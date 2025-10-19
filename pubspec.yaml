@@ -1,0 +1,161 @@
+name: mushtary
+description: "A new Flutter project."
+
+publish_to: "none"
+
+version: 1.0.0+3
+
+environment:
+  sdk: ">=3.7.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  #used packages
+  cupertino_icons: ^1.0.6
+
+  #state management
+  flutter_bloc: ^9.1.0
+
+  # code generator for data-classes/unions ( mainly used with bloc )
+  freezed: ^2.4.7
+  freezed_annotation: ^2.4.1
+
+  #for svg images
+  flutter_svg: ^2.0.10+1
+
+  #use a native file explorer to pick single or multiple absolute file
+  file_picker: ^10.1.2
+  path: ^1.9.0
+
+  # dependency injection
+  get_it: ^8.0.3
+
+#  #firebase packages
+#  firebase_core: ^3.6.0
+#  cloud_firestore: ^5.4.4
+#  firebase_auth: ^5.3.1
+
+  # bottom navigation bar
+  curved_navigation_bar: ^1.0.3
+
+  # for indicator styles
+  smooth_page_indicator: ^1.1.0
+  equatable: ^2.0.5
+  # localization
+  easy_localization: ^3.0.5
+
+  #to add a dashed border around any widget.
+  dotted_border: ^2.1.0
+
+  #n animated bottom navigation bar
+  salomon_bottom_bar: ^3.3.2
+
+  #text formatting with customizable styles between specified marks.
+  special_text_between_marks: ^0.0.2
+
+  #splash screen
+  flutter_native_splash: ^2.4.0
+
+  #for otp input
+  pin_code_fields: ^8.0.1
+
+  #plugin for adjusting screen and font size. Ensures a good look on all devices.
+  flutter_screenutil: ^5.9.3
+
+  #creating a list of Choice Chip
+  chip_list: ^3.0.0
+
+  #to load and cache network images.
+  cached_network_image: ^3.3.1
+
+  #HTTP networking package
+  dio: ^5.7.0
+
+  #Dio interceptor that logs network calls in a pretty
+  pretty_dio_logger: ^1.4.0
+
+  #Plugin for reading and writing simple key-value pairs.
+  shared_preferences: ^2.3.2
+
+  #Flutter Secure Storage provides API to store data in secure storage.
+  flutter_secure_storage: ^9.2.2
+
+  #Notifications
+  flutter_local_notifications: ^19.0.0
+  firebase_messaging: ^15.1.3
+
+  dropdown_button3:
+    git:
+      url: https://github.com/bilalelsayed97/dropdownbutton3.git
+
+  #google maps
+  google_maps_flutter: ^2.7.0
+  flutter_map_marker_cluster: ^1.3.6
+  latlong2: ^0.9.1
+  google_maps_cluster_manager: ^3.1.0
+  # flutter_map: ^6.2.1
+
+  #for json serialization and deserialization
+  json_annotation: ^4.9.0
+
+  #launching a URL. Supports web, phone, SMS, and email schemes.
+  # url_launcher: ^6.3.1
+
+  #Collections and utilities functions and classes related to collections.
+  collection: ^1.18.0
+
+  #for time ago format
+  timeago: ^3.7.0
+  #loading indicators animated
+  flutter_spinkit: ^5.2.1
+
+  #A Flutter plugin for launching a URL. Supports web, phone, SMS, and email schemes.
+  device_info_plus: ^11.1.0
+  #A Flutter plugin for accessing native device features such as camera, location, and sensors.
+  image_picker: ^1.1.2
+  url_launcher: ^6.3.2
+  geocoding: ^4.0.0
+  geolocator: ^14.0.2
+  socket_io_client: ^3.1.2
+  jwt_decoder: ^2.0.1
+  share_plus: ^12.0.0
+  flutter_image_compress: ^2.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  #used dev packages
+  flutter_lints: ^5.0.0
+  # A build system for Dart code generation and modular compilation
+  build_runner: ^2.4.11
+
+  #internationalized/localized messages, date and number formatting and parsing, bi-directional text, and other internationalization issues.
+  intl: ^0.20.2
+
+  #for generating json serialization code
+  json_serializable: ^6.8.0
+
+flutter:
+  uses-material-design: true
+
+  # To add assets to your application, add an assets section, like this:
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/translations/
+    - assets/fonts/
+    - assets/json/
+
+  fonts:
+    - family: DIN NEXT™ ARABIC
+      fonts:
+        - asset: assets/fonts/DIN NEXT™ ARABIC BLACK.otf
+        - asset: assets/fonts/DIN NEXT™ ARABIC BOLD.otf
+        - asset: assets/fonts/DIN NEXT™ ARABIC HEAVY.otf
+        - asset: assets/fonts/DIN NEXT™ ARABIC LIGHT.otf
+        - asset: assets/fonts/DIN NEXT™ ARABIC MEDIUM.otf
+        - asset: assets/fonts/DIN NEXT™ ARABIC REGULAR.otf
+        - asset: assets/fonts/DIN NEXT™ ARABIC ULTRALIGHT.otf

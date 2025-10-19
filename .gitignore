@@ -1,0 +1,48 @@
+# Flutter/Dart related
+.dart_tool/
+.packages
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+
+# Android
+**/android/**/gradle-wrapper.jar
+**/android/.gradle
+**/android/captures/
+**/android/gradlew
+**/android/gradlew.bat
+**/android/local.properties
+
+# iOS
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/ephemeral/
+
+# Windows
+windows/flutter/ephemeral/
+windows/CMakeFiles/
+*.vcxproj*
+*.sln
+
+# Emulator / System
+.android/
+.emulator/
+Templates/
+
+# IntelliJ / Android Studio
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# Misc
+*.log
+*.lock
+*.DS_Store
+*.swp
