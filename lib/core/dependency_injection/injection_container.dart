@@ -87,16 +87,25 @@ import '../../features/service_request/data/repo/provider_repo.dart' as pr;
 import '../../features/service_request/data/repo/received_offers_repo.dart' as ro;
 import '../../features/service_request/ui/logic/cubit/provider_cubit.dart' as poc;
 import '../../features/service_request/ui/logic/cubit/received_offers_cubit.dart' as roc;
+// ❌ تم إزالة الاستيراد التالي: import '../../features/services/data/repo/dyna_trip_repo.dart';
 import '../../features/services/data/repo/laborer_types_repo.dart';
+import '../../features/services/data/repo/service_offers_repo.dart';
 import '../../features/services/data/repo/service_providers_repo.dart';
 import '../../features/services/data/repo/service_request_repo.dart';
+import '../../features/services/logic/cubit/dyna_trips_cubit.dart';
 import '../../features/services/logic/cubit/laborer_types_cubit.dart';
+import '../../features/services/logic/cubit/service_offer_cubit.dart';
 import '../../features/services/logic/cubit/service_providers_cubit.dart';
 import '../../features/services/logic/cubit/service_request_cubit.dart';
-import '../../features/trips/data/repo/dyna_trips_repo.dart';
+import '../../features/support/data/repo/conversation_report_repo.dart';
+import '../../features/support/ui/logic/conversation_report_cubit.dart';
+import '../../features/trips/data/repo/dyna_trips_repo.dart'; // ✅ هذا هو المستودع المدمج الآن
 import '../../features/trips/ui/logic/cubit/dyna_my_trips_cubit.dart';
 import '../../features/trips/ui/logic/cubit/dyna_trip_create_cubit.dart';
 import '../../features/trips/ui/logic/cubit/dyna_trips_list_cubit.dart';
+import '../../features/user_profile/data/repo/ads_repo.dart';
+import '../../features/user_profile/data/repo/my_auctions_repo.dart';
+import '../../features/wallet/ui/data/repo/payment_config_repo.dart';
 import '../../features/work_with_us/data/repo/exhibition_create_repo.dart';
 import '../../features/work_with_us/data/repo/exhibition_details_repo.dart';
 import '../../features/work_with_us/data/repo/exhibitions_repo.dart';
@@ -292,4 +301,22 @@ void setupServiceLocator() {
   // Car catalog (brands/models)
   registerLazyIfNeeded<CarCatalogRepo>(() => CarCatalogRepo(getIt<api.ApiService>()));
   registerFactoryReplacing<CarCatalogCubit>(() => CarCatalogCubit(getIt<CarCatalogRepo>()));
+  registerLazyIfNeeded<CarAuctionRepo>(() => CarAuctionRepo(getIt<api.ApiService>()));
+  // 💡 نستخدم FactoryReplacing لتمكين CarAuctionDetailsCubit من أن يكون له مثيل جديد في كل مرة
+  registerFactoryReplacing<CarAuctionDetailsCubit>(() => CarAuctionDetailsCubit(getIt<CarAuctionRepo>()));
+  registerLazyIfNeeded<ConversationReportRepo>(() => ConversationReportRepo(getIt<api.ApiService>()));
+  registerFactoryReplacing<ConversationReportCubit>(() => ConversationReportCubit(getIt<ConversationReportRepo>()));
+  // Real Estate Auction Cubit remains the same
+  registerLazyIfNeeded<RealEstateAuctionRepo>(() => RealEstateAuctionRepo(getIt<api.ApiService>()));
+  registerFactoryReplacing<RealEstateAuctionDetailsCubit>(() => RealEstateAuctionDetailsCubit(getIt<RealEstateAuctionRepo>()));
+  getIt.registerLazySingleton<MyAuctionsRepo>(() => MyAuctionsRepo(getIt<api.ApiService>()));
+  registerLazyIfNeeded<PaymentConfigRepo>(() => PaymentConfigRepo(getIt<api.ApiService>()));
+  getIt.registerLazySingleton<AdsRepo>(() => AdsRepo(getIt<api.ApiService>()));
+
+  // ✅ تم توجيه DynaTripsCubit لاستخدام DynaTripsRepo المدمج
+  getIt.registerFactory<DynaTripsCubit>(() => DynaTripsCubit(getIt<DynaTripsRepo>()));
+
+  getIt.registerLazySingleton<ServiceOffersRepo>(() => ServiceOffersRepo(getIt<api.ApiService>()));
+  getIt.registerFactory<ServiceOfferCubit>(() => ServiceOfferCubit(getIt<ServiceOffersRepo>()));
+
 }

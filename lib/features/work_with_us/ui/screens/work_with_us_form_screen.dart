@@ -1,3 +1,5 @@
+// lib/features/work_with_us/ui/screens/work_with_us_form_screen.dart
+
 import 'dart:io';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
@@ -5,25 +7,23 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-
-// Theme/Widgets
 import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
 import 'package:mushtary/core/widgets/primary/my_svg.dart';
 import 'package:mushtary/core/widgets/primary/primary_button.dart';
 import 'package:mushtary/core/widgets/primary/secondary_text_form_field.dart';
-
 import 'package:mushtary/core/location/logic/cubit/location_cubit.dart';
 import 'package:mushtary/core/location/logic/cubit/location_state.dart';
-
+import 'package:mushtary/core/location/data/model/location_models.dart';
 import '../../../../core/dependency_injection/injection_container.dart';
-import '../../../../core/location/data/model/location_models.dart';
 import '../logic/cubit/work_with_us_cubit.dart';
 import '../logic/cubit/work_with_us_state.dart';
+import '../logic/cubit/promoter_profile_cubit.dart';
+import '../logic/cubit/promoter_profile_state.dart';
+import '../../../../core/router/routes.dart';
+import '../../../../core/utils/helpers/navigation.dart';
 
-// شاشة البروفايل بعد التقديم
-import 'work_with_us_profile_screen.dart';
 
 class WorkWithUsFormScreen extends StatefulWidget {
   const WorkWithUsFormScreen({super.key});
@@ -34,20 +34,14 @@ class WorkWithUsFormScreen extends StatefulWidget {
 
 class _WorkWithUsFormScreenState extends State<WorkWithUsFormScreen> {
   final _formKey = GlobalKey<FormState>();
-
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _nationalIdController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-
   final TextEditingController _dateUiController = TextEditingController();
-  String? _birthDateIso; // yyyy-MM-dd
-
+  String? _birthDateIso;
   File? _imageFile;
-
-  // employment toggle: index 0 -> working, index 1 -> available
   List<bool> _isSelected = [true, false];
-
   Region? _selectedRegion;
   City? _selectedCity;
 
@@ -87,184 +81,212 @@ class _WorkWithUsFormScreenState extends State<WorkWithUsFormScreen> {
     super.dispose();
   }
 
+  // 💡 FIX: دالة build المفقودة
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
         BlocProvider<LocationCubit>(
-          create: (_) {
-            final c = getIt<LocationCubit>();
-            c.loadRegions(); // أول ما تفتح الشاشة حمل المناطق
-            return c;
-          },
+          create: (_) => getIt<LocationCubit>()..loadRegions(),
         ),
         BlocProvider<WorkWithUsCubit>(
           create: (_) => getIt<WorkWithUsCubit>(),
         ),
+        BlocProvider<PromoterProfileCubit>(
+          create: (_) => getIt<PromoterProfileCubit>()..loadProfile(),
+        ),
       ],
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: ColorsManager.white,
           centerTitle: true,
-          title: Text('العمل معنا', style: TextStyles.font20Black500Weight),
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios, color: ColorsManager.darkGray300),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
+          title:  Text('قدم الآن',style: TextStyles.font20Black500Weight,),
         ),
-        body: BlocListener<WorkWithUsCubit, WorkWithUsState>(
-          listener: (context, state) {
-            if (state.success) {
-              if (!mounted) return;
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const WorkWithUsProfileScreen()),
-              );
-            } else if (state.error != null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.error!)),
-              );
-            }
-          },
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  SecondaryTextFormField(
-                    controller: _nameController,
-                    label: 'الاسم كامل',
-                    hint: 'الاسم كامل',
-                    maxheight: 56,
-                    minHeight: 56,
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'برجاء إدخال الاسم' : null,
-                  ),
-                  verticalSpace(16),
+        body: _buildProfileChecker(),
+      ),
+    );
+  }
 
-                  SecondaryTextFormField(
-                    controller: _phoneController,
-                    label: 'رقم الهاتف',
-                    hint: '+966',
-                    isNumber: true,
-                    maxheight: 56,
-                    minHeight: 56,
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'برجاء إدخال الهاتف' : null,
-                  ),
-                  verticalSpace(16),
-                  SecondaryTextFormField(
-                    controller: _emailController,
-                    label: 'البريد الإلكتروني',
-                    hint: 'name@example.com',
-                    maxheight: 56,
-                    minHeight: 56,
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'برجاء إدخال البريد' : null,
-                  ),
-                  verticalSpace(16),
 
-                  SecondaryTextFormField(
-                    controller: _nationalIdController,
-                    label: 'رقم الرخصه / الاقامة',
-                    hint: 'رقم الرخصه / الاقامة',
-                    maxheight: 56,
-                    minHeight: 56,
-                    isNumber: true,
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'برجاء إدخال الرقم' : null,
-                  ),
-                  verticalSpace(16),
+  // 💡 دالة تبني شاشة الفحص (Check Screen)
+  Widget _buildProfileChecker() {
+    return BlocBuilder<PromoterProfileCubit, PromoterProfileState>(
+      builder: (context, pState) {
+        if (pState.loading) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-                  // تاريخ الميلاد (قابل للنقر)
-                  InkWell(
-                    onTap: _pickDate,
-                    borderRadius: BorderRadius.circular(12.r),
-                    child: AbsorbPointer(
-                      child: SecondaryTextFormField(
-                        controller: _dateUiController,
-                        label: 'تاريخ الميلاد',
-                        hint: '12/05/2024',
-                        maxheight: 56,
-                        minHeight: 56,
-                        isEnabled: true,
-                        suffexIcon: 'calendar',
-                        validator: (_) => _birthDateIso == null ? 'برجاء اختيار التاريخ' : null,
-                      ),
+        // 💡 الحالة 2: إذا كان لديه بيانات (أي تم التقديم والموافقة عليه)
+        if (pState.data != null) {
+          // التوجيه إلى شاشة البروفايل مباشرة
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            // ✅ FIX: استخدام pushReplacementNamed
+            context.pushReplacementNamed(Routes.workWithUsProfileScreen);
+          });
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        // 💡 الحالة 1: إذا لم يجد ملف شخصي، اعرض النموذج
+        return _buildForm();
+      },
+    );
+  }
+
+  // 💡 دالة تبني النموذج (لبناء مشروط)
+  Widget _buildForm() {
+    return BlocListener<WorkWithUsCubit, WorkWithUsState>(
+      listener: (context, state) {
+        if (state.success) {
+          if (!mounted) return;
+          // 💡 التوجيه إلى شاشة البروفايل بعد النجاح
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تقديم الطلب بنجاح!')));
+          // ✅ FIX: استخدام pushReplacementNamed
+          context.pushReplacementNamed(Routes.workWithUsProfileScreen);
+        } else if (state.error != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.error!)),
+          );
+        }
+      },
+      child: SingleChildScrollView(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom), // للحفاظ على مساحة الكيبورد
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                SecondaryTextFormField(
+                  controller: _nameController,
+                  label: 'الاسم كامل',
+                  hint: 'الاسم كامل',
+                  maxheight: 56,
+                  minHeight: 56,
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'برجاء إدخال الاسم' : null,
+                ),
+                verticalSpace(16),
+
+                SecondaryTextFormField(
+                  controller: _phoneController,
+                  label: 'رقم الهاتف',
+                  hint: '+966',
+                  isNumber: true,
+                  maxheight: 56,
+                  minHeight: 56,
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'برجاء إدخال الهاتف' : null,
+                ),
+                verticalSpace(16),
+                SecondaryTextFormField(
+                  controller: _emailController,
+                  label: 'البريد الإلكتروني',
+                  hint: 'name@example.com',
+                  maxheight: 56,
+                  minHeight: 56,
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'برجاء إدخال البريد' : null,
+                ),
+                verticalSpace(16),
+
+                SecondaryTextFormField(
+                  controller: _nationalIdController,
+                  label: 'رقم الرخصه / الاقامة',
+                  hint: 'رقم الرخصه / الاقامة',
+                  maxheight: 56,
+                  minHeight: 56,
+                  isNumber: true,
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'برجاء إدخال الرقم' : null,
+                ),
+                verticalSpace(16),
+
+                // تاريخ الميلاد (قابل للنقر)
+                InkWell(
+                  onTap: _pickDate,
+                  borderRadius: BorderRadius.circular(12.r),
+                  child: AbsorbPointer(
+                    child: SecondaryTextFormField(
+                      controller: _dateUiController,
+                      label: 'تاريخ الميلاد',
+                      hint: '12/05/2024',
+                      maxheight: 56,
+                      minHeight: 56,
+                      isEnabled: true,
+                      suffexIcon: 'calendar',
+                      validator: (_) => _birthDateIso == null ? 'برجاء اختيار التاريخ' : null,
                     ),
                   ),
-                  verticalSpace(16),
+                ),
+                verticalSpace(16),
 
-                  // المنطقة ثم المدينة
-                  BlocBuilder<LocationCubit, LocationState>(
-                    builder: (context, state) {
-                      return Column(
-                        children: [
-                          _RegionDropdown(
-                            regions: state.regions,
-                            loading: state.regionsLoading,
-                            value: _selectedRegion,
-                            onChanged: (region) {
-                              setState(() {
-                                _selectedRegion = region;
-                                _selectedCity = null;
-                              });
-                              if (region != null) {
-                                context.read<LocationCubit>().loadCities(region.id);
-                              }
-                            },
-                          ),
-                          SizedBox(height: 16.h),
-                          _CityDropdown(
-                            cities: state.cities,
-                            loading: state.citiesLoading,
-                            enabled: _selectedRegion != null && !state.citiesLoading,
-                            value: _selectedCity,
-                            onChanged: (city) {
-                              setState(() => _selectedCity = city);
-                            },
-                          ),
-                        ],
-                      );
-                    },
-                  ),
+                // المنطقة ثم المدينة
+                BlocBuilder<LocationCubit, LocationState>(
+                  builder: (context, state) {
+                    return Column(
+                      children: [
+                        _RegionDropdown(
+                          regions: state.regions,
+                          loading: state.regionsLoading,
+                          value: _selectedRegion,
+                          onChanged: (region) {
+                            setState(() {
+                              _selectedRegion = region;
+                              _selectedCity = null;
+                            });
+                            if (region != null) {
+                              context.read<LocationCubit>().loadCities(region.id);
+                            }
+                          },
+                        ),
+                        SizedBox(height: 16.h),
+                        _CityDropdown(
+                          cities: state.cities,
+                          loading: state.citiesLoading,
+                          enabled: _selectedRegion != null && !state.citiesLoading,
+                          value: _selectedCity,
+                          onChanged: (city) {
+                            setState(() => _selectedCity = city);
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                ),
 
-                  verticalSpace(16),
-                  ToggleButtons(
-                    isSelected: _isSelected,
-                    onPressed: (index) {
-                      setState(() {
-                        for (int i = 0; i < _isSelected.length; i++) {
-                          _isSelected[i] = i == index;
-                        }
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(12.r),
-                    selectedColor: Colors.white,
-                    color: ColorsManager.darkGray,
-                    fillColor: ColorsManager.primaryColor,
-                    borderColor: ColorsManager.dark200,
-                    selectedBorderColor: ColorsManager.primaryColor,
-                    children: [
-                      _buildToggleChild('يعمل'),
-                      _buildToggleChild('متفرغ'),
-                    ],
-                  ),
-                  verticalSpace(24),
+                verticalSpace(16),
+                ToggleButtons(
+                  isSelected: _isSelected,
+                  onPressed: (index) {
+                    setState(() {
+                      for (int i = 0; i < _isSelected.length; i++) {
+                        _isSelected[i] = i == index;
+                      }
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(12.r),
+                  selectedColor: Colors.white,
+                  color: ColorsManager.darkGray,
+                  fillColor: ColorsManager.primaryColor,
+                  borderColor: ColorsManager.dark200,
+                  selectedBorderColor: ColorsManager.primaryColor,
+                  children: [
+                    _buildToggleChild('يعمل'),
+                    _buildToggleChild('متفرغ'),
+                  ],
+                ),
+                verticalSpace(24),
 
-                  _buildImagePicker(),
-                  verticalSpace(40),
+                _buildImagePicker(),
+                verticalSpace(40),
 
-                  BlocBuilder<WorkWithUsCubit, WorkWithUsState>(
-                    builder: (context, state) {
-                      return PrimaryButton(
-                        text: state.submitting ? 'جاري الإرسال...' : 'تقديم الطلب',
-                        onPressed: () => _onSubmit(context),
-                        isDisabled: state.submitting,
-                        isLoading: state.submitting,
-                      );
-                    },
-                  ),
-                  verticalSpace(24),
-                ],
-              ),
+                BlocBuilder<WorkWithUsCubit, WorkWithUsState>(
+                  builder: (context, state) {
+                    return PrimaryButton(
+                      text: state.submitting ? 'جاري الإرسال...' : 'تقديم الطلب',
+                      onPressed: () => _onSubmit(context),
+                      isDisabled: state.submitting,
+                      isLoading: state.submitting,
+                    );
+                  },
+                ),
+                verticalSpace(24),
+              ],
             ),
           ),
         ),

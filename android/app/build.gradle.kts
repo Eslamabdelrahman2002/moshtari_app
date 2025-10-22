@@ -23,8 +23,16 @@ android {
     }
 
     defaultConfig {
+<<<<<<< HEAD
         applicationId = "com.rasad.sa.mushtary"
         minSdk = flutter.minSdkVersion.toInt()
+=======
+        applicationId = "com.example.mushtary"
+        // FIX: Set minSdkVersion to 26 to satisfy the myfatoorah_flutter plugin requirement.
+        minSdk = 26
+        // minSdk = flutter.minSdkVersion.toInt() // <-- The problematic line commented out
+
+>>>>>>> 95fc8bb (update)
         targetSdk = flutter.targetSdkVersion.toInt()
         versionCode = flutter.versionCode.toInt()
         versionName = flutter.versionName

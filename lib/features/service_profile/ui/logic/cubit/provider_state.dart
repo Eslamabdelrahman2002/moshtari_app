@@ -1,4 +1,4 @@
-// File: provider_state.dart (التعديل في copyWith)
+// lib/features/service_profile/ui/screens/service_provider_dashboard_screen.dart
 
 import 'package:equatable/equatable.dart';
 import '../../../data/model/service_provider_models.dart';
@@ -11,8 +11,11 @@ class ProviderState extends Equatable {
   final bool requestsLoading;
   final String? requestsError;
   final List<ServiceRequest> requests;
-  final bool updating;
-  final bool updateSuccess; // <--- تمت الإضافة هنا
+
+  // 🟢 NEW/RENAMED:
+  final bool isUpdating;
+  final bool updateSuccess;
+  final int? actingRequestId; // 🟢 NEW: لتتبع الطلب الذي يتم تحديث حالته حاليًا
 
   const ProviderState({
     this.loading = false,
@@ -21,8 +24,9 @@ class ProviderState extends Equatable {
     this.requestsLoading = false,
     this.requestsError,
     this.requests = const [],
-    this.updating = false,
-    this.updateSuccess = false, // <--- قيمة أولية
+    this.isUpdating = false, // 🟢 RENAMED (كانت updating)
+    this.updateSuccess = false,
+    this.actingRequestId, // 🟢 NEW
   });
 
   ProviderState copyWith({
@@ -32,8 +36,12 @@ class ProviderState extends Equatable {
     bool? requestsLoading,
     String? requestsError,
     List<ServiceRequest>? requests,
-    bool? updating,
-    bool? updateSuccess, // <--- تمت الإضافة هنا
+
+    // 🟢 NEW/RENAMED in copyWith:
+    bool? isUpdating,
+    bool? updateSuccess,
+    int? actingRequestId, // 🟢 NEW
+
     bool clearError = false,
     bool clearRequestsError = false,
   }) {
@@ -44,11 +52,17 @@ class ProviderState extends Equatable {
       requestsLoading: requestsLoading ?? this.requestsLoading,
       requestsError: clearRequestsError ? null : (requestsError ?? this.requestsError),
       requests: requests ?? this.requests,
-      updating: updating ?? this.updating,
-      updateSuccess: updateSuccess ?? false, // <--- التعامل معها هنا
+
+      // 🟢 Assignments:
+      isUpdating: isUpdating ?? this.isUpdating,
+      updateSuccess: updateSuccess ?? this.updateSuccess,
+      actingRequestId: actingRequestId, // نحتاج لجعله يقبل null صراحة لتمكين إلغاء تعيينه
     );
   }
 
   @override
-  List<Object?> get props => [loading, error, provider, requestsLoading, requestsError, requests, updating, updateSuccess];
+  List<Object?> get props => [
+    loading, error, provider, requestsLoading, requestsError, requests,
+    isUpdating, updateSuccess, actingRequestId
+  ];
 }

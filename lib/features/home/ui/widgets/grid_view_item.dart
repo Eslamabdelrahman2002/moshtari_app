@@ -30,33 +30,26 @@ class GridViewItem extends StatelessWidget {
   Widget build(BuildContext context) {
     timeago.setLocaleMessages('ar', timeago.ArMessages());
 
-    final bool hasImage = adModel.imageUrls.isNotEmpty;
-    final String imageUrl = hasImage ? adModel.imageUrls.first : '';
-    final bool isAuction = adModel.auctionDisplayType != null;
-    final String favoriteType = isAuction ? 'auction' : 'ad';
+    final hasImage = adModel.imageUrls.isNotEmpty;
+    final imageUrl = hasImage ? adModel.imageUrls.first : '';
+    final isAuction = adModel.auctionDisplayType != null;
+    final favoriteType = isAuction ? 'auction' : 'ad';
+    final favId = isAuction ? (adModel.auctionId ?? adModel.id) : adModel.id;
 
-    final DateTime? created = DateTime.tryParse(adModel.createdAt);
-    final String createdAgo = created != null ? timeago.format(created, locale: 'ar') : '';
+    final created = DateTime.tryParse(adModel.createdAt);
+    final createdAgo = created != null ? timeago.format(created, locale: 'ar') : '';
 
     return InkWell(
       onTap: () {
-        final isAuction = adModel.auctionDisplayType != null;
         if (isAuction) {
           if (adModel.categoryId == 1) {
-            Navigator.of(context).pushNamed(
-              Routes.carAuctionDetailsScreen,
-              arguments: adModel.auctionId ?? adModel.id,
-            );
+            Navigator.of(context).pushNamed(Routes.carAuctionDetailsScreen, arguments: adModel.auctionId ?? adModel.id);
           } else if (adModel.categoryId == 2) {
-            Navigator.of(context).pushNamed(
-              Routes.realEstateAuctionDetailsScreen,
-              arguments: adModel.auctionId ?? adModel.id,
-            );
+            Navigator.of(context).pushNamed(Routes.realEstateAuctionDetailsScreen, arguments: adModel.auctionId ?? adModel.id);
           }
           return;
         }
 
-        debugPrint('[Home] tap id=${adModel.id}, cat=${adModel.categoryId}, auction=${adModel.auctionDisplayType}, source=${adModel.sourceType}');
         switch (adModel.sourceType) {
           case 'car_ads':
             Navigator.of(context).pushNamed(Routes.carDetailsScreen, arguments: adModel.id);
@@ -78,13 +71,7 @@ class GridViewItem extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.07),
-              blurRadius: 16.r,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 16.r, offset: const Offset(0, 4))],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,19 +86,10 @@ class GridViewItem extends StatelessWidget {
                           ? CachedNetworkImage(
                         imageUrl: imageUrl,
                         fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color: ColorsManager.grey200,
-                          child: const Center(child: CircularProgressIndicator()),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          color: ColorsManager.grey200,
-                          child: const Icon(Icons.error),
-                        ),
+                        placeholder: (_, __) => Container(color: ColorsManager.grey200, child: const Center(child: CircularProgressIndicator())),
+                        errorWidget: (_, __, ___) => Container(color: ColorsManager.grey200, child: const Icon(Icons.error)),
                       )
-                          : Container(
-                        color: ColorsManager.grey200,
-                        child: Icon(Icons.image_not_supported, color: Colors.grey[400]),
-                      ),
+                          : Container(color: ColorsManager.grey200, child: Icon(Icons.image_not_supported, color: Colors.grey[400])),
                     ),
                   ),
                   if (isAuction)
@@ -120,15 +98,9 @@ class GridViewItem extends StatelessWidget {
                       left: 8.w,
                       child: Row(
                         children: [
-                          _buildTag(
-                            text: adModel.auctionDisplayType == 'single' ? 'فردي' : 'متعدد',
-                            color: ColorsManager.success500,
-                          ),
+                          _tag('single' == adModel.auctionDisplayType ? 'فردي' : 'متعدد', ColorsManager.success500),
                           horizontalSpace(4),
-                          _buildTag(
-                            text: 'مزاد حي',
-                            color: ColorsManager.redButton,
-                          ),
+                          _tag('مزاد حي', ColorsManager.redButton),
                         ],
                       ),
                     ),
@@ -137,26 +109,19 @@ class GridViewItem extends StatelessWidget {
                     right: 0,
                     child: BlocBuilder<FavoritesCubit, FavoritesState>(
                       builder: (context, state) {
-                        bool isCurrentlyFavorite = isFavorited;
+                        bool isFav = isFavorited;
                         if (state is FavoritesLoaded) {
-                          isCurrentlyFavorite = state.favoriteIds.contains(adModel.id);
+                          isFav = state.favoriteIds.contains(favId);
                         }
-
                         return GestureDetector(
-                          onTap: onFavoriteTap ??
-                                  () {
-                                context.read<FavoritesCubit>().toggleFavorite(
-                                  type: favoriteType,
-                                  id: adModel.id,
-                                );
-                              },
+                          onTap: onFavoriteTap ?? () => context.read<FavoritesCubit>().toggleFavorite(type: favoriteType, id: favId),
                           child: Container(
                             padding: const EdgeInsets.all(8.0),
                             child: MySvg(
-                              image: isCurrentlyFavorite ? "favourite_filled" : "favourite",
+                              image: "favourite",
                               width: 20,
                               height: 20,
-                              color: isCurrentlyFavorite ? ColorsManager.redButton : Colors.white,
+                              color: isFav ? ColorsManager.redButton : Colors.white,
                             ),
                           ),
                         );
@@ -167,59 +132,36 @@ class GridViewItem extends StatelessWidget {
               ),
             ),
             verticalSpace(8),
-            Text(
-              adModel.title,
-              style: TextStyles.font12Black400Weight,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            Text(adModel.title.isEmpty ? 'No Title' : adModel.title, style: TextStyles.font12Black400Weight, maxLines: 1, overflow: TextOverflow.ellipsis),
             verticalSpace(8),
             Row(
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ListViewItemDataWidget(image: 'location-dark', text: adModel.location),
-                      verticalSpace(4),
-                      ListViewItemDataWidget(image: 'user', text: adModel.username),
-                    ],
-                  ),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    ListViewItemDataWidget(image: 'location-dark', text: adModel.location),
+                    verticalSpace(4),
+                    ListViewItemDataWidget(image: 'user', text: adModel.username),
+                  ]),
                 ),
                 horizontalSpace(8),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ListViewItemDataWidget(
-                        image: 'riyal_black',
-                        isColoredText: true,
-                        text: (adModel.price == null || adModel.price!.trim().isEmpty) ? 'N/A' : adModel.price!,
-                      ),
-                      verticalSpace(4),
-                      ListViewItemDataWidget(image: 'clock', text: createdAgo),
-                    ],
-                  ),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    ListViewItemDataWidget(image: 'riyal_black', isColoredText: true, text: (adModel.price?.trim().isEmpty ?? true) ? 'N/A' : adModel.price!),
+                    verticalSpace(4),
+                    ListViewItemDataWidget(image: 'clock', text: createdAgo),
+                  ]),
                 ),
               ],
-            )
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTag({required String text, required Color color}) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(20.r),
-      ),
-      child: Text(
-        text,
-        style: TextStyles.font10White500Weight,
-      ),
-    );
-  }
+  Widget _tag(String text, Color color) => Container(
+    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(20.r)),
+    child: Text(text, style: TextStyles.font10White500Weight),
+  );
 }

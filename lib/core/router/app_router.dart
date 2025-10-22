@@ -9,6 +9,7 @@ import 'package:mushtary/core/dependency_injection/injection_container.dart';
 
 // Helpers
 import 'package:mushtary/core/utils/helpers/cache_helper.dart';
+import 'package:mushtary/features/about/ui/screens/about_app_screen.dart';
 
 // Auth
 import 'package:mushtary/features/auth/login/ui/screens/login_screen.dart';
@@ -25,6 +26,7 @@ import 'package:mushtary/features/home/ui/screens/bottom_navigation_bar.dart';
 import 'package:mushtary/features/home/data/models/home_data_model.dart';
 import 'package:mushtary/features/home/ui/screens/home_screen.dart';
 import 'package:mushtary/features/home/ui/widgets/home_reels_view.dart';
+import 'package:mushtary/features/policy/ui/screens/usage_policy_screen.dart';
 
 // Common
 import 'package:mushtary/features/splash/splash_screen.dart';
@@ -97,6 +99,7 @@ import '../../features/trips/ui/screens/dyna_trips_manager_screen.dart';
 import '../../features/trips/ui/screens/dyna_trips_screen.dart';
 import '../../features/work_with_us/ui/screens/work_with_us_form_screen.dart';
 import '../../features/work_with_us/ui/screens/work_with_us_intro_screen.dart';
+import '../../features/work_with_us/ui/screens/work_with_us_profile_screen.dart';
 
 class NoAnimationPageRoute<T> extends MaterialPageRoute<T> {
   NoAnimationPageRoute({required WidgetBuilder builder, RouteSettings? settings})
@@ -192,8 +195,22 @@ class AppRouter {
       case Routes.favoritesScreen:
         return NoAnimationPageRoute(builder: (_) => const FavoritesScreen());
 
-      case Routes.technicalSupportScreen:
-        return NoAnimationPageRoute(builder: (_) => const TechnicalSupportScreen());
+      case Routes.technicalSupportScreen: {
+        final arg = settings.arguments;
+        int? conversationId;
+        if (arg is int) {
+          conversationId = arg;
+        } else if (arg is Map && arg['conversationId'] != null) {
+          final v = arg['conversationId'];
+          if (v is int) conversationId = v;
+          if (v is String) conversationId = int.tryParse(v);
+        }
+
+        // لو مفيش argument جاي، هنفترض 1 كـ default
+        return NoAnimationPageRoute(
+          builder: (_) => TechnicalSupportScreen(conversationId: conversationId ?? 1),
+        );
+      }
 
       case Routes.walletScreen:
         return NoAnimationPageRoute(builder: (_) => const WalletScreen());
@@ -434,8 +451,14 @@ class AppRouter {
           builder: (_) => ServiceProviderDashboardScreen(providerId: providerId),
         );
       }
+      case Routes.workWithUsProfileScreen:
+        return NoAnimationPageRoute(builder: (_) => const WorkWithUsProfileScreen());
       case Routes.myReceivedOffersScreen:
         return NoAnimationPageRoute(builder: (_) => const MyReceivedOffersScreen());
+      case Routes.usagePolicyScreen:
+        return NoAnimationPageRoute(builder: (_) => const UsagePolicyScreen());
+      case Routes.aboutAppScreen:
+        return NoAnimationPageRoute(builder: (_) => const AboutAppScreen());
 
     // Default
       default:

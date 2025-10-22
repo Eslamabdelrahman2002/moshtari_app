@@ -36,7 +36,7 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
 
   bool chat = false;
   bool whatsapp = false;
-  bool phone = false;
+  bool phone = false; // سيتم تحويلها لـ 'call' عند الإرسال
 
   String priceType = 'fixed';
   bool allowComments = true;
@@ -46,7 +46,8 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
   Region? _selectedRegion;
   City? _selectedCity;
 
-  // اسم التصنيف الفرعي (كما كان)
+  // التصنيف الفرعي
+  int? _selectedSubCategoryId;
   String? subCategoryName;
 
   final subCategories = const [
@@ -64,11 +65,11 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
 
     Future<void> pickImage() async {
       final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-      if (image != null) {
-        final f = File(image.path);
-        setState(() => picked.add(f));
-        cubit.addImage(f);
-      }
+      if (image == null) return;
+
+      final f = File(image.path);
+      setState(() => picked.add(f));
+      cubit.addImage(f);
     }
 
     return MultiBlocProvider(
@@ -88,7 +89,8 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
               const SnackBar(content: Text('تم نشر الإعلان بنجاح')),
             );
             Navigator.pop(context);
-          } else if (state.error != null) {
+            Navigator.pop(context);
+          } else if (state.error != null && state.error!.isNotEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(state.error!)),
             );
@@ -139,12 +141,15 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
                 else
                   CreateRealEstateAdAddPhotoVideo(
                     pickImage: pickImage,
-                    remove: (i) => setState(() => picked.removeAt(i)),
+                    remove: (i) {
+                      setState(() => picked.removeAt(i));
+                      cubit.removeImageAt(i);
+                    },
                     pickedImages: picked,
                   ),
                 verticalSpace(16),
 
-                // التصنيف الفرعي (كما هو)
+                // التصنيف الفرعي
                 _OutlinedSelectorField(
                   label: 'التصنيف الفرعي',
                   hint: subCategoryName ?? 'اختر التصنيف الفرعي',
@@ -154,14 +159,16 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
                       title: 'اختر التصنيف الفرعي',
                       hint: 'ابحث اسم التصنيف...',
                       items: subCategories,
-                      multi: true,
+                      multi: false, // اختيار واحد فقط
                     );
                     if (chosen == null || chosen.isEmpty) return;
                     final id = chosen.first;
-                    final name =
-                    subCategories.firstWhere((e) => e['id'] == id)['name'] as String;
-                    cubit.setCategoryId(id);
-                    setState(() => subCategoryName = name);
+                    final name = subCategories.firstWhere((e) => e['id'] == id)['name'] as String;
+                    setState(() {
+                      _selectedSubCategoryId = id;
+                      subCategoryName = name;
+                    });
+                    cubit.setSubCategoryId(id);
                   },
                 ),
                 verticalSpace(12),
@@ -191,7 +198,8 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
                     final isLoading = locState.regionsLoading;
                     return _OutlinedSelectorField(
                       label: 'المنطقة',
-                      hint: _selectedRegion?.nameAr ?? (isLoading ? 'جاري تحميل المناطق...' : 'اختر المنطقة'),
+                      hint: _selectedRegion?.nameAr ??
+                          (isLoading ? 'جاري تحميل المناطق...' : 'اختر المنطقة'),
                       onTap: isLoading
                           ? null
                           : () async {
@@ -230,7 +238,9 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
                           ? null
                           : () async {
                         FocusScope.of(context).unfocus();
-                        await context.read<LocationCubit>().loadCities(_selectedRegion!.id);
+                        await context
+                            .read<LocationCubit>()
+                            .loadCities(_selectedRegion!.id);
                         final st = context.read<LocationCubit>().state;
                         if (st.cities.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -326,7 +336,26 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
 
                 NextButtonBar(
                   title: 'نشر الاعلان',
-                  onPressed: () => cubit.submit(),
+                  onPressed: () {
+                    // تحقق سريع قبل الإرسال
+                    final missing = <String>[];
+                    if (_selectedSubCategoryId == null) missing.add('التصنيف الفرعي');
+                    if (_selectedRegion == null) missing.add('المنطقة');
+                    if (_selectedCity == null) missing.add('المدينة');
+                    if (picked.isEmpty) missing.add('صورة واحدة على الأقل');
+                    if (!chat && !whatsapp && !phone) missing.add('طريقة تواصل واحدة على الأقل');
+
+                    if (missing.isNotEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('يرجى استكمال: ${missing.join(' • ')}')),
+                      );
+                      return;
+                    }
+
+                    // مرّر نوع السعر (إن كان الباك يتطلبه)
+                    cubit.setPriceType(priceType);
+                    cubit.submit();
+                  },
                 ),
                 verticalSpace(16),
               ],
@@ -790,7 +819,7 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
     final list = <String>[];
     if (chat) list.add('chat');
     if (whatsapp) list.add('whatsapp');
-    if (phone) list.add('phone'); // أو 'call' حسب الباك
+    if (phone) list.add('call'); // مهم: استخدم 'call' بدلاً من 'phone' حسب الباك
     cubit.setCommunicationMethods(list);
   }
 }

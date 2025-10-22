@@ -23,6 +23,8 @@ import 'package:mushtary/core/car/logic/cubit/car_catalog_cubit.dart';
 import 'package:mushtary/core/car/logic/cubit/car_catalog_state.dart';
 
 
+import '../../../../../core/widgets/primary/confirmation_dialog.dart';
+import '../../../../../core/widgets/primary/custom_app_bar.dart';
 import 'car_part_create_ad_step2_screen.dart';
 import 'logic/cubit/car_part_ads_cubit.dart';
 
@@ -138,6 +140,25 @@ class _CarPartCreateAdStep1ScreenState extends State<CarPartCreateAdStep1Screen>
       ],
       child: Scaffold(
         backgroundColor: Colors.white,
+        appBar: CustomAppBar(
+          title: "إنشاء إعلان قطع غيار",
+          onBackPressed: () async {
+            // إضافة dialog للتأكيد من الخروج
+            final shouldExit = await ConfirmationDialog.show(
+              context: context,
+              title: "تأكيد الخروج",
+              message: "هل أنت متأكد من الخروج؟ سيتم فقدان البيانات المدخلة.",
+              confirmText: "خروج",
+              cancelText: "البقاء",
+              confirmColor: Colors.red,
+              icon: Icons.warning_amber_rounded,
+            );
+
+            if (shouldExit == true && context.mounted) {
+              Navigator.pop(context);
+            }
+          },
+        ),
         body: SafeArea(
           child: Column(
             children: [

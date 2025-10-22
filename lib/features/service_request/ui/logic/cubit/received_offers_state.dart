@@ -1,30 +1,30 @@
-import 'package:equatable/equatable.dart';
 import '../../../data/model/received_offer_models.dart';
 
-class ReceivedOffersState extends Equatable {
+
+class ReceivedOffersState {
   final bool loading;
   final String? error;
   final List<ReceivedOffer> offers;
+  final int? actingOfferId; // العرض الجاري تنفيذ طلب عليه (accept)
 
   const ReceivedOffersState({
     this.loading = false,
     this.error,
     this.offers = const [],
+    this.actingOfferId,
   });
 
   ReceivedOffersState copyWith({
     bool? loading,
     String? error,
     List<ReceivedOffer>? offers,
-    bool clearError = false,
+    int? actingOfferId,
   }) {
     return ReceivedOffersState(
       loading: loading ?? this.loading,
-      error: clearError ? null : (error ?? this.error),
+      error: error,
       offers: offers ?? this.offers,
+      actingOfferId: actingOfferId,
     );
   }
-
-  @override
-  List<Object?> get props => [loading, error, offers];
 }

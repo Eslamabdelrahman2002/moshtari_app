@@ -9,7 +9,8 @@ class ApiService {
   ApiService(this._dio) {
     _dio.options
       ..baseUrl = ApiConstants.baseUrl
-      ..connectTimeout = const Duration(seconds: 20)
+    // ✅ 1. تم زيادة connectTimeout إلى 60 ثانية لحل مشكلة الـ Timeout
+      ..connectTimeout = const Duration(seconds: 60)
       ..receiveTimeout = const Duration(minutes: 2)
       ..responseType = ResponseType.json
       ..headers = {'Accept': 'application/json'};
@@ -81,6 +82,24 @@ class ApiService {
     }
   }
 
+  // ✅ 2. دالة جديدة لتنفيذ POST بدون إرسال Body (للخروج/الإجراءات البسيطة)
+  Future<Map<String, dynamic>> postNoData(String endpoint) async {
+    try {
+      // إرسال طلب POST بدون تمرير أي بيانات في الـ data
+      final response = await _dio.post(endpoint);
+      // التعامل مع حالة إذا كان الخادم لا يرجع بيانات
+      final d = response.data;
+      if (d == null) return {'success': true, 'message': 'تم تسجيل الخروج بنجاح'};
+      if (d is Map<String, dynamic>) return d;
+      return {'success': true, 'data': d};
+    } on DioException catch (error) {
+      throw AppException.create(error);
+    } catch (e) {
+      throw AppException(e.toString());
+    }
+  }
+
+
   Future<Map<String, dynamic>> postForm(String endpoint, FormData formData) async {
     try {
       final response = await _dio.post(
@@ -112,10 +131,24 @@ class ApiService {
     }
   }
 
-  Future<dynamic> delete(String endpoint) async {
+  Future<Map<String, dynamic>> deleteWithBody(
+      String endpoint, {
+        Map<String, dynamic>? data,
+      }) async {
     try {
-      final response = await _dio.delete(endpoint);
-      return response.data;
+      final response = await _dio.delete(
+        endpoint,
+        data: data,
+        options: Options(
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+      final d = response.data;
+      if (d is Map<String, dynamic>) return d;
+      return {'success': true, 'data': d};
     } on DioException catch (error) {
       throw AppException.create(error);
     } catch (e) {

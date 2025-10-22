@@ -56,24 +56,32 @@ class _AdsAuctionsToggleState extends State<AdsAuctionsToggle> {
           verticalSpace(12),
           Expanded(
             child: showAds
-                ? widget.myAds.isEmpty
+                ? (widget.myAds.isEmpty
                 ? const Center(child: Text('لا يوجد لديك إعلانات بعد.'))
-                : ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+                : GridView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.78, // عدّلها لو احتجت
+              ),
               itemCount: widget.myAds.length,
-              itemBuilder: (context, index) {
-                return ProductItem(model: widget.myAds[index]);
-              },
-            )
-                : widget.myAuctions.isEmpty
+              itemBuilder: (context, index) => ProductItem(model: widget.myAds[index]),
+            ))
+                : (widget.myAuctions.isEmpty
                 ? const Center(child: Text('لا يوجد لديك مزادات بعد.'))
-                : ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+                : GridView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.78,
+              ),
               itemCount: widget.myAuctions.length,
-              itemBuilder: (context, index) {
-                return ProductItem(model: widget.myAuctions[index]);
-              },
-            ),
+              itemBuilder: (context, index) => ProductItem(model: widget.myAuctions[index]),
+            )),
           ),
         ],
       ),

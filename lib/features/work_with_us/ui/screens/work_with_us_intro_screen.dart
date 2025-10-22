@@ -47,7 +47,7 @@ class WorkWithUsIntroScreen extends StatelessWidget {
             Text('العمل معنا', style: TextStyles.font24Black700Weight),
             verticalSpace(16),
             Text(
-              'هذا النص هو مثال لنص يمكن أن يستبدل في نفس المساحة، لقد تم توليد هذا النص من مولد النصوص العربى، حيث يمكنك أن تولد مثل هذا النص أو العديد من النصوص الأخرى إضافة إلى زيادة عدد الحروف التى يولدها التطبيق.',
+              'كن جزءاً من منصة مشتري، ووسّع نطاق عملك ووصولك إلى آلاف العملاء الباحثين عن خدمات ومنتجات متخصصة في قطاعات السيارات والعقارات والخدمات اللوجستية.',
               textAlign: TextAlign.center,
               style: TextStyles.font14DarkGray400Weight,
             ),

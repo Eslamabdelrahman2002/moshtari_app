@@ -1,3 +1,4 @@
+// lib/features/create_ad/ui/screens/other/other_ad_selects_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -86,12 +87,12 @@ class _OtherAdSelectsScreenState extends State<OtherAdSelectsScreen> {
                 title: 'اختر التصنيف الفرعي',
                 hint: 'ابحث اسم التصنيف...',
                 items: subCategories,
-                multi: true,
+                multi: true, // تقدر تخليها false لو تبغى اختيار واحد فقط
                 onSaved: (ids) {
                   if (ids.isEmpty) return;
                   final id = ids.first;
                   final name = subCategories.firstWhere((e) => e['id'] == id)['name'] as String;
-                  cubit.setCategoryId(id);
+                  cubit.setSubCategoryId(id);
                   setState(() => subCategoryName = name);
                 },
               ),
@@ -156,7 +157,7 @@ class _OtherAdSelectsScreenState extends State<OtherAdSelectsScreen> {
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16),
         child: NextButtonBar(
           title: 'التالي',
-          onPressed: (cubit.state.categoryId != null && cubit.state.cityId != null)
+          onPressed: (cubit.state.subCategoryId != null && cubit.state.cityId != null)
               ? widget.onNext
               : null,
         ),
@@ -257,7 +258,8 @@ class _OtherAdSelectsScreenState extends State<OtherAdSelectsScreen> {
                           title: Text(
                             name,
                             style: isSelected
-                                ? TextStyles.font14Blue500Weight.copyWith(color: const Color(0xFF0A45A6))
+                                ? TextStyles.font14Blue500Weight
+                                .copyWith(color: const Color(0xFF0A45A6))
                                 : null,
                           ),
                           trailing: multi

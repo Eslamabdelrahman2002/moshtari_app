@@ -1,82 +1,100 @@
-// lib/features/create_ad/ui/screens/other/logic/cubit/other_ads_cubit.dart
 import 'dart:io';
-import 'package:flutter/foundation.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../../../../core/api/top_level_categories.dart';
 import '../../../../../data/car/data/model/other_ad_request.dart';
 import '../../../../../data/car/data/repo/other_ads_repo.dart';
 import 'other_ads_state.dart';
 
 class OtherAdsCubit extends Cubit<OtherAdsState> {
-  final OtherAdsCreateRepo _repo;
-  OtherAdsCubit(this._repo) : super(const OtherAdsState());
+  final OtherAdsCreateRepo repo;
+  OtherAdsCubit(this.repo) : super(const OtherAdsState());
 
   // setters
-  void setTitle(String v) => emit(state.copyWith(title: v));
-  void setDescription(String v) => emit(state.copyWith(description: v));
+  void setTitle(String v) => emit(state.copyWith(title: v, error: null, success: false));
+  void setDescription(String v) => emit(state.copyWith(description: v, error: null, success: false));
+  // التصنيف ثابت 4، لا حاجة فعليًا لهذا الحقل لكن نُبقي setSubCategoryId إن كان مستخدمًا في الواجهة
+  void setSubCategoryId(int id) => emit(state.copyWith(subCategoryId: id, error: null, success: false));
+  void setRegionId(int? id) => emit(state.copyWith(regionId: id, error: null, success: false));
+  void setCityId(int? id) => emit(state.copyWith(cityId: id, error: null, success: false));
+  void setPrice(num? v) => emit(state.copyWith(price: v, error: null, success: false));
+  void setPhone(String v) => emit(state.copyWith(phone: v, error: null, success: false));
+  void setPriceType(String v) => emit(state.copyWith(priceType: v, error: null, success: false));
 
-  void setCategoryId(int? v) => emit(state.copyWith(categoryId: v));
+  void setAllowComments(bool v) => emit(state.copyWith(allowComments: v, error: null));
+  void setAllowMarketing(bool v) => emit(state.copyWith(allowMarketing: v, error: null));
 
-  void setPriceType(String v) => emit(state.copyWith(priceType: v));
-  void setPrice(num? v) => emit(state.copyWith(price: v));
+  void setCommunicationMethods(List<String> methods) =>
+      emit(state.copyWith(communicationMethods: methods, error: null));
 
-  void setCityId(int? v) => emit(state.copyWith(cityId: v));
-  void setRegionId(int? v) => emit(state.copyWith(regionId: v));
-  void setLocationName(String? v) => emit(state.copyWith(locationName: v));
+  void addImage(File f) {
+    final imgs = List<File>.from(state.images)..add(f);
+    emit(state.copyWith(images: imgs, error: null));
+  }
 
-  void setPhone(String? v) => emit(state.copyWith(phoneNumber: v));
-  void setLatLng(double? lat, double? lng) =>
-      emit(state.copyWith(latitude: lat, longitude: lng));
-
-  void setAllowMarketing(bool v) => emit(state.copyWith(allowMarketing: v));
-  void setAllowComments(bool v) => emit(state.copyWith(allowComments: v));
-  void setCommunicationMethods(List<String> v) =>
-      emit(state.copyWith(communicationMethods: v));
-
-  void addImage(File f) => emit(state.copyWith(images: [...state.images, f]));
-  void removeImageAt(int i) {
-    final imgs = [...state.images]..removeAt(i);
-    emit(state.copyWith(images: imgs));
+  void removeImageAt(int index) {
+    final imgs = List<File>.from(state.images)..removeAt(index);
+    emit(state.copyWith(images: imgs, error: null));
   }
 
   Future<void> submit() async {
-    if (state.title == null ||
-        /* state.categoryId == null (سنضبطها هنا) */
-        state.cityId == null ||
-        state.priceType.isEmpty) {
-      emit(state.copyWith(error: 'يرجى تعبئة الحقول الأساسية'));
-      emit(state.copyWith(error: null));
+    // تحقق داخلي قبل الإرسال
+    final missing = <String>[];
+    if ((state.title ?? '').trim().isEmpty) missing.add('عنوان الإعلان');
+    if ((state.description ?? '').trim().isEmpty) missing.add('وصف العرض');
+    // التصنيف ثابت، فلا نتحقق من subCategoryId
+    if (state.regionId == null) missing.add('المنطقة');
+    if (state.cityId == null) missing.add('المدينة');
+    if (state.price == null) missing.add('السعر');
+    if ((state.phone ?? '').trim().isEmpty) missing.add('رقم الهاتف');
+    if (state.images.isEmpty) missing.add('صورة واحدة على الأقل');
+    if (state.communicationMethods.isEmpty) missing.add('طريقة تواصل واحدة على الأقل');
+
+    if (missing.isNotEmpty) {
+      emit(state.copyWith(
+        error: 'يرجى استكمال الحقول: ${missing.join(' • ')}',
+        submitting: false,
+        success: false,
+      ));
       return;
     }
 
-    emit(state.copyWith(submitting: true, success: false, error: null));
+    emit(state.copyWith(submitting: true, error: null, success: false));
+
     try {
       final req = OtherAdRequest(
-        title: state.title!,
-        description: state.description,
-        // لو ما تم تحديد التصنيف، نثبت "أخرى" = 4
-        categoryId: state.categoryId ?? TopLevelCategoryIds.other,
-        priceType: state.priceType,
-        price: state.price,
+        title: state.title!.trim(),
+        description: state.description!.trim(),
+        regionId: state.regionId!,
         cityId: state.cityId!,
-        regionId: state.regionId,
-        locationName: state.locationName,
-        phoneNumber: state.phoneNumber,
-        communicationMethods: state.communicationMethods,
-        allowMarketing: state.allowMarketing,
+        price: state.price!,
+        phone: state.phone!.trim(),
+        priceType: (state.priceType ?? 'fixed').trim(),
         allowComments: state.allowComments,
-        latitude: state.latitude,
-        longitude: state.longitude,
+        allowMarketing: state.allowMarketing,
+        communicationMethods: state.communicationMethods,
         images: state.images,
+        // إن كان لديك موقع على الخريطة مرره هنا:
+        // locationName: state.locationName,
+        // latitude: state.lat,
+        // longitude: state.lng,
       );
 
-      await _repo.createOtherAd(req);
-      emit(state.copyWith(submitting: false, success: true));
+      final res = await repo.createOtherAd(req);
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        emit(state.copyWith(submitting: false, success: true, error: null));
+      } else {
+        emit(state.copyWith(
+          submitting: false,
+          success: false,
+          error: res.data?.toString() ?? 'حدث خطأ غير متوقع',
+        ));
+      }
     } catch (e) {
-      debugPrint('[OtherAds] submit error: $e');
-      emit(state.copyWith(submitting: false, error: e.toString()));
-      emit(state.copyWith(error: null));
+      final msg = (e is DioException)
+          ? (e.error?.toString() ?? e.message ?? 'فشل الاتصال بالخادم')
+          : e.toString();
+      emit(state.copyWith(submitting: false, success: false, error: msg));
     }
   }
 }

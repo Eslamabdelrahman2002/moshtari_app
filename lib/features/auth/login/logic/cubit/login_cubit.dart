@@ -14,18 +14,20 @@ class LoginCubit extends Cubit<LoginState> {
   Future<void> login(String phoneNumber) async {
     emit(LoginLoading());
     try {
-      final fakeResponse = LoginResponse(message: 'تم الانتقال إلى شاشة التحقق');
-      emit(LoginSuccess(fakeResponse));
       final loginRequestBody = LoginRequestBody(phoneNumber: phoneNumber);
       final response = await _loginRepo.login(loginRequestBody);
 
-      if (response.data?.token != null) {
-        await CacheHelper.saveData(key: 'token', value: response.data!.token!);
+      // حفظ التوكن إن وُجد (بعض الـ APIs ترجع التوكن بعد خطوة اللوجين مباشرة)
+      final token = response.data?.token;
+      if (token != null && token.isNotEmpty) {
+        await CacheHelper.saveData(key: 'token', value: token);
       }
 
+      // نجاح واحد فقط (لو UI ينقل لصفحة OTP يعتمد على هذه الحالة)
       emit(LoginSuccess(response));
     } catch (e) {
-      emit(LoginError(e.toString()));
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      emit(LoginError(msg));
     }
   }
 }

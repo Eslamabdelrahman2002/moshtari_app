@@ -1,3 +1,5 @@
+// lib/features/product_details/ui/logic/cubit/provider_cubit.dart
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../data/model/service_request_models.dart';
@@ -30,9 +32,16 @@ class ProviderCubit extends Cubit<ProviderState> {
   }
 
   Future<void> updateRequestStatus(int requestId, String newStatus) async {
-    emit(state.copyWith(updating: true));
+    // 🟢 بدء التحميل: تعيين isUpdating و actingRequestId
+    emit(state.copyWith(
+      isUpdating: true,
+      actingRequestId: requestId,
+      updateSuccess: false,
+      clearRequestsError: true,
+    ));
     try {
       await _repo.updateRequestStatus(requestId, newStatus);
+
       // حدّث العنصر محلياً
       final updated = state.requests.map((r) {
         if (r.id == requestId) {
@@ -46,9 +55,22 @@ class ProviderCubit extends Cubit<ProviderState> {
         }
         return r;
       }).toList();
-      emit(state.copyWith(updating: false, requests: updated));
+
+      // 🟢 النجاح: إعادة تعيين isUpdating و actingRequestId
+      emit(state.copyWith(
+        isUpdating: false,
+        actingRequestId: null,
+        requests: updated,
+        updateSuccess: true, // للإشارة إلى نجاح العملية في الـ Listener
+      ));
+
     } catch (e) {
-      emit(state.copyWith(updating: false, requestsError: e.toString()));
+      // 🟢 الفشل: إعادة تعيين isUpdating و actingRequestId مع رسالة الخطأ
+      emit(state.copyWith(
+        isUpdating: false,
+        actingRequestId: null,
+        requestsError: e.toString(),
+      ));
     }
   }
 }

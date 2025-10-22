@@ -42,4 +42,23 @@ class CarAuctionRepo {
     if (data is String) return data;
     return 'حدث خطأ غير متوقع';
   }
+  Future<CarAuctionDetailsModel> getAuctionDetails(int id) async {
+    final response = await api.get(ApiConstants.carAuctionDetails(id));
+    return CarAuctionDetailsModel.fromJson(response['data']);
+  }
+
+  // 🟢 NEW: Approve the highest bid for an auction
+  Future<Map<String, dynamic>> approveAuction(int id, String auctionType) async {
+    // نستخدم GET لأن الـ URL المرفق لا يوحي بوجود Body
+    final endpoint = ApiConstants.auctionAccept(id, auctionType);
+    final response = await api.get(endpoint);
+    return response;
+  }
+
+  // 🟢 NEW: Reject the auction result/highest bid
+  Future<Map<String, dynamic>> rejectAuction(int id, String auctionType) async {
+    final endpoint = ApiConstants.auctionReject(id, auctionType);
+    final response = await api.get(endpoint);
+    return response;
+  }
 }

@@ -31,14 +31,16 @@ class HomeScreen extends StatelessWidget {
       ],
       child: BlocListener<FavoritesCubit, FavoritesState>(
         listener: (context, state) {
-          if (state is AddFavoriteSuccess) {
+          // عرض رسالة الخطأ فقط (AddFavoriteSuccess غير معرّفة في الـ States الحالية)
+          if (state is AddFavoriteFailure) {
             ScaffoldMessenger.of(context)
               ..hideCurrentSnackBar()
-              ..showSnackBar(SnackBar(content: Text(state.message), backgroundColor: ColorsManager.success500));
-          } else if (state is AddFavoriteFailure) {
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(SnackBar(content: Text(state.error), backgroundColor: ColorsManager.redButton));
+              ..showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: ColorsManager.redButton,
+                ),
+              );
           }
         },
         child: const HomeView(),
@@ -133,7 +135,7 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
                     SliverToBoxAdapter(
                       child: HomeCategoriesListView(
                         categoriesToShow: _showAuctions
-                            ? const {'car_ads': 'سيارات','real_estate_ads': 'عقارات'}
+                            ? const {'car_ads': 'سيارات', 'real_estate_ads': 'عقارات'}
                             : const {'car_ads': 'سيارات','real_estate_ads': 'عقارات','car_parts_ads': 'قطع غيار','other_ads': 'أخرى'},
                         selectedCategoryKey: _selectedCategoryKey,
                         onCategorySelected: (key) => setState(() => _selectedCategoryKey = key),

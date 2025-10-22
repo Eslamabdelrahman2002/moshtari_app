@@ -50,3 +50,4 @@ class ProfileUpdateFailure extends ProfileState {
 
 // حالة لتغيير الصورة فقط
 class ProfileImageChanged extends ProfileState {}
+

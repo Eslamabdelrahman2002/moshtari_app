@@ -1,9 +1,8 @@
-// lib/features/create_ad/ui/screens/car_parts/car_part_create_ad_step2_screen.dart
-
 import 'dart:io';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -29,12 +28,12 @@ class CarPartCreateAdStep2Screen extends StatefulWidget {
 }
 
 class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen> {
-  // الامتدادات المدعومة (صور + فيديو اختياري)
   static const List<String> kAllowedMediaExt = ['.jpg', '.jpeg', '.png', '.mp4'];
 
   final _titleCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _offerDescCtrl = TextEditingController();
+  final _priceCtrl = TextEditingController();
 
   final List<File> _picked = [];
 
@@ -50,11 +49,15 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
   @override
   void initState() {
     super.initState();
+    // تنظيف قائمة الملفات المؤقتة لمنع "الملف موجود مسبقاً"
+    PhotoPicker.clearSelectedFiles();
+
     final s = context.read<CarPartAdsCubit>().state;
 
     _titleCtrl.text = s.title ?? '';
     _offerDescCtrl.text = s.description ?? '';
     _phoneCtrl.text = s.phoneNumber ?? '';
+    if (s.price != null) _priceCtrl.text = '${s.price}';
 
     priceType = s.priceType.isNotEmpty ? s.priceType : 'fixed';
     allowComments = s.allowComments;
@@ -76,6 +79,7 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
     _titleCtrl.dispose();
     _phoneCtrl.dispose();
     _offerDescCtrl.dispose();
+    _priceCtrl.dispose();
     super.dispose();
   }
 
@@ -84,8 +88,8 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
     return kAllowedMediaExt.contains(ext);
   }
 
-  // بدون ضغط — نرجع الملف كما هو
   Future<File> _compressImageIfNeeded(File file) async {
+    // بدون ضغط
     return file;
   }
 
@@ -104,17 +108,15 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
     final cubit = context.read<CarPartAdsCubit>();
     final picker = PhotoPicker(context);
 
-    final files = await picker.pickMedia(); // يرجع List<File>
+    final files = await picker.pickMedia();
     if (!mounted || files.isEmpty) return;
 
     for (final f in files) {
-      // 1) التأكد من الامتداد
       if (!_isSupportedMedia(f)) {
         _showError('الملف ${p.basename(f.path)} ليس بصيغة مدعومة (png, jpg, mp4).');
         continue;
       }
 
-      // 2) إضافة مباشرة بدون فحص حجم أو ضغط
       final finalFile = await _compressImageIfNeeded(f);
       _picked.add(finalFile);
       cubit.addImage(finalFile);
@@ -136,6 +138,7 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
         } else if (state.success) {
           ScaffoldMessenger.of(context)
               .showSnackBar(const SnackBar(content: Text('تم إنشاء الإعلان بنجاح')));
+          Navigator.pop(context);
           Navigator.pop(context);
         } else if (state.error != null) {
           _showError(state.error!);
@@ -183,9 +186,38 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
                       _field(
                         'وصف العرض',
                         _offerDescCtrl,
-                        hint: 'أكتب وصف للمنتج...',
+                        hint: 'اكتب وصفًا للمنتج...',
                         maxLines: 3,
                         onChanged: cubit.setDescription,
+                      ),
+                      verticalSpace(12),
+
+                      // السعر
+                      TextField(
+                        controller: _priceCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                        ],
+                        onChanged: (v) {
+                          final parsed = num.tryParse(v.replaceAll(',', '').trim());
+                          cubit.setPrice(parsed);
+                        },
+                        decoration: InputDecoration(
+                          labelText: 'السعر',
+                          hintText: 'مثال: 250',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r)),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                            borderSide: BorderSide(color: ColorsManager.dark200),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                            borderSide: BorderSide(color: ColorsManager.primary300),
+                          ),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+                          suffixText: 'ر.س',
+                        ),
                       ),
                       verticalSpace(12),
 
@@ -269,11 +301,20 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
                       ),
                       verticalSpace(20),
 
-                      PrimaryButton(
-                        text: 'نشر الاعلان',
-                        onPressed: () {
-                          cubit.setPriceType(priceType);
-                          cubit.submit();
+                      // زر النشر: نعطّل أثناء الإرسال
+                      BlocBuilder<CarPartAdsCubit, CarPartAdsState>(
+                        buildWhen: (p, c) => p.submitting != c.submitting,
+                        builder: (context, s) {
+                          return AbsorbPointer(
+                            absorbing: s.submitting,
+                            child: PrimaryButton(
+                              text: s.submitting ? 'جارٍ النشر...' : 'نشر الاعلان',
+                              onPressed: () {
+                                cubit.setPriceType(priceType);
+                                cubit.submit();
+                              },
+                            ),
+                          );
                         },
                       ),
                       verticalSpace(12),
@@ -325,7 +366,7 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
     final methods = <String>[];
     if (chat) methods.add('chat');
     if (whatsapp) methods.add('whatsapp');
-    if (phone) methods.add('call'); // تأكد من المفتاح المتوقع في الـ API
+    if (phone) methods.add('call');
     cubit.setCommunicationMethods(methods);
   }
 

@@ -1,6 +1,8 @@
 import 'dart:convert';
 
+// 🟢 الدوال المساعدة يجب أن تكون خارج الكلاس
 int _asInt(v) => v is int ? v : int.tryParse('$v') ?? 0;
+bool _asBool(v) => v == true || v?.toString().toLowerCase() == 'true';
 
 class ReceivedOffer {
   final int offerId;
@@ -12,6 +14,7 @@ class ReceivedOffer {
   final int providerId;
   final String fullName;
   final String? personalImage;
+  final bool isVerified; // 🟢 NEW: Added to support UI check
 
   ReceivedOffer({
     required this.offerId,
@@ -23,6 +26,7 @@ class ReceivedOffer {
     required this.providerId,
     required this.fullName,
     required this.personalImage,
+    this.isVerified = false,
   });
 
   factory ReceivedOffer.fromJson(Map<String, dynamic> j) => ReceivedOffer(
@@ -35,6 +39,7 @@ class ReceivedOffer {
     providerId: _asInt(j['provider_id']),
     fullName: (j['full_name'] ?? '').toString(),
     personalImage: (j['personal_image'] ?? '').toString().isEmpty ? null : (j['personal_image'] as String),
+    isVerified: _asBool(j['is_verified'] ?? j['verified'] ?? false), // استخدام الدالة المساعدة
   );
 }
 

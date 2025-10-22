@@ -1,13 +1,26 @@
+// lib/features/trips/data/repo/dyna_trips_repo.dart
 import 'package:mushtary/core/api/api_constants.dart';
 import 'package:mushtary/core/api/api_service.dart';
 
+import '../../../services/data/model/dinat_trip.dart';
 import '../model/dyna_trip_models.dart';
 import '../model/dyna_trips_list_models.dart';
-
+// ملاحظة: يجب أن تتأكد من أن DynaTripsResponse موجود في أحد ملفات الـ model أعلاه.
 
 class DynaTripsRepo {
   final ApiService _api;
   DynaTripsRepo(this._api);
+
+  // ✅ وظيفة جلب الرحلات المتاحة (تم دمجها من DynaTripRepo)
+  Future<DynaTripsResponse> fetchAvailable({int page = 1, int limit = 10}) async {
+    final res = await _api.get(
+      ApiConstants.dynaTripsAvailable,
+      queryParameters: {'page': page, 'limit': limit},
+    );
+    // نفترض أن DynaTripsResponse هو الكلاس الصحيح الذي تم استيراده من ملف الـ model
+    return DynaTripsResponse.fromJson(res);
+  }
+
   Future<DynaTripsListResponse> fetchTrips({
     required int page,
     required int pageSize,
@@ -23,6 +36,7 @@ class DynaTripsRepo {
     final res = await _api.get(ApiConstants.dynaTrips, queryParameters: qp);
     return DynaTripsListResponse.fromJson(res as Map<String, dynamic>);
   }
+
   Future<DynaTripsListResponse> fetchMyTrips({
     required int page,
     required int pageSize,

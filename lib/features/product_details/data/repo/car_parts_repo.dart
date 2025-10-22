@@ -25,7 +25,7 @@ class CarPartsRepo {
       } else if (r1.statusCode == 404) {
         // فallback للمسار القديم (لو السيرفر يدعمه)
         final r2 = await _apiService.getResponse(
-          ApiConstants.carPartAdDetailsV2(id),
+          ApiConstants.carPartAdDetails(id),
           relaxStatus: true,
         );
         if ((r2.statusCode ?? 500) >= 200 &&

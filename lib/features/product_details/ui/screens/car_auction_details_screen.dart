@@ -404,7 +404,11 @@ class _CarAuctionDetailsScreenState extends State<CarAuctionDetailsScreen> {
           elevation: 0,
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.white,
+          leading: InkWell(
+              onTap: ()=>Navigator.pop(context),
+              child: Icon(Icons.arrow_back_ios_new,color: ColorsManager.darkGray300,)),
         ),
+        
         body: SafeArea(
           child: BlocBuilder<CarAuctionDetailsCubit, CarAuctionDetailsState>(
             builder: (context, state) {

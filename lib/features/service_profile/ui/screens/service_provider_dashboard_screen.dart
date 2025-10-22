@@ -30,7 +30,8 @@ class _ServiceProviderDashboardScreenState extends State<ServiceProviderDashboar
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 3, vsync: this, initialIndex: 1);
+    // 💡 Initial index set to 2 (الأعمال) to match expected flow
+    _tab = TabController(length: 3, vsync: this, initialIndex: 2);
   }
 
   @override
@@ -44,6 +45,13 @@ class _ServiceProviderDashboardScreenState extends State<ServiceProviderDashboar
     return BlocProvider<ProviderCubit>(
       create: (_) => getIt<ProviderCubit>()..loadAll(widget.providerId),
       child: Scaffold(
+        appBar: AppBar(
+            title: Text("الملف الشخصي",style: TextStyles.font20Black500Weight,),
+            leading:
+            IconButton(onPressed: ()=>Navigator.pop(context),
+                icon: Icon(Icons.arrow_back_ios_new,
+                  color: ColorsManager.darkGray300,))
+        ),
         body: BlocListener<ProviderCubit, ProviderState>(
           listener: (context, state) {
             // استخدام الخصائص المحدثة
@@ -51,14 +59,12 @@ class _ServiceProviderDashboardScreenState extends State<ServiceProviderDashboar
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('تم تحديث حالة الطلب بنجاح.')),
               );
-              // reset updateSuccess flag after showing snackbar
               context.read<ProviderCubit>().emit(state.copyWith(updateSuccess: false));
 
             } else if (state.requestsError != null) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('خطأ في تحديث الحالة: ${state.requestsError}')),
               );
-              // reset requestsError flag after showing snackbar
               context.read<ProviderCubit>().emit(state.copyWith(clearRequestsError: true));
             }
           },
@@ -150,6 +156,7 @@ class SegmentedTabs extends StatelessWidget {
                     alignment: Alignment.center,
                     margin: EdgeInsets.symmetric(horizontal: 2.w),
                     decoration: BoxDecoration(
+                      // 💡 استخدام الألوان الأساسية للمطابقة
                       color: selected ? ColorsManager.primaryColor : Colors.white,
                       borderRadius: BorderRadius.circular(10.r),
                       border: selected ? null : Border.all(color: ColorsManager.dark200),
@@ -318,8 +325,13 @@ class _WorksTab extends StatelessWidget {
       itemCount: state.requests.length,
       itemBuilder: (_, i) {
         final r = state.requests[i];
+
+        // 💡 NEW: تحديد ما إذا كان هذا الطلب بالذات في حالة تحديث (تحميل)
+        final isUpdating = state.isUpdating && state.actingRequestId == r.id;
+
         return ServiceRequestCard(
           req: r,
+          isLoading: isUpdating, // 💡 تمرير حالة التحميل
           onAccept: () => onAccept(r.id),
           onReject: () => onReject(r.id),
           onComplete: () => onComplete(r.id),

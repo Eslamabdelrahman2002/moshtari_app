@@ -88,4 +88,9 @@ class Routes {
   static const String serviceProviderDashboard1 = '/serviceProviderDashboard';
   static const String serviceRequestsScreen = '/serviceRequestsScreen';
   static const String myReceivedOffersScreen = '/myReceivedOffersScreen';
+  static const String workWithUsProfileScreen = '/workWithUsProfileScreen ';
+ static const String usagePolicyScreen = '/usagePolicyScreen';
+  static const String aboutAppScreen = '/aboutAppScreen';
+
+
 }

@@ -17,6 +17,10 @@ import 'package:mushtary/core/widgets/primary/secondary_text_form_field.dart';
 import 'package:mushtary/features/create_ad/ui/widgets/customized_chip.dart';
 import 'package:mushtary/features/create_ad/ui/widgets/detail_selector.dart';
 
+import 'package:mushtary/features/services/data/model/service_request_payload.dart';
+import 'package:mushtary/features/services/logic/cubit/service_request_cubit.dart';
+import 'package:mushtary/features/services/logic/cubit/service_request_state.dart';
+
 import '../widgets/map_picker_screen.dart'; // PickedLocation
 
 class ShrejScreen extends StatefulWidget {
@@ -37,16 +41,8 @@ class _ShrejScreenState extends State<ShrejScreen> {
 
   // Dropdown sources
   final List<String> tankSizes = ['صغر', 'متوسط', 'كبير'];
-  final List<String> waterTypes = [
-    'مياه عذبة',
-    'مياه مفلترة',
-    'مياه صالحة للشرب',
-    'مياه صناعية',
-  ];
-  final List<String> requiredServices = [
-    'مضخة رفع الماء للخزان العلوي',
-    'رشاش سفلي في الصهريج',
-  ];
+  final List<String> waterTypes = ['مياه عذبة', 'مياه مفلترة', 'مياه صالحة للشرب', 'مياه صناعية'];
+  final List<String> requiredServices = ['مضخة رفع الماء للخزان العلوي', 'رشاش سفلي في الصهريج'];
 
   // Selected values
   String? selectedTankSize;
@@ -127,10 +123,14 @@ class _ShrejScreenState extends State<ShrejScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => getIt<LocationCubit>()..loadRegions(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => getIt<LocationCubit>()..loadRegions()),
+        BlocProvider(create: (_) => getIt<ServiceRequestCubit>()),
+      ],
       child: Scaffold(
         appBar: AppBar(
+          leading: IconButton(onPressed: () => Navigator.pop(context), icon: Icon(Icons.arrow_back_ios, color: ColorsManager.darkGray300)),
           title: Text('طلب صهريج ماء', style: TextStyles.font20Black500Weight),
           backgroundColor: ColorsManager.white,
           elevation: 4,
@@ -139,215 +139,244 @@ class _ShrejScreenState extends State<ShrejScreen> {
           surfaceTintColor: ColorsManager.transparent,
         ),
         body: SafeArea(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.w),
-            child: Form(
-              key: _formKey,
-              child: BlocBuilder<LocationCubit, LocationState>(
-                builder: (context, state) {
-                  final cubit = context.read<LocationCubit>();
+          child: BlocConsumer<ServiceRequestCubit, ServiceRequestState>(
+            listenWhen: (p, c) => c is ServiceRequestSuccess || c is ServiceRequestFailure,
+            listener: (context, state) {
+              final m = ScaffoldMessenger.of(context);
+              m.hideCurrentSnackBar();
+              if (state is ServiceRequestSuccess) {
+                m.showSnackBar(SnackBar(content: Text(state.message)));
+                Navigator.of(context).maybePop();
+              } else if (state is ServiceRequestFailure) {
+                m.showSnackBar(SnackBar(content: Text(state.error.replaceFirst('Exception: ', ''))));
+              }
+            },
+            builder: (context, reqState) {
+              final submitting = reqState is ServiceRequestLoading;
 
-                  return Column(
-                    children: [
-                      // وصف الخدمة
-                      SecondaryTextFormField(
-                        label: 'وصف الخدمة *',
-                        hint: 'أدخل وصف الخدمة المطلوبة',
-                        maxheight: 110.w,
-                        minHeight: 96.w,
-                        controller: _descCtrl,
-                        maxLines: 3,
-                        validator: (v) => (v == null || v.trim().isEmpty) ? 'الحقل مطلوب' : null,
-                      ),
-                      verticalSpace(16),
+              return SingleChildScrollView(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.w),
+                child: Form(
+                  key: _formKey,
+                  child: BlocBuilder<LocationCubit, LocationState>(
+                    builder: (context, state) {
+                      final cubit = context.read<LocationCubit>();
 
-                      // حجم الصهريج
-                      DetailSelector(
-                        title: 'حجم الصهريج *',
-                        widget: DropdownButtonFormField<String>(
-                          value: selectedTankSize,
-                          items: tankSizes.map((e) => DropdownMenuItem(value: e, child: Text(e, style: TextStyles.font16Black500Weight))).toList(),
-                          onChanged: (v) => setState(() => selectedTankSize = v),
-                          decoration: _dec('حدد حجم الصهريج'),
-                          validator: (v) => v == null ? 'الحقل مطلوب' : null,
-                        ),
-                      ),
-                      verticalSpace(16),
-
-                      // نوع المياه
-                      DetailSelector(
-                        title: 'نوع المياه *',
-                        widget: DropdownButtonFormField<String>(
-                          value: selectedWaterType,
-                          items: waterTypes.map((e) => DropdownMenuItem(value: e, child: Text(e, style: TextStyles.font16Black500Weight))).toList(),
-                          onChanged: (v) => setState(() => selectedWaterType = v),
-                          decoration: _dec('حدد نوع المياه'),
-                          validator: (v) => v == null ? 'الحقل مطلوب' : null,
-                        ),
-                      ),
-                      verticalSpace(16),
-
-                      // الخدمات المطلوبة
-                      DetailSelector(
-                        title: 'الخدمات المطلوبة *',
-                        widget: DropdownButtonFormField<String>(
-                          value: selectedReqService,
-                          items: requiredServices.map((e) => DropdownMenuItem(value: e, child: Text(e, style: TextStyles.font16Black500Weight))).toList(),
-                          onChanged: (v) => setState(() => selectedReqService = v),
-                          decoration: _dec('حدد الخدمات المطلوبة'),
-                          validator: (v) => v == null ? 'الحقل مطلوب' : null,
-                        ),
-                      ),
-                      verticalSpace(16),
-
-                      // المنطقة
-                      DetailSelector(
-                        title: 'المنطقة *',
-                        widget: state.regionsLoading
-                            ? const Center(child: CircularProgressIndicator())
-                            : DropdownButtonFormField<Region>(
-                          value: selectedRegion,
-                          items: state.regions.map((r) => DropdownMenuItem(value: r, child: Text(r.nameAr, style: TextStyles.font16Black500Weight))).toList(),
-                          onChanged: (r) {
-                            setState(() {
-                              selectedRegion = r;
-                              selectedCity = null;
-                            });
-                            if (r != null) cubit.loadCities(r.id);
-                          },
-                          decoration: _dec('حدد المنطقة'),
-                          validator: (v) => v == null ? 'الحقل مطلوب' : null,
-                        ),
-                      ),
-                      if (state.regionsError != null) ...[
-                        verticalSpace(8),
-                        Align(alignment: Alignment.centerRight, child: Text(state.regionsError!, style: TextStyles.font14Red500Weight)),
-                      ],
-                      verticalSpace(16),
-
-                      // المدينة
-                      DetailSelector(
-                        title: 'المدينة *',
-                        widget: state.citiesLoading
-                            ? const Center(child: CircularProgressIndicator())
-                            : DropdownButtonFormField<City>(
-                          value: selectedCity,
-                          items: state.cities.map((c) => DropdownMenuItem(value: c, child: Text(c.nameAr, style: TextStyles.font16Black500Weight))).toList(),
-                          onChanged: (c) => setState(() => selectedCity = c),
-                          decoration: _dec('حدد المدينة'),
-                          validator: (v) => v == null ? 'الحقل مطلوب' : null,
-                        ),
-                      ),
-                      if (state.citiesError != null) ...[
-                        verticalSpace(8),
-                        Align(alignment: Alignment.centerRight, child: Text(state.citiesError!, style: TextStyles.font14Red500Weight)),
-                      ],
-                      verticalSpace(16),
-
-                      // رقم الهاتف
-                      SecondaryTextFormField(
-                        label: 'رقم الهاتف *',
-                        hint: 'أدخل رقم الهاتف',
-                        maxheight: 56.w,
-                        minHeight: 56.w,
-                        keyboardType: TextInputType.phone,
-                        controller: _phoneCtrl,
-                        validator: (v) => (v == null || v.trim().isEmpty) ? 'الحقل مطلوب' : null,
-                      ),
-                      verticalSpace(16),
-
-                      // موقع الخدمة
-                      SecondaryTextFormField(
-                        label: 'موقع الخدمة',
-                        hint: 'اختر الموقع على الخريطة أو ابحث',
-                        maxheight: 56.w,
-                        minHeight: 56.w,
-                        controller: _locationCtrl,
-                        onTap: _pickLocationOnMap,
-                        suffexIcon: 'location-primary',
-                      ),
-                      verticalSpace(8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      return Column(
                         children: [
-                          TextButton(onPressed: _pickCurrentLocation, child: const Text('موقعي الحالي')),
-                          if (_pickedLatLng != null) Text('تم تحديد الموقع', style: TextStyles.font12Green400Weight),
-                        ],
-                      ),
-                      verticalSpace(16),
+                          SecondaryTextFormField(
+                            label: 'وصف الخدمة *',
+                            hint: 'أدخل وصف الخدمة المطلوبة',
+                            maxheight: 110.w,
+                            minHeight: 96.w,
+                            controller: _descCtrl,
+                            maxLines: 3,
+                            validator: (v) => (v == null || v.trim().isEmpty) ? 'الحقل مطلوب' : null,
+                          ),
+                          verticalSpace(16),
 
-                      // وقت الخدمة
-                      DetailSelector(
-                        title: 'حدد وقت الخدمة',
-                        widget: Row(
-                          children: [
-                            Expanded(
-                              child: CustomizedChip(
-                                title: 'حالاً',
-                                isSelected: nowSelected,
-                                onTap: () => setState(() => nowSelected = true),
-                              ),
+                          DetailSelector(
+                            title: 'حجم الصهريج *',
+                            widget: DropdownButtonFormField<String>(
+                              value: selectedTankSize,
+                              items: tankSizes.map((e) => DropdownMenuItem(value: e, child: Text(e, style: TextStyles.font16Black500Weight))).toList(),
+                              onChanged: (v) => setState(() => selectedTankSize = v),
+                              decoration: _dec('حدد حجم الصهريج'),
+                              validator: (v) => v == null ? 'الحقل مطلوب' : null,
                             ),
-                            horizontalSpace(16),
-                            Expanded(
-                              child: CustomizedChip(
-                                title: 'لاحقاً',
-                                isSelected: !nowSelected,
-                                onTap: () => setState(() => nowSelected = false),
-                              ),
+                          ),
+                          verticalSpace(16),
+
+                          DetailSelector(
+                            title: 'نوع المياه *',
+                            widget: DropdownButtonFormField<String>(
+                              value: selectedWaterType,
+                              items: waterTypes.map((e) => DropdownMenuItem(value: e, child: Text(e, style: TextStyles.font16Black500Weight))).toList(),
+                              onChanged: (v) => setState(() => selectedWaterType = v),
+                              decoration: _dec('حدد نوع المياه'),
+                              validator: (v) => v == null ? 'الحقل مطلوب' : null,
                             ),
+                          ),
+                          verticalSpace(16),
+
+                          DetailSelector(
+                            title: 'الخدمات المطلوبة *',
+                            widget: DropdownButtonFormField<String>(
+                              value: selectedReqService,
+                              items: requiredServices.map((e) => DropdownMenuItem(value: e, child: Text(e, style: TextStyles.font16Black500Weight))).toList(),
+                              onChanged: (v) => setState(() => selectedReqService = v),
+                              decoration: _dec('حدد الخدمات المطلوبة'),
+                              validator: (v) => v == null ? 'الحقل مطلوب' : null,
+                            ),
+                          ),
+                          verticalSpace(16),
+
+                          DetailSelector(
+                            title: 'المنطقة *',
+                            widget: state.regionsLoading
+                                ? const Center(child: CircularProgressIndicator())
+                                : DropdownButtonFormField<Region>(
+                              value: selectedRegion,
+                              items: state.regions.map((r) => DropdownMenuItem(value: r, child: Text(r.nameAr, style: TextStyles.font16Black500Weight))).toList(),
+                              onChanged: (r) {
+                                setState(() {
+                                  selectedRegion = r;
+                                  selectedCity = null;
+                                });
+                                if (r != null) cubit.loadCities(r.id);
+                              },
+                              decoration: _dec('حدد المنطقة'),
+                              validator: (v) => v == null ? 'الحقل مطلوب' : null,
+                            ),
+                          ),
+                          if (state.regionsError != null) ...[
+                            verticalSpace(8),
+                            Align(alignment: Alignment.centerRight, child: Text(state.regionsError!, style: TextStyles.font14Red500Weight)),
                           ],
-                        ),
-                      ),
-                      verticalSpace(16),
+                          verticalSpace(16),
 
-                      // ملاحظات إضافية
-                      SecondaryTextFormField(
-                        label: 'ملاحظات إضافية',
-                        hint: 'ادخل تفاصيل إضافية للخدمة',
-                        maxheight: 96.w,
-                        minHeight: 96.w,
-                        controller: _notesCtrl,
-                        maxLines: 3,
-                      ),
-                      verticalSpace(16),
+                          DetailSelector(
+                            title: 'المدينة *',
+                            widget: state.citiesLoading
+                                ? const Center(child: CircularProgressIndicator())
+                                : DropdownButtonFormField<City>(
+                              value: selectedCity,
+                              items: state.cities.map((c) => DropdownMenuItem(value: c, child: Text(c.nameAr, style: TextStyles.font16Black500Weight))).toList(),
+                              onChanged: (c) => setState(() => selectedCity = c),
+                              decoration: _dec('حدد المدينة'),
+                              validator: (v) => v == null ? 'الحقل مطلوب' : null,
+                            ),
+                          ),
+                          if (state.citiesError != null) ...[
+                            verticalSpace(8),
+                            Align(alignment: Alignment.centerRight, child: Text(state.citiesError!, style: TextStyles.font14Red500Weight)),
+                          ],
+                          verticalSpace(16),
 
-                      // إرسال الطلب (جمع البيانات فقط)
-                      MyButton(
-                        label: 'إرسال الطلب',
-                        onPressed: () {
-                          FocusScope.of(context).unfocus();
-                          if (_formKey.currentState?.validate() != true) return;
+                          SecondaryTextFormField(
+                            label: 'رقم الهاتف *',
+                            hint: 'أدخل رقم الهاتف',
+                            maxheight: 56.w,
+                            minHeight: 56.w,
+                            keyboardType: TextInputType.phone,
+                            controller: _phoneCtrl,
+                            validator: (v) => (v == null || v.trim().isEmpty) ? 'الحقل مطلوب' : null,
+                          ),
+                          verticalSpace(16),
 
-                          final payload = {
-                            'description': _descCtrl.text.trim(),
-                            'tank_size': selectedTankSize,          // صغر/متوسط/كبير
-                            'water_type': selectedWaterType,        // نوع المياه
-                            'required_service': selectedReqService, // الخدمة المطلوبة
-                            'region_id': selectedRegion?.id,
-                            'city_id': selectedCity?.id,
-                            'phone': _phoneCtrl.text.trim(),
-                            'schedule': nowSelected ? 'now' : 'later',
-                            'notes': _notesCtrl.text.trim(),
-                            'latitude': _pickedLatLng?.latitude,
-                            'longitude': _pickedLatLng?.longitude,
-                          };
+                          SecondaryTextFormField(
+                            label: 'موقع الخدمة',
+                            hint: 'اختر الموقع على الخريطة أو ابحث',
+                            maxheight: 56.w,
+                            minHeight: 56.w,
+                            controller: _locationCtrl,
+                            onTap: _pickLocationOnMap,
+                            suffexIcon: 'location-primary',
+                          ),
+                          verticalSpace(8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              TextButton(onPressed: _pickCurrentLocation, child: const Text('موقعي الحالي')),
+                              if (_pickedLatLng != null) Text('تم تحديد الموقع', style: TextStyles.font12Green400Weight),
+                            ],
+                          ),
+                          verticalSpace(16),
 
-                          debugPrint('Shrej payload: $payload');
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('تم التحقق من البيانات وجاهز للإرسال')),
-                          );
-                        },
-                        height: 52.w,
-                        backgroundColor: ColorsManager.primaryColor,
-                        radius: 12.r,
-                        labelStyle: TextStyles.font16White500Weight,
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
+                          DetailSelector(
+                            title: 'حدد وقت الخدمة',
+                            widget: Row(
+                              children: [
+                                Expanded(
+                                  child: CustomizedChip(
+                                    title: 'حالاً',
+                                    isSelected: nowSelected,
+                                    onTap: () => setState(() => nowSelected = true),
+                                  ),
+                                ),
+                                horizontalSpace(16),
+                                Expanded(
+                                  child: CustomizedChip(
+                                    title: 'لاحقاً',
+                                    isSelected: !nowSelected,
+                                    onTap: () => setState(() => nowSelected = false),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          verticalSpace(16),
+
+                          SecondaryTextFormField(
+                            label: 'ملاحظات إضافية',
+                            hint: 'ادخل تفاصيل إضافية للخدمة',
+                            maxheight: 96.w,
+                            minHeight: 96.w,
+                            controller: _notesCtrl,
+                            maxLines: 3,
+                          ),
+                          verticalSpace(16),
+
+                          MyButton(
+                            label: submitting ? 'جارٍ الإرسال...' : 'إرسال الطلب',
+                            onPressed: submitting
+                                ? null
+                                : () {
+                              FocusScope.of(context).unfocus();
+                              if (_formKey.currentState?.validate() != true) return;
+
+                              if (selectedRegion == null || selectedCity == null || _pickedLatLng == null) {
+                                final m = ScaffoldMessenger.of(context);
+                                m.hideCurrentSnackBar();
+                                m.showSnackBar(const SnackBar(content: Text('الرجاء اختيار المنطقة والمدينة والموقع')));
+                                return;
+                              }
+                              if (selectedTankSize == null || selectedWaterType == null || selectedReqService == null) {
+                                final m = ScaffoldMessenger.of(context);
+                                m.hideCurrentSnackBar();
+                                m.showSnackBar(const SnackBar(content: Text('الرجاء استكمال حقول الصهريج')));
+                                return;
+                              }
+
+                              final extras = <String, dynamic>{
+                                'tank_size': selectedTankSize,
+                                'water_type': selectedWaterType,
+                                'required_service': selectedReqService,
+                              };
+
+                              final req = CreateServiceRequest(
+                                serviceType: 'tanker', // عدّلها لو الباك يستخدم قيمة أخرى
+                                description: _descCtrl.text.trim(),
+                                phone: _phoneCtrl.text.trim(),
+                                scheduleType: nowSelected ? 'now' : 'later',
+                                scheduleTimeIso: null,
+                                notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+                                cityId: selectedCity!.id,
+                                regionId: selectedRegion!.id,
+                                latitude: _pickedLatLng!.latitude,
+                                longitude: _pickedLatLng!.longitude,
+                                extras: extras,
+                              );
+
+                              context.read<ServiceRequestCubit>().create(req);
+                            },
+                            height: 52.w,
+                            backgroundColor: ColorsManager.primaryColor,
+                            radius: 12.r,
+                            labelStyle: TextStyles.font16White500Weight,
+                          ),
+
+                          if (submitting) ...[
+                            verticalSpace(12),
+                            const Center(child: CircularProgressIndicator()),
+                          ],
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ),

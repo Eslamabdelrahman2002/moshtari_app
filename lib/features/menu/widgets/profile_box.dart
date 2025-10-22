@@ -98,7 +98,7 @@ class ProfileBox extends StatelessWidget {
                       child: Row(
                         children: [
                           Text('رابط الاحالة:', style: TextStyles.font10Dark400Grey400Weight),
-                          Text(user.referral_code ?? '', style: TextStyles.font10Dark400Grey400Weight.copyWith(color: ColorsManager.black)),
+                          Text(user.referralCode ?? '', style: TextStyles.font10Dark400Grey400Weight.copyWith(color: ColorsManager.black)),
                           horizontalSpace(4),
                           const MySvg(image: 'copy_icon'),
                         ],

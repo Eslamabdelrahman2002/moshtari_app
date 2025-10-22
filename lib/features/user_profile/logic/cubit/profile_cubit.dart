@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/utils/helpers/cache_helper.dart';
 import '../../data/model/my_ads_model.dart';
 import '../../data/model/my_auctions_model.dart';
 import '../../data/model/user_profile_model.dart';
@@ -18,12 +19,11 @@ class ProfileCubit extends Cubit<ProfileState> {
   final emailController = TextEditingController();
   final phoneController = TextEditingController();
 
-  File? imageFile; // الصورة الجديدة
-  UserProfileModel? user; // بيانات المستخدم
+  File? imageFile;
+  UserProfileModel? user;
   List<MyAdsModel> myAds = [];
   List<MyAuctionModel> myAuctions = [];
 
-  /// جلب بيانات المستخدم من API
   void loadProfile({int page = 1, int limit = 10}) async {
     emit(ProfileLoading());
     try {
@@ -35,6 +35,11 @@ class ProfileCubit extends Cubit<ProfileState> {
       emailController.text = user?.email ?? '';
       phoneController.text = user?.phoneNumber ?? '';
 
+      if (user == null) {
+        emit(const ProfileFailure('فشل في جلب بيانات المستخدم'));
+        return;
+      }
+
       emit(ProfileSuccess(
         user: user!,
         myAds: myAds,
@@ -44,41 +49,38 @@ class ProfileCubit extends Cubit<ProfileState> {
       emit(ProfileFailure(e.toString()));
     }
   }
+
   int? get providerId => user?.provider?.providerId;
 
-  /// تحديث بيانات المستخدم
   Future<void> updateProfile() async {
-    if (formKey.currentState!.validate()) {
-      emit(ProfileUpdateInProgress());
-      try {
-        await _profileRepo.updateUserProfile(
-          username: nameController.text,
-          email: emailController.text,
-          phoneNumber: phoneController.text,
-          profilePicture: imageFile,
-        );
-        emit(ProfileUpdateSuccess());
-        loadProfile(); // إعادة تحميل البيانات بعد التحديث
-      } catch (e) {
-        emit(ProfileUpdateFailure(e.toString()));
-      }
+    if (!formKey.currentState!.validate()) return;
+    emit(ProfileUpdateInProgress());
+    try {
+      await _profileRepo.updateUserProfile(
+        username: nameController.text,
+        email: emailController.text,
+        phoneNumber: phoneController.text,
+        profilePicture: imageFile,
+      );
+      emit(ProfileUpdateSuccess());
+      loadProfile();
+    } catch (e) {
+      emit(ProfileUpdateFailure(e.toString()));
     }
   }
 
-  /// تغيير الصورة المختارة
   Future<void> changeImage(File pickedFile) async {
     imageFile = pickedFile;
     emit(ProfileImageChanged());
   }
 
-  /// تحديث بيانات المستخدم محلياً
   void updateUser(UserProfileModel updatedUser) {
-    if (state is ProfileSuccess) {
-      final currentState = state as ProfileSuccess;
+    final s = state;
+    if (s is ProfileSuccess) {
       emit(ProfileSuccess(
         user: updatedUser,
-        myAds: currentState.myAds,
-        myAuctions: currentState.myAuctions,
+        myAds: s.myAds,
+        myAuctions: s.myAuctions,
       ));
     }
   }
@@ -89,5 +91,16 @@ class ProfileCubit extends Cubit<ProfileState> {
     emailController.dispose();
     phoneController.dispose();
     return super.close();
+  }
+
+  Future<bool> deleteAccount() async {
+    try {
+      await _profileRepo.deleteAccount();
+      await CacheHelper.removeData(key: 'token'); // امسح التوكن
+      return true;
+    } catch (e) {
+      // ممكن تسجّل الخطأ أو تعرضه
+      return false;
+    }
   }
 }

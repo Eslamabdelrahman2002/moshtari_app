@@ -50,7 +50,7 @@ class RealEstateRepo {
   /// Delete Ad
   Future<void> deleteRealEstateAd(int id) async {
     try {
-      await _apiService.delete("${ApiConstants.realEstateAds}/$id");
+      await _apiService.deleteWithBody("${ApiConstants.realEstateAds}/$id");
     } catch (e) {
       throw AppException("Failed to delete ad: $e");
     }

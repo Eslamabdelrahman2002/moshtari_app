@@ -41,11 +41,15 @@ class CarPartAdsCubit extends Cubit<CarPartAdsState> {
   }
 
   Future<void> submit() async {
+    // منع الضغط المزدوج أثناء الإرسال
+    if (state.submitting) return;
+
     debugPrint('[CarPart] submit tapped');
 
+    final needsPrice = state.priceType != 'negotiable';
     if (state.title == null ||
         state.partName == null ||
-        state.price == null ||
+        (needsPrice && state.price == null) ||
         state.priceType.isEmpty) {
       emit(state.copyWith(error: 'يرجى تعبئة الحقول الأساسية لقطع الغيار'));
       emit(state.copyWith(error: null));

@@ -23,7 +23,9 @@ class DinatSectionHeader extends StatelessWidget {
             color: ColorsManager.white,
             child: Row(
               children: [
-                Icon(Icons.arrow_forward_ios,color: ColorsManager.darkGray300,),
+                InkWell(
+                    onTap: ()=>Navigator.pop(context),
+                    child: Icon(Icons.arrow_back_ios,color: ColorsManager.darkGray300,)),
                 Spacer(),
                 Text('طلب الانضمام إلى رحلة حالية', style: TextStyles.font20Black500Weight),
                 Spacer()

@@ -130,9 +130,9 @@ class HomeAdModel {
     } else if (json['region'] is Map && (json['region'] as Map)['name'] != null) {
       loc = (json['region'] as Map)['name'].toString();
     } else if (json['name_ar'] != null) {
-      loc = json['name_ar'].toString();
+      loc = (json['name_ar']).toString();
     } else if (json['location'] != null) {
-      loc = json['location'].toString();
+      loc = (json['location']).toString();
     }
 
     final created = (json['created_at'] ?? DateTime(1970).toIso8601String()).toString();
@@ -158,19 +158,12 @@ class HomeAdModel {
   factory HomeAdModel.fromSection(Map<String, dynamic> json, String sectionKey) {
     int cat = 4;
     switch (sectionKey) {
-      case 'car_ads':
-        cat = 1;
-        break;
-      case 'real_estate_ads':
-        cat = 2;
-        break;
+      case 'car_ads':        cat = 1; break;
+      case 'real_estate_ads':cat = 2; break;
       case 'car_parts_ads':
-      case 'car_part_ads':
-        cat = 3;
-        break;
+      case 'car_part_ads':   cat = 3; break;
       case 'other_ads':
-      default:
-        cat = 4;
+      default:               cat = 4;
     }
 
     final base = HomeAdModel.fromJson(json);
@@ -183,14 +176,10 @@ class HomeAdModel {
   factory HomeAdModel.fromAuction(AuctionsModel auction) {
     int? categoryId;
     switch (auction.auctionType) {
-      case 'car':
-        categoryId = 1; break;
-      case 'real_estate':
-        categoryId = 2; break;
-      case 'car_parts':
-        categoryId = 3; break;
-      default:
-        categoryId = 4;
+      case 'car':         categoryId = 1; break;
+      case 'real_estate': categoryId = 2; break;
+      case 'car_parts':   categoryId = 3; break;
+      default:            categoryId = 4;
     }
 
     return HomeAdModel(
@@ -210,19 +199,27 @@ class HomeAdModel {
     );
   }
 
+  // من المفضلة
   factory HomeAdModel.fromFavorite(FavoriteItemModel favorite) {
-    final details = favorite.details;
+    final d = favorite.details;
     final isAuction = favorite.favoriteType == 'auction';
+    // صور أفضل: image_urls ثم thumbnail
+    final images = (d.imageUrls?.isNotEmpty ?? false)
+        ? d.imageUrls!
+        : (d.thumbnail != null && d.thumbnail!.isNotEmpty ? [d.thumbnail!] : <String>[]);
+
+    final title = (d.title?.trim().isNotEmpty ?? false) ? d.title!.trim() : 'No Title';
+
     return HomeAdModel(
       id: favorite.favoriteId,
       auctionId: isAuction ? favorite.favoriteId : null,
-      title: details.title ?? 'No Title',
-      price: isAuction ? 'مزاد' : details.price,
-      imageUrls: details.imageUrls ?? [],
-      createdAt: details.createdAt ?? DateTime(1970).toIso8601String(),
-      location: details.location ?? 'Unknown Location',
-      username: details.username ?? 'Unknown User',
-      phoneNumber: details.phoneNumber,
+      title: title,
+      price: isAuction ? 'مزاد' : d.price,
+      imageUrls: images,
+      createdAt: d.createdAt ?? DateTime(1970).toIso8601String(),
+      location: d.location ?? 'Unknown Location',
+      username: d.username ?? 'Unknown User',
+      phoneNumber: d.phoneNumber,
       auctionDisplayType: isAuction ? 'single' : null,
       categoryId: null,
       condition: null,
@@ -282,15 +279,9 @@ class HomeDataModel {
     final carPartsAds   = tag(carPartKey);
     final otherAds      = tag('other_ads');
 
-    final auctions = parseList<AuctionsModel>(
-      (json['auctions'] as List? ?? []), (item) => AuctionsModel.fromJson(item),
-    );
-    final categories = parseList<CategoryModel>(
-      (json['categories'] as List? ?? []), (item) => CategoryModel.fromJson(item),
-    );
-    final banners = parseList<BannerModel>(
-      (json['banners'] as List? ?? []), (item) => BannerModel.fromJson(item),
-    );
+    final auctions = parseList<AuctionsModel>((json['auctions'] as List? ?? []), (item) => AuctionsModel.fromJson(item));
+    final categories = parseList<CategoryModel>((json['categories'] as List? ?? []), (item) => CategoryModel.fromJson(item));
+    final banners = parseList<BannerModel>((json['banners'] as List? ?? []), (item) => BannerModel.fromJson(item));
 
     return HomeDataModel(
       carAds: carAds,

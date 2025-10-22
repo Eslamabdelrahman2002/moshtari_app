@@ -6,7 +6,7 @@ class ProviderInfo {
   final String? cityNameEn;
   final String? serviceType;
 
-  ProviderInfo({
+  const ProviderInfo({
     required this.providerId,
     this.status,
     this.cityId,
@@ -15,21 +15,20 @@ class ProviderInfo {
     this.serviceType,
   });
 
-  factory ProviderInfo.fromJson(Map<String, dynamic> j) {
-    int _asInt(dynamic v) {
-      if (v is int) return v;
-      return int.tryParse('$v') ?? 0;
-    }
-
-    return ProviderInfo(
-      providerId: _asInt(j['provider_id']),
-      status: (j['status'] ?? '').toString(),
-      cityId: _asInt(j['city_id']),
-      cityNameAr: (j['city_name_ar'] ?? '').toString(),
-      cityNameEn: (j['city_name_en'] ?? '').toString(),
-      serviceType: (j['service_type'] ?? '').toString(),
-    );
+  static int? _asIntOrNull(dynamic v) {
+    if (v == null) return null;
+    if (v is num) return v.toInt();
+    return int.tryParse(v.toString());
   }
+
+  factory ProviderInfo.fromJson(Map<String, dynamic> j) => ProviderInfo(
+    providerId: _asIntOrNull(j['provider_id']) ?? 0,
+    status: j['status']?.toString(),
+    cityId: _asIntOrNull(j['city_id']),
+    cityNameAr: j['city_name_ar']?.toString(),
+    cityNameEn: j['city_name_en']?.toString(),
+    serviceType: j['service_type']?.toString(),
+  );
 }
 
 class UserProfileModel {
@@ -38,35 +37,47 @@ class UserProfileModel {
   final String? email;
   final String? phoneNumber;
   final String? profilePictureUrl;
-  final bool? isVerified;
-  final String? referral_code;
-
-  // NEW
+  final bool isVerified;
+  final String? referralCode;
   final ProviderInfo? provider;
+  final dynamic promoter; // حسب الـ API قد يكون null أو كائن لاحقًا
 
-  UserProfileModel({
+  const UserProfileModel({
     required this.userId,
     this.username,
     this.email,
     this.phoneNumber,
     this.profilePictureUrl,
-    this.isVerified,
-    this.referral_code,
-    this.provider, // NEW
+    this.isVerified = false,
+    this.referralCode,
+    this.provider,
+    this.promoter,
   });
 
-  factory UserProfileModel.fromJson(Map<String, dynamic> json) {
-    return UserProfileModel(
-      userId: json['user_id'] is int ? json['user_id'] : int.tryParse('${json['user_id']}') ?? 0,
-      username: json['username'],
-      email: json['email'],
-      phoneNumber: json['phone_number'],
-      profilePictureUrl: json['profile_picture_url'],
-      isVerified: json['is_verified'] ?? false,
-      referral_code: json['referral_code'],
-      provider: json['provider'] is Map<String, dynamic>
-          ? ProviderInfo.fromJson(json['provider'])
-          : null,
-    );
+  static int _asInt(dynamic v) {
+    if (v == null) return 0;
+    if (v is num) return v.toInt();
+    return int.tryParse(v.toString()) ?? 0;
   }
+
+  static bool _asBool(dynamic v) {
+    if (v is bool) return v;
+    if (v is num) return v != 0;
+    if (v is String) return v.toLowerCase() == 'true' || v == '1';
+    return false;
+  }
+
+  factory UserProfileModel.fromJson(Map<String, dynamic> json) => UserProfileModel(
+    userId: _asInt(json['user_id']),
+    username: json['username']?.toString(),
+    email: json['email']?.toString(),
+    phoneNumber: json['phone_number']?.toString(),
+    profilePictureUrl: json['profile_picture_url']?.toString(),
+    isVerified: _asBool(json['is_verified']),
+    referralCode: json['referral_code']?.toString(),
+    provider: json['provider'] is Map<String, dynamic>
+        ? ProviderInfo.fromJson(json['provider'])
+        : null,
+    promoter: json['promoter'],
+  );
 }

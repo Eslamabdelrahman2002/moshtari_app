@@ -13,69 +13,41 @@ class PhotoPicker {
 
   /// Picks photos and videos from the gallery with the given constraints.
   Future<List<File>> pickMedia() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.media,
+    final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
+      allowCompression: false, // بدون ضغط
+      type: FileType.custom,
+      allowedExtensions: ['jpg', 'jpeg', 'png', 'mp4'],
+      withData: false,
     );
 
-    if (result == null) {
-      return [];
-    }
+    if (result == null) return [];
 
-    List<File> files = [];
+    final files = <File>[];
 
-    if (!Platform.isIOS) {
-      for (var file in result.files) {
-        if (file.path != null &&
-            !_selectedFiles.contains(p.basename(file.path!))) {
-          File fileObj = File(file.path!);
-          if (await fileObj.length() <= maxSizeInBytes) {
-            _selectedFiles.add(p.basename(file.path!));
-            files.add(fileObj);
-          } else {
-            if (context.mounted) {
-              context.showErrorSnackbar(
-                'حجم الملف يجب ان يكون اقل من 2 ميغا بايت',
-              );
-            }
-          }
-        } else {
-          if (context.mounted) {
-            context.showErrorSnackbar('الملف موجود مسبقاً');
-          }
+    for (final file in result.files) {
+      final path = file.path;
+      if (path == null) continue;
+
+      // مفتاح التمييز لمنع التكرار (مراعاة اختلاف iOS)
+      final key = Platform.isIOS
+          ? p.basename(path).extractFileNamePartFromIOS()
+          : p.basename(path);
+
+      if (_selectedFiles.contains(key)) {
+        if (context.mounted) {
+          context.showErrorSnackbar('الملف موجود مسبقاً');
         }
+        continue;
       }
-    }
 
-    if (Platform.isIOS) {
-      for (var file in result.files) {
-        if (file.path != null &&
-            !_selectedFiles.contains(
-              p.basename(file.path!).extractFileNamePartFromIOS(),
-            )) {
-          File fileObj = File(file.path!);
-          if (await fileObj.length() <= maxSizeInBytes) {
-            _selectedFiles.add(
-              p.basename(file.path!).extractFileNamePartFromIOS(),
-            );
-            files.add(fileObj);
-          } else {
-            if (context.mounted) {
-              context.showErrorSnackbar(
-                'حجم الملف يجب ان يكون اقل من 2 ميغا بايت',
-              );
-            }
-          }
-        } else {
-          if (context.mounted) {
-            context.showErrorSnackbar('الملف موجود مسبقاً');
-          }
-        }
-      }
+      _selectedFiles.add(key);
+      files.add(File(path));
     }
 
     return files;
   }
+
 
   /// Clears the list of selected files.
   static void clearSelectedFiles() {

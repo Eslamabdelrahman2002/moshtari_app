@@ -1,3 +1,5 @@
+// lib/features/product_details/ui/widgets/publish_entry_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mushtary/core/router/routes.dart';
@@ -37,7 +39,7 @@ class PublishEntryScreen extends StatelessWidget {
               ),
               SizedBox(height: 12.h),
 
-              // كرت بدء مزاد
+              // كرت بدء مزاد (يستخدم الديالوج لتحديد النوع أولاً)
               _ActionCard(
                 title: 'بدء مزاد',
                 subtitle: 'إدارة مزاد بسيط أو متعدد العناصر',
@@ -51,16 +53,18 @@ class PublishEntryScreen extends StatelessWidget {
                   // 2) اختر نوع المزاد (فردي/متعدد)
                   await showBidTypeDialog(
                     context,
-                    initial: 'single', // تقدر تغيّرها لـ 'multiple' لو حاب
+                    initial: 'single',
                     onContinue: (type) {
                       if (selectedCategory == 'cars') {
                         Navigator.of(context).pushNamed(
                           Routes.createCarAuctionScreen,
+                          // تمرير نوع المزاد المختار: single أو multiple
                           arguments: {'auctionType': type},
                         );
                       } else if (selectedCategory == 'real_estate') {
                         Navigator.of(context).pushNamed(
                           Routes.createRealEstateAuctionScreen,
+                          // تمرير نوع المزاد المختار: single أو multiple
                           arguments: {'auctionType': type},
                         );
                       }

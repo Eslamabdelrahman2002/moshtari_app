@@ -27,9 +27,9 @@ class WalletScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('المحفظة'),
+        title:  Text('المحفظة',style: TextStyles.font20Black500Weight,),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
+          icon:  Icon(Icons.arrow_back_ios,color: ColorsManager.darkGray300,),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),

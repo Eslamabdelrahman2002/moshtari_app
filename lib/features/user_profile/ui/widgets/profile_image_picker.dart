@@ -1,3 +1,5 @@
+// lib/features/user_profile/ui/widgets/profile_image_picker.dart
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -33,15 +35,21 @@ class _ProfileImagePickerState extends State<ProfileImagePicker> {
     final user = widget.profileCubit.user;
     final imageFile = widget.profileCubit.imageFile;
 
-    ImageProvider profileImage;
-
+    // 1. تحديد الـ ImageProvider للصور الفعلية فقط.
+    final ImageProvider<Object>? profileImage;
     if (imageFile != null) {
       profileImage = FileImage(imageFile);
     } else if (user?.profilePictureUrl != null && user!.profilePictureUrl!.isNotEmpty) {
       profileImage = CachedNetworkImageProvider(user.profilePictureUrl!);
     } else {
-      profileImage = const AssetImage('assets/images/prof.png');
+      profileImage = null; // لا يوجد صورة، نعتمد على الـ Child/Color
     }
+
+    // 2. تحديد ويدجت الـ Fallback (MySvg)
+    final Widget? fallbackChild = (profileImage == null)
+        ? MySvg(image: "profile", height: 100.w, color: ColorsManager.primary400) // حجم ولون مناسبين
+        : null;
+
 
     return Center(
       child: GestureDetector(
@@ -52,17 +60,27 @@ class _ProfileImagePickerState extends State<ProfileImagePicker> {
             CircleAvatar(
               radius: 50.w,
               backgroundColor: ColorsManager.lightGrey,
-              backgroundImage: profileImage,
+              backgroundImage: profileImage, // قد تكون null الآن
+              child: fallbackChild, // 💡 عرض الـ MySvg هنا في حالة الـ Fallback
             ),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                MySvg(image: "edit", height: 30, color: ColorsManager.white),
-                Text(
-                  'تعديل الصورة',
-                  style: TextStyle(fontSize: 14.sp, color: ColorsManager.white),
-                ),
-              ],
+            // أيقونة التعديل تكون فوق الصورة/الفولباك
+            Container(
+              width: 100.w,
+              height: 100.w,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.black54, // طبقة داكنة فوق الصورة
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  MySvg(image: "edit", height: 30, color: ColorsManager.white),
+                  Text(
+                    'تعديل الصورة',
+                    style: TextStyle(fontSize: 14.sp, color: ColorsManager.white),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

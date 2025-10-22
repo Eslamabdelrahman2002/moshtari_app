@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mushtary/core/theme/colors.dart';
+import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
 import 'package:mushtary/core/widgets/primary/my_svg.dart';
 import 'package:mushtary/core/widgets/primary/primary_button.dart';
@@ -26,9 +27,9 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('تعديل الملف الشخصي'),
+        title:  Text('تعديل الملف الشخصي',style:TextStyles.font20Black500Weight,),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon:  Icon(Icons.arrow_back_ios_new,color: ColorsManager.darkGray300,),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),

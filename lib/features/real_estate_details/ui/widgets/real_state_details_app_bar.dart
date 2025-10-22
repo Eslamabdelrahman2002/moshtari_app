@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/widgets/primary/my_svg.dart';
 
 class RealStateDetailsAppBar extends StatelessWidget {
@@ -16,6 +17,9 @@ class RealStateDetailsAppBar extends StatelessWidget {
       elevation: 0,
       backgroundColor: Colors.white,
       surfaceTintColor: Colors.white,
+      leading: IconButton(
+          onPressed: ()=>Navigator.pop(context),
+          icon: Icon(Icons.arrow_back_ios_new,color:ColorsManager.darkGray300)),
     );
   }
 }

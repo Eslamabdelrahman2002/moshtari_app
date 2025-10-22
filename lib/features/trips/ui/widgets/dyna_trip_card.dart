@@ -65,20 +65,20 @@ class DynaTripCard extends StatelessWidget {
           ),
           SizedBox(height: 12.h),
 
-          Align(
-            alignment: Alignment.centerRight,
-            child: SizedBox(
-              height: 36.h,
-              child: OutlinedButton(
-                onPressed: onDetails,
-                style: OutlinedButton.styleFrom(
-                  backgroundColor:ColorsManager.primaryColor,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
-                ),
-                child: Text('عرض التفاصيل', style: TextStyle(color: ColorsManager.white, fontWeight: FontWeight.w600)),
-              ),
-            ),
-          ),
+          // Align(
+          //   alignment: Alignment.centerRight,
+          //   child: SizedBox(
+          //     height: 36.h,
+          //     child: OutlinedButton(
+          //       onPressed: onDetails,
+          //       style: OutlinedButton.styleFrom(
+          //         backgroundColor:ColorsManager.primaryColor,
+          //         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+          //       ),
+          //       child: Text('عرض التفاصيل', style: TextStyle(color: ColorsManager.white, fontWeight: FontWeight.w600)),
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );

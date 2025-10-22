@@ -70,7 +70,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         curve: Curves.easeOut,
       );
     } else {
-      // لو تحب يرجع للشاشة السابقة في النافجيشن:
+      // في أول صفحة: ننتقل مباشرة لشاشة الدخول
+      _navigateToLogin();
+      // أو لو حاب ترجع خطوة للوراء في النافيجيشن:
       // Navigator.maybePop(context);
     }
   }
@@ -83,7 +85,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Scaffold(
       body: Column(
         children: [
-          // الهيدر (خلفية زرقاء + صورة الموبايل مثبتة أسفل)
+          // الهيدر (خلفية + PageView + أزرار فوقه)
           SizedBox(
             height: headerH,
             width: double.infinity,
@@ -103,32 +105,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                 ),
 
-                // زر "تخطي"
-                Positioned(
-                  top: 8.h,
-                  left: 20.w,
-                  child: SafeArea(
-                    child: TextButton(
-                      onPressed: _navigateToLogin,
-                      child: Text('تخطي', style: TextStyles.font16White500Weight),
-                    ),
-                  ),
-                ),
-
-                // زر السهم للرجوع لصفحة قبلها
-                Positioned(
-                  top: 8.h,
-                  right: 20.w,
-                  child: SafeArea(
-                    child: IconButton(
-                      icon: Icon(Icons.keyboard_arrow_right,
-                          color: Colors.white, size: 30.w),
-                      onPressed: _goPrev,
-                    ),
-                  ),
-                ),
-
-                // صورة الموبايل كبيرة ومثبتة أسفل
+                // ضع الـ PageView قبل الأزرار ليكون "تحت" الأزرار في الـ Stack
                 Positioned.fill(
                   child: PageView.builder(
                     controller: _pageController,
@@ -146,6 +123,31 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         ),
                       );
                     },
+                  ),
+                ),
+
+                // زر "تخطي" (يوضع بعد الـ PageView ليكون فوقه ويستقبل اللمس)
+                Positioned(
+                  top: 8.h,
+                  left: 20.w,
+                  child: SafeArea(
+                    child: TextButton(
+                      onPressed: _navigateToLogin,
+                      child: Text('تخطي', style: TextStyles.font16White500Weight),
+                    ),
+                  ),
+                ),
+
+                // زر السهم للرجوع (يوضع بعد الـ PageView ليكون فوقه)
+                Positioned(
+                  top: 8.h,
+                  right: 20.w,
+                  child: SafeArea(
+                    child: IconButton(
+                      icon: Icon(Icons.keyboard_arrow_right,
+                          color: Colors.white, size: 30.w),
+                      onPressed: _goPrev,
+                    ),
                   ),
                 ),
               ],
@@ -171,11 +173,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         highlightStyle: TextStyles.font24Yellow700Weight,
                         underlineAsset: 'onboadring_underline',
                         underlineHeight: 12,
-                        underlineGap: 8, // ابعاد العلامة شوية (زد/قلّل الرقم)
+                        underlineGap: 8,
                       ),
-
                       verticalSpace(16.h),
-
                       // الوصف
                       Text(
                         _onboardingData[_currentPage].description,
@@ -315,13 +315,13 @@ class TitleWithSvgUnderline extends StatelessWidget {
 
               // الخط الأصفر: أبعدناه بمقدار underlineGap
               PositionedDirectional(
-                start: startX,                           // من اليمين في RTL
+                start: startX, // من اليمين في RTL
                 bottom: -(underlineHeight * 0.45 + underlineGap),
                 child: SizedBox(
                   width: underlineW,
                   height: underlineHeight,
                   child: MySvg(
-                    image: underlineAsset,               // تأكد من المسار داخل MySvg
+                    image: underlineAsset, // تأكد من المسار داخل MySvg
                   ),
                 ),
               ),

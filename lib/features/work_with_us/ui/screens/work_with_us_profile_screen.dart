@@ -1,3 +1,5 @@
+// lib/features/work_with_us/ui/screens/work_with_us_profile_screen.dart
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -51,7 +53,9 @@ class WorkWithUsProfileScreen extends StatelessWidget {
           builder: (context, pState) {
             if (pState.loading) return const Center(child: CircularProgressIndicator());
             if (pState.error != null) return Center(child: Text(pState.error!));
-            final data = pState.data;
+
+            // 💡 الآن data هو PromoterProfileResponse
+            final PromoterProfileResponse? data = pState.data;
             if (data == null) return const Center(child: Text('لا توجد بيانات'));
 
             return SingleChildScrollView(
@@ -60,8 +64,9 @@ class WorkWithUsProfileScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _HeaderCard(
-                    profile: data.profile,
-                    countAccounts: data.countAccount,
+                    // ✅ الوصول إلى البيانات عبر data.data.profile
+                    profile: data.data.profile,
+                    countAccounts: data.data.countAccount,
                     totalEarnings: 350, // UI placeholder
                   ),
                   verticalSpace(12),
@@ -355,22 +360,7 @@ class _ExhibitionCardV2 extends StatelessWidget {
                     ),
                   ],
                 ),
-                SizedBox(height: 10.h),
-                SizedBox(
-                  height: 36.h,
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () {
-                      // TODO: إضافة إعلان سريع
-                    },
-                    style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
-                      backgroundColor: ColorsManager.primary100,
-                      padding: EdgeInsets.symmetric(horizontal: 16.w),
-                    ),
-                    child: Text('إضافة إعلان سريع', style: TextStyle(color: ColorsManager.primaryColor, fontWeight: FontWeight.w500)),
-                  ),
-                ),
+
               ],
             ),
           ),

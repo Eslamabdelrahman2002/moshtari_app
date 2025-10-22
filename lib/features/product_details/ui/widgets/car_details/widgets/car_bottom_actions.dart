@@ -63,16 +63,34 @@ class CarBottomActions extends StatelessWidget {
         children: [
           // 1. زر المساومة (Expanded)
           Expanded(
-            child: ElevatedButton.icon(
-              onPressed: onAddBid, // ✅ ربط بـ onAddBid
-              style: ElevatedButton.styleFrom(
-                backgroundColor: ColorsManager.primary400,
-                minimumSize: Size.fromHeight(48.h),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-                elevation: 0,
+            child: Container(
+              // ✅ الحاوية لإضافة الحدود
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(
+                  color: ColorsManager.primaryColor, // 🎨 لون الحدود
+                  width: 1.5,
+                ),
               ),
-              icon: const Icon(Icons.add, color: Colors.white),
-              label: Text('قم بالمزايدة', style: TextStyles.font14White500Weight),
+              child: ElevatedButton.icon(
+                onPressed: onAddBid, // ✅ ربط بـ onAddBid
+                style: ElevatedButton.styleFrom(
+                  // إزالة الحدود الداخلية للاعتماد على حدود الـ Container
+                  backgroundColor: ColorsManager.white,
+                  minimumSize: Size.fromHeight(48.h),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                  elevation: 0,
+                  // إزالة أي حشوة قد تؤثر على مظهر الحدود
+                  padding: EdgeInsets.zero,
+                ),
+                icon: Icon(Icons.add, color: ColorsManager.primaryColor),
+                label: Text(
+                  'أضف سومتك',
+                  style: TextStyles.font14White500Weight.copyWith(
+                    color: ColorsManager.primaryColor,
+                  ),
+                ),
+              ),
             ),
           ),
           horizontalSpace(16),

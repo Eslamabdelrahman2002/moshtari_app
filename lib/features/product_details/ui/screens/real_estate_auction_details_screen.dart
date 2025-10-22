@@ -401,6 +401,7 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
         BlocProvider<FavoritesCubit>(create: (_) => getIt<FavoritesCubit>()..fetchFavorites()),
       ],
       child: Scaffold(
+
         body: SafeArea(
           child: BlocBuilder<RealEstateAuctionDetailsCubit, RealEstateAuctionDetailsState>(
             builder: (context, state) {

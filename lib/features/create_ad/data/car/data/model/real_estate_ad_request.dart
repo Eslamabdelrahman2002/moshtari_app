@@ -37,7 +37,7 @@ class RealEstateAdRequest {
     required this.description,
     required this.price,
     required this.priceType,
-    this.categoryId = 2, // ✅ تم التعديل إلى 2 (فئة العقارات)
+    this.categoryId = 3, // ✅ تم التعديل إلى 2 (فئة العقارات)
     required this.cityId,
     required this.regionId,
     required this.latitude,

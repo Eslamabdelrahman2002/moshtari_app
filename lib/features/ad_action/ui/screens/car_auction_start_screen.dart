@@ -1,4 +1,3 @@
-// lib/features/ad_action/ui/screens/car_auction_start_screen.dart
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -25,7 +24,6 @@ import '../logic/cubit/car_auction_start_cubit.dart';
 import '../widgets/auction_ui_parts.dart';
 import '../widgets/car_step_classify.dart';
 
-
 class CarAuctionStartScreen extends StatefulWidget {
   const CarAuctionStartScreen({super.key});
 
@@ -35,28 +33,25 @@ class CarAuctionStartScreen extends StatefulWidget {
 
 class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
   final ImagePicker _picker = ImagePicker();
-  bool _isPickerOpen = false; // حارس لمنع already_active
+  bool _isPickerOpen = false;
 
   int _step = 0;
+  final PageController _pageController = PageController();
 
-  // هيدر الخطوات
   final List<String> _stepLabels = const [
     'حدد التصنيف',
     'تفاصيل متقدمة',
     'معلومات العرض',
   ];
 
-  // Step 0 (تصنيف السيارة)
   final _title = TextEditingController();
   final _desc = TextEditingController();
-  final _carType = TextEditingController();  // اسم الماركة (عرض)
-  final _carModel = TextEditingController(); // اسم الموديل (عرض)
+  final _carType = TextEditingController();
+  final _carModel = TextEditingController();
 
-  // مُحددات الكتالوج (IDs)
   CarType? _selectedBrand;
   CarModel? _selectedModel;
 
-  // Step 1 (تفاصيل متقدمة) - قوائم
   final _color = TextEditingController();
   final _bodyType = TextEditingController();
   final _year = TextEditingController();
@@ -66,32 +61,76 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
   final _driveType = TextEditingController();
   final _descAdv = TextEditingController();
 
-  // Step 2 (تفاصيل المزاد)
   final _startDate = TextEditingController();
   final _endDate = TextEditingController();
 
-  // أسعار وخطوة المزايدة
   final _startPrice = TextEditingController();
   final _hiddenLimit = TextEditingController();
   final _bidStep = TextEditingController();
   final _minBid = TextEditingController();
 
   bool _autoApproval = false;
-  String _auctionType = 'single'; // single | multiple
+  String _auctionType = 'single';
 
-  // وسائط
   File? _thumbnail;
   final List<File> _images = [];
   final List<File> _pdfs = [];
 
-  // عناصر المزاد (في الوضع المتعدد)
   final List<Map<String, dynamic>> _carItems = [];
 
-  // وضع التحرير
   int? _editingIndex;
   bool get _isEditingItem => _editingIndex != null;
 
   bool _argsApplied = false;
+
+  // ===================== Helpers (Arabic normalization) =====================
+  // شيل أي نص بين أقواس من نوع الدفع: "دفع كلي (AWD)" -> "دفع كلي"
+  String _stripParens(String s) => s.replaceAll(RegExp(r'\s*\([^)]*\)'), '').trim();
+
+  // يحول "3.0 لتر" أو "4.0 لتر+" إلى "3.0" (كنص)
+  String _engineCapacityToString(String text) {
+    final s = _toAsciiDigits(text).replaceAll('+', '');
+    final m = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(s);
+    return m == null ? '' : m.group(1)!;
+  }
+
+  // ===================== Navigation =====================
+  void _goToStep(int i, {bool animate = true}) {
+    if (i < 0 || i > 2) return;
+    if (mounted) setState(() => _step = i);
+    if (animate && _pageController.hasClients) {
+      _pageController.animateToPage(i, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+    }
+  }
+
+  // ===================== Error extraction =====================
+  String _extractErrorDetails(String rawError) {
+    try {
+      final jsonStart = rawError.indexOf("Response Text:");
+      String jsonString = rawError;
+      if (jsonStart != -1) {
+        jsonString = rawError.substring(jsonStart + "Response Text:".length).trim();
+      }
+      final serverJson = jsonDecode(jsonString);
+      String primaryMsg = serverJson['message']?.toString() ?? 'تعذر إنشاء المزاد';
+      final details = <String>[];
+
+      final errors = serverJson['errors'];
+      if (errors is Map) {
+        errors.forEach((k, v) {
+          if (v is List) details.add('$k: ${v.join(', ')}');
+          else if (v != null) details.add('$k: $v');
+        });
+      }
+
+      if (details.isNotEmpty) {
+        return '$primaryMsg:\n\nالتفاصيل:\n- ${details.join('\n- ')}';
+      }
+      return primaryMsg;
+    } catch (_) {
+      return 'تعذر إنشاء المزاد. ${rawError.contains('DioException') ? 'الرجاء التحقق من المدخلات أو الاتصال.' : rawError}';
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -109,6 +148,7 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
 
   @override
   void dispose() {
+    _pageController.dispose();
     _title.dispose();
     _desc.dispose();
     _carType.dispose();
@@ -206,15 +246,33 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
     for (var i = 0; i < eastern.length; i++) {
       s = s.replaceAll(eastern[i], western[i]);
     }
-    s = s.replaceAll('٬', '').replaceAll(',', '');
-    s = s.replaceAll('٫', '.').replaceAll('،', '.');
-    s = s.replaceAll(RegExp(r'\s+'), '');
+    s = s.replaceAll('٬', '').replaceAll(',', '').replaceAll('،', '');
+    s = s.replaceAll('٫', '.');
+    s = s.replaceAll(RegExp(r'\s+'), ' ');
     return s;
   }
 
   num _parseNumSafe(String input) {
-    final txt = _toAsciiDigits(input);
+    final txt = _toAsciiDigits(input).replaceAll(' ', '');
     return num.tryParse(txt) ?? 0;
+  }
+
+  // يستخرج أول رقم صحيح من نص (للمدى "50,000 - 100,000 كم" -> 50000)
+  int _normalizeKilometersToInt(String text) {
+    final s = _toAsciiDigits(text);
+    final match = RegExp(r'(\d+(?:\.\d+)?)').allMatches(s).toList();
+    if (match.isEmpty) return 0;
+    final first = match.first.group(1) ?? '0';
+    final intPart = first.split('.').first;
+    return int.tryParse(intPart) ?? 0;
+  }
+
+  // (احتفظنا بها لو احتجناها في التحقق)
+  double _normalizeEngineCapacityLiters(String text) {
+    final s = _toAsciiDigits(text).replaceAll('+', '');
+    final m = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(s);
+    if (m == null) return 0;
+    return double.tryParse(m.group(1)!) ?? 0;
   }
 
   bool _validateTimes() {
@@ -252,22 +310,110 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
     return true;
   }
 
-  // ===================== بناء/إدارة العناصر =====================
+  // ===================== Validation =====================
+  bool _validateVehicleRequiredFields() {
+    final missing = <String>[];
+
+    if (_selectedBrand == null) missing.add('الماركة');
+    if (_selectedModel == null) missing.add('الموديل');
+    if (_year.text.trim().isEmpty) missing.add('سنة الصنع');
+    if (_color.text.trim().isEmpty) missing.add('اللون');
+    if (_bodyType.text.trim().isEmpty) missing.add('هيكل المركبة');
+    if (_mileage.text.trim().isEmpty) missing.add('عدد الكيلومترات');
+    if (_engineCapacity.text.trim().isEmpty) missing.add('سعة المحرك');
+    if (_cylinders.text.trim().isEmpty) missing.add('عدد السلندرات');
+    if (_driveType.text.trim().isEmpty) missing.add('نوع الدفع');
+    if (_descAdv.text.trim().isEmpty) missing.add('وصف المركبة');
+
+    if (missing.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('أكمل الحقول التالية: ${missing.join('، ')}')),
+      );
+      return false;
+    }
+
+    final invalid = <String>[];
+    final y = int.tryParse(_year.text.trim()) ?? 0;
+    final nowY = DateTime.now().year + 1;
+    if (y < 1950 || y > nowY) invalid.add('سنة الصنع');
+
+    final km = _normalizeKilometersToInt(_mileage.text.trim());
+    if (km <= 0) invalid.add('عدد الكيلومترات');
+
+    final liters = _normalizeEngineCapacityLiters(_engineCapacity.text.trim());
+    if (liters <= 0) invalid.add('سعة المحرك');
+
+    final cyl = int.tryParse(_cylinders.text.trim()) ?? 0;
+    if (cyl <= 0) invalid.add('عدد السلندرات');
+
+    if (invalid.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('حقول غير صالحة: ${invalid.join('، ')}')),
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  // ===================== Building/Managing Items =====================
+  // ملاحظة: نخزّن قيم عربية للاستهلاك داخل الواجهة، ونحوّل لصيغة الـ API عند الإرسال.
   Map<String, dynamic> _buildCurrentCarItem() {
+    final yearVal = int.tryParse(_year.text.trim()) ?? 0;
+    final kmVal = _normalizeKilometersToInt(_mileage.text.trim());
+    final engineStr = _engineCapacityToString(_engineCapacity.text.trim());
+    final cylindersVal = int.tryParse(_cylinders.text.trim()) ?? 0;
+
+    final colorAr = _color.text.trim();                // عربي
+    final bodyAr = _bodyType.text.trim();              // عربي
+    final driveAr = _stripParens(_driveType.text.trim()); // عربي بدون الأقواس
+
     return {
-      if (_selectedBrand != null) 'car_type_id': _selectedBrand!.id,
-      if (_selectedModel != null) 'car_model_id': _selectedModel!.id,
-      'make': _selectedBrand?.name ?? _carType.text.trim(),
-      'model': _selectedModel?.displayName ?? _carModel.text.trim(),
-      'year': int.tryParse(_year.text.trim()),
-      'color': _color.text.trim(),
-      'body_type': _bodyType.text.trim(),
-      'mileage': _mileage.text.trim(),
-      'engine_capacity': _engineCapacity.text.trim(),
-      'cylinders': _cylinders.text.trim(),
-      'drive_type': _driveType.text.trim(),
+      if (_selectedBrand != null) 'brand_id': _selectedBrand!.id,           // int (نحوّلها نص عند الإرسال)
+      if (_selectedModel != null) 'model_id': _selectedModel!.id,           // int (نحوّلها نص عند الإرسال)
+      'make': _selectedBrand?.name ?? _carType.text.trim(),                 // للعرض فقط
+      'model': _selectedModel?.displayName ?? _carModel.text.trim(),        // للعرض فقط
+      'year': yearVal,                    // int
+      'color': colorAr,                   // عربي
+      'body_type': bodyAr,                // عربي
+      'kilometers': kmVal,                // int
+      'engine_capacity': engineStr,       // "2.4"
+      'cylinders': cylindersVal,          // int
+      'drivetrain': driveAr,              // عربي
       'description': _descAdv.text.trim(),
     };
+  }
+
+  // يبني عنصر الـ API من عنصر الواجهة، ويضيف أسعار/تواريخ العنصر
+  Map<String, dynamic> _toApiItem(
+      Map<String, dynamic> it, {
+        required num startPrice,
+        required num hiddenLimit,
+        String? itemStartDate,
+        required String itemEndDate,
+      }) {
+    final m = <String, dynamic>{
+      'brand_id': it['brand_id']?.toString(),
+      'model_id': it['model_id']?.toString(),
+      'year': it['year'],
+      'color': it['color'],
+      'body_type': it['body_type'],
+      'title': _title.text.trim(), // عنوان للعنصر
+      'kilometers': it['kilometers'],
+      'engine_capacity': it['engine_capacity']?.toString(), // كنص "2.4"
+      'cylinders': it['cylinders'],
+      'drivetrain': it['drivetrain'],
+      'specs': 'خليجي', // مؤقتًا
+      'description': it['description'],
+      'starting_price': startPrice,
+      'hidden_min_price': hiddenLimit,
+      if (itemStartDate != null && itemStartDate.trim().isNotEmpty) 'start_date': itemStartDate.trim(),
+      'end_date': itemEndDate.trim(),
+    };
+
+    // إزالة أي مفاتيح ناقصة (null) حتى لا يرفضها السيرفر
+    m.removeWhere((k, v) => v == null || (v is String && v.trim().isEmpty));
+    return m;
   }
 
   void _clearCarItemFields() {
@@ -287,13 +433,7 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
 
   void _saveEditedCarItem({bool silent = false}) {
     if (_editingIndex == null) return;
-    if ((_selectedBrand == null && _carType.text.trim().isEmpty) ||
-        (_selectedModel == null && _carModel.text.trim().isEmpty)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('أدخل النوع والموديل')),
-      );
-      return;
-    }
+    if (!_validateVehicleRequiredFields()) return;
     final updated = _buildCurrentCarItem();
     setState(() {
       _carItems[_editingIndex!] = updated;
@@ -313,13 +453,8 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
       setState(() => _step = 0);
       return;
     }
-    if ((_selectedBrand == null && _carType.text.trim().isEmpty) ||
-        (_selectedModel == null && _carModel.text.trim().isEmpty)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('أدخل النوع والموديل قبل إضافة عنصر جديد')),
-      );
-      return;
-    }
+    if (!_validateVehicleRequiredFields()) return;
+
     final item = _buildCurrentCarItem();
     setState(() {
       _carItems.add(item);
@@ -342,10 +477,10 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
       _year.text = (item['year']?.toString() ?? '');
       _color.text = (item['color'] ?? '').toString();
       _bodyType.text = (item['body_type'] ?? '').toString();
-      _mileage.text = (item['mileage'] ?? '').toString();
-      _engineCapacity.text = (item['engine_capacity'] ?? '').toString();
-      _cylinders.text = (item['cylinders'] ?? '').toString();
-      _driveType.text = (item['drive_type'] ?? '').toString();
+      _mileage.text = (item['kilometers']?.toString() ?? '');
+      _engineCapacity.text = (item['engine_capacity']?.toString() ?? '');
+      _cylinders.text = (item['cylinders']?.toString() ?? '');
+      _driveType.text = (item['drivetrain'] ?? '').toString();
       _descAdv.text = (item['description'] ?? '').toString();
       _step = 0;
     });
@@ -368,20 +503,39 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
     });
   }
 
-  String _buildItemsJsonForSend() {
-    final list = (_auctionType == 'multiple')
+  // يبني JSON النهائي للإرسال بصيغة الـ API تمامًا
+  String _buildItemsJsonForSend({
+    required num startPrice,
+    required num hiddenLimit,
+    String? itemStartDate,
+    required String itemEndDate,
+  }) {
+    final baseList = (_auctionType == 'multiple')
         ? [
       ..._carItems,
-      if (_selectedBrand != null || _carType.text.trim().isNotEmpty || _carModel.text.trim().isNotEmpty)
+      if (_selectedBrand != null ||
+          _carType.text.trim().isNotEmpty ||
+          _carModel.text.trim().isNotEmpty)
         _buildCurrentCarItem(),
     ]
         : [_buildCurrentCarItem()];
+
+    final list = baseList
+        .map((it) => _toApiItem(
+      it,
+      startPrice: startPrice,
+      hiddenLimit: hiddenLimit,
+      itemStartDate: itemStartDate,
+      itemEndDate: itemEndDate,
+    ))
+        .toList();
+
     final s = jsonEncode(list);
     debugPrint('Car items JSON -> $s');
     return s;
   }
 
-  // ===================== Dialogs: اختيار ماركة/موديل من الكتالوج =====================
+  // ===================== Dialogs: اختيار ماركة/موديل =====================
   void _showCarTypeScreen() {
     showModalBottomSheet(
       context: context,
@@ -540,7 +694,6 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
   }
 
   // ===================== UI Helpers =====================
-  // ميثود الاختيار العام (حل الخطأ)
   Future<String?> showOptionsDialog(
       BuildContext context, {
         required List<String> options,
@@ -767,7 +920,7 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
           );
           return;
         }
-        setState(() => _step = 1);
+        _goToStep(1);
       },
     );
   }
@@ -783,11 +936,11 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
         _selectField(hint: 'سعة المحرك', controller: _engineCapacity, options: _engineCapacityOptions),
         _selectField(hint: 'عدد السلندرات', controller: _cylinders, options: _cylindersOptions),
         _selectField(hint: 'نوع الدفع', controller: _driveType, options: _driveTypeOptions),
-        _area('وصف المزاد', _descAdv),
+        _area('وصف المركبة', _descAdv),
         SizedBox(height: 16.h),
         _bottomNav(
-          onBack: () => setState(() => _step = 0),
-          onNext: () => setState(() => _step = 2),
+          onBack: () => _goToStep(0),
+          onNext: () => _goToStep(2),
         ),
       ],
     );
@@ -815,11 +968,8 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
               },
             );
           } else if (state.error != null) {
-            final msg = state.error!;
-            final friendly = msg.contains('auth.unauthorized')
-                ? 'الرجاء تسجيل الدخول أولًا أو إعادة تسجيل الدخول ثم حاول مرة أخرى.'
-                : msg;
-            await showAuctionErrorDialog(context, message: friendly);
+            final finalMessage = _extractErrorDetails(state.error!);
+            await showAuctionErrorDialog(context, message: finalMessage);
           }
         },
         builder: (context, state) {
@@ -828,7 +978,7 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
             children: [
               _priceInput('بداية المزاد', _startPrice),
               SizedBox(height: 12.h),
-              _priceInput('الحد', _hiddenLimit),
+              _priceInput('الحد (غير ظاهر للمستخدم)', _hiddenLimit),
               SizedBox(height: 12.h),
               _dateInput('تاريخ بداية المزاد', _startDate),
               SizedBox(height: 12.h),
@@ -872,10 +1022,23 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
               SizedBox(height: 12.h),
 
               _bottomNav(
-                onBack: () => setState(() => _step = 1),
+                onBack: () => _goToStep(1),
                 onNext: () {
                   if (_isEditingItem) {
                     _saveEditedCarItem(silent: true);
+                  }
+
+                  if (_auctionType == 'single') {
+                    if (!_validateVehicleRequiredFields()) return;
+                  } else {
+                    final sendingCurrentItem = _selectedBrand != null && _selectedModel != null;
+                    if (_carItems.isEmpty && !sendingCurrentItem) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('الرجاء إضافة عنصر واحد على الأقل وتعبئة كامل بياناته')),
+                      );
+                      return;
+                    }
+                    if (sendingCurrentItem && !_validateVehicleRequiredFields()) return;
                   }
 
                   if (_endDate.text.trim().isEmpty) {
@@ -892,6 +1055,18 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
                   final rawMinBid = _minBid.text.trim();
                   final minBidVal = rawMinBid.isEmpty ? bidStepVal : _parseNumSafe(rawMinBid);
 
+                  if (startPriceVal <= 0) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('أدخل بداية المزاد رقمًا أكبر من صفر')),
+                    );
+                    return;
+                  }
+                  if (hiddenLimitVal <= 0) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('أدخل الحد (غير الظاهر) رقمًا أكبر من صفر')),
+                    );
+                    return;
+                  }
                   if (bidStepVal <= 0) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('أدخل قيمة المزايدة الواحدة رقمًا أكبر من صفر')),
@@ -905,25 +1080,36 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
                     return;
                   }
 
-                  if ((_selectedBrand == null && _carType.text.trim().isEmpty) ||
-                      (_selectedModel == null && _carModel.text.trim().isEmpty)) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('اختر النوع والموديل')),
-                    );
-                    return;
-                  }
+                  final itemsJson = _buildItemsJsonForSend(
+                    startPrice: startPriceVal,
+                    hiddenLimit: hiddenLimitVal,
+                    itemStartDate: _startDate.text.trim().isEmpty ? null : _startDate.text.trim(),
+                    itemEndDate: _endDate.text.trim(),
+                  );
 
-                  final itemsJson = _buildItemsJsonForSend();
+                  // Debug
+                  debugPrint('----- SENDING CAR AUCTION -----');
+                  debugPrint('type=$_auctionType');
+                  debugPrint('title=${_title.text.trim()}');
+                  debugPrint('desc=${_desc.text.trim()}');
+                  debugPrint('is_auto_approval=$_autoApproval');
+                  debugPrint('start_date(top)=${_startDate.text.trim()}');
+                  debugPrint('end_date(top)=${_endDate.text.trim()}');
+                  debugPrint('min_bid_value=$minBidVal');
+                  debugPrint('bid_step=$bidStepVal');
+                  debugPrint('images_count=${_images.length}, pdfs_count=${_pdfs.length}');
+                  debugPrint('thumbnail=${_thumbnail?.path}');
+                  debugPrint('--------------------------------');
 
                   context.read<CarAuctionStartCubit>().submit(
                     type: _auctionType,
                     title: _title.text.trim(),
                     description: _desc.text.trim(),
                     isAutoApproval: _autoApproval,
-                    startDateIso:
-                    _startDate.text.trim().isEmpty ? null : _startDate.text.trim(),
+                    startDateIso: _startDate.text.trim().isEmpty ? null : _startDate.text.trim(),
                     endDateIso: _endDate.text.trim(),
                     minBidValue: minBidVal,
+                    bidStep: bidStepVal,
                     itemsJson: itemsJson,
                     thumbnail: _thumbnail,
                     images: _images,
@@ -965,11 +1151,16 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
     '1.0 لتر','1.2 لتر','1.4 لتر','1.6 لتر','1.8 لتر','2.0 لتر','2.4 لتر','2.5 لتر','3.0 لتر','3.5 لتر','4.0 لتر+'
   ];
   final List<String> _cylindersOptions = const ['3','4','6','8','10','12'];
+
+  // مهم: خلي الخيارات بالعربي بدون اختصارات داخل أقواس
   final List<String> _driveTypeOptions = const [
-    'دفع أمامي (FWD)','دفع خلفي (RWD)','دفع رباعي (4WD)','دفع كلي (AWD)'
+    'دفع أمامي',
+    'دفع خلفي',
+    'دفع رباعي',
+    'دفع كلي',
   ];
 
-  // ===================== Widgets بسيطة =====================
+  // ===================== Widgets =====================
   Widget _area(String label, TextEditingController c) {
     return Padding(
       padding: EdgeInsets.only(bottom: 12.h),
@@ -979,7 +1170,7 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
           Text(label, style: TextStyles.font14Dark500Weight),
           SizedBox(height: 6.h),
           SecondaryTextFormField(
-            hint: 'اكتب وصف المزاد',
+            hint: 'اكتب $label',
             maxheight: 120,
             minHeight: 48,
             maxLines: 5,
@@ -1005,13 +1196,18 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
               StepsHeaderRtl(
                 labels: _stepLabels,
                 current: _step,
-                onTap: (i) => setState(() => _step = i),
+                onTap: (i) => _goToStep(i),
               ),
               const SizedBox(height: 8),
               Expanded(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(16.w),
-                  child: steps[_step],
+                child: PageView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  controller: _pageController,
+                  onPageChanged: (i) => setState(() => _step = i),
+                  children: steps
+                      .map((stepWidget) =>
+                      SingleChildScrollView(padding: EdgeInsets.all(16.w), child: stepWidget))
+                      .toList(),
                 ),
               ),
             ],
@@ -1022,7 +1218,7 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
   }
 }
 
-// Dialog اختيار خيارات بقائمة راديو (تصميم بسيط)
+// Dialog اختيار خيارات بقائمة راديو (Top-level Widget)
 class OptionSelectDialog extends StatefulWidget {
   final List<String> options;
   final String? selected;
@@ -1038,7 +1234,7 @@ class OptionSelectDialog extends StatefulWidget {
 }
 
 class _OptionSelectDialogState extends State<OptionSelectDialog> {
-  late String? _selected;
+  String? _selected;
 
   @override
   void initState() {

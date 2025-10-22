@@ -23,6 +23,8 @@ import 'package:mushtary/features/register_service/logic/cubit/service_registrat
 import 'package:mushtary/features/user_profile/logic/cubit/profile_cubit.dart';
 
 // Register service flows
+import '../../../core/api/api_constants.dart';
+import '../../../core/api/api_service.dart' as api;
 import '../../register_service/dyna/ui/screens/CompleteProfileScreenSteps.dart';
 import '../../register_service/flatbed/ui/screens/delivery_service_steps.dart';
 import '../../register_service/labour/ui/screens/complete_profile_screen_steps.dart';
@@ -58,6 +60,35 @@ class _MenuScreenState extends State<MenuScreen> {
   void dispose() {
     _profileCubit.close();
     super.dispose();
+  }
+
+  // دالة موحّدة لتسجيل الخروج (API -> مسح توكن -> توجيه للّوجن من الروت)
+  Future<void> _handleLogout(BuildContext context) async {
+    try {
+      // 1) Logout من الخادم أولاً (والتوكن لسه موجود)
+      try {
+        final apiService = getIt<api.ApiService>();
+        await apiService.postNoData(ApiConstants.logout);
+      } catch (e) {
+        // ما نوقف الخروج لو API فشل
+        print('Logout API failed: $e');
+      }
+
+      // 2) امسح التوكن محلياً (تأكد أن onLogout لا يعمل أي Navigation داخله)
+      await Future.sync(() => widget.menuScreenArgs.onLogout());
+
+      // 3) امسح كل الاستاك وانتقل لشاشة الدخول من الروت
+      if (!mounted) return;
+      await Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+        Routes.loginScreen,
+            (Route<dynamic> route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر تسجيل الخروج: $e')),
+      );
+    }
   }
 
   @override
@@ -176,25 +207,18 @@ class _MenuScreenState extends State<MenuScreen> {
       _profileMenuItem(context),
       verticalSpace(16),
 
-
-// جديد: العروض المستلمة
+      // جديد: العروض المستلمة
       MenuItem(
         icon: 'document-cloud',
         title: 'العروض المستلمة',
         onTap: () => Navigator.of(context).pushNamed(Routes.myReceivedOffersScreen),
       ),
       verticalSpace(16),
+
       MenuItem(
         icon: 'wallet',
         title: 'المحفظة',
         onTap: () => Navigator.of(context).pushNamed(Routes.walletScreen),
-      ),
-      verticalSpace(16),
-
-      MenuItem(
-        icon: 'chart',
-        title: 'أرباحي',
-        onTap: () => Navigator.of(context).pushNamed(Routes.earningsScreen),
       ),
       verticalSpace(16),
 
@@ -211,18 +235,9 @@ class _MenuScreenState extends State<MenuScreen> {
       ),
       verticalSpace(16),
 
-      MenuItem(icon: 'add_gray', title: 'إضافة أعلان', onTap: () => _soon(context)),
-      verticalSpace(16),
-
-      MenuItem(icon: 'personal_card', title: 'اعلاناتي', onTap: () => _soon(context)),
-      verticalSpace(16),
-
-      MenuItem(icon: 'judge_gray', title: 'مزاداتي ومزايداتي', onTap: () => _soon(context)),
-      verticalSpace(16),
-
       MenuItem(
         icon: 'favorites_gray',
-        title: 'قائمة المتابعة والمفضلة',
+        title: 'قائمة المفضلة',
         onTap: () => Navigator.of(context).pushNamed(Routes.favoritesScreen),
       ),
       verticalSpace(16),
@@ -244,32 +259,6 @@ class _MenuScreenState extends State<MenuScreen> {
       Divider(color: ColorsManager.dark100, thickness: 1.h),
       verticalSpace(20),
 
-      Text('اعدادات', style: TextStyles.font20Black500Weight),
-      verticalSpace(20),
-
-      MenuItem(
-        icon: 'languages',
-        title: 'اللغات',
-        onTap: () => Navigator.of(context).pushNamed(Routes.languagesScreen),
-      ),
-      verticalSpace(16),
-
-      MenuItem(icon: 'moon', title: 'الثيم', onTap: () => _soon(context)),
-      verticalSpace(16),
-
-      MenuItem(
-        icon: 'notifications_gray',
-        title: 'الاشعارات',
-        onTap: () => Navigator.of(context).pushNamed(Routes.notificationsScreen),
-      ),
-      verticalSpace(16),
-
-      MenuItem(icon: 'settings_gray', title: 'اعدادت اضافية', onTap: () => _soon(context)),
-      verticalSpace(20),
-
-      Divider(color: ColorsManager.dark100, thickness: 1.h),
-      verticalSpace(20),
-
       Text('اخرى', style: TextStyles.font20Black500Weight),
       verticalSpace(20),
 
@@ -280,16 +269,24 @@ class _MenuScreenState extends State<MenuScreen> {
       ),
       verticalSpace(16),
 
-      MenuItem(icon: 'info_gray', title: 'سياسات الاستخدام', onTap: () => _soon(context)),
+      MenuItem(
+        icon: 'info_gray',
+        title: 'سياسات الاستخدام',
+        onTap: () => context.pushNamed(Routes.usagePolicyScreen),
+      ),
       verticalSpace(16),
 
-      MenuItem(icon: 'about_gray', title: 'عن التطبيق', onTap: () => _soon(context)),
+      MenuItem(
+        icon: 'about_gray',
+        title: 'عن التطبيق',
+        onTap: () => context.pushNamed(Routes.aboutAppScreen),
+      ),
       verticalSpace(16),
 
       MenuItem(
         icon: 'close-square',
         title: 'تسجيل الخروج',
-        onTap: widget.menuScreenArgs.onLogout,
+        onTap: () => _handleLogout(context),
       ),
     ];
   }
@@ -304,8 +301,11 @@ class _MenuScreenState extends State<MenuScreen> {
       verticalSpace(16),
 
       // إدارة رحلاتي
-      MenuItem(icon: 'chart', title: 'إدارة رحلاتي',
-          onTap: () => Navigator.pushNamed(context, Routes.dynaTripsManagerScreen)),
+      MenuItem(
+        icon: 'chart',
+        title: 'إدارة رحلاتي',
+        onTap: () => Navigator.pushNamed(context, Routes.dynaTripsManagerScreen),
+      ),
       verticalSpace(16),
 
       // إنشاء رحلة
@@ -325,18 +325,6 @@ class _MenuScreenState extends State<MenuScreen> {
       ),
       verticalSpace(16),
 
-      // الخطة
-      MenuItem(icon: 'chart', title: 'الخطة', onTap: () => _soon(context)),
-      verticalSpace(16),
-
-      // أرباحي
-      MenuItem(
-        icon: 'chart',
-        title: 'أرباحي',
-        onTap: () => Navigator.of(context).pushNamed(Routes.earningsScreen),
-      ),
-      verticalSpace(16),
-
       Divider(color: ColorsManager.dark100, thickness: 1.h),
       verticalSpace(16),
 
@@ -350,15 +338,9 @@ class _MenuScreenState extends State<MenuScreen> {
       ),
       verticalSpace(16),
 
-      MenuItem(icon: 'sheild', title: 'توثيق الحساب', onTap: () => _soon(context)),
-      verticalSpace(16),
-
-      MenuItem(icon: 'judge_gray', title: 'مزاداتي ومزايداتي', onTap: () => _soon(context)),
-      verticalSpace(16),
-
       MenuItem(
         icon: 'favorites_gray',
-        title: 'قائمة المتابعة والمفضلة',
+        title: 'قائمة المفضلة',
         onTap: () => Navigator.of(context).pushNamed(Routes.favoritesScreen),
       ),
       verticalSpace(16),
@@ -380,32 +362,6 @@ class _MenuScreenState extends State<MenuScreen> {
       Divider(color: ColorsManager.dark100, thickness: 1.h),
       verticalSpace(20),
 
-      Text('اعدادات', style: TextStyles.font20Black500Weight),
-      verticalSpace(20),
-
-      MenuItem(
-        icon: 'languages',
-        title: 'اللغات',
-        onTap: () => Navigator.of(context).pushNamed(Routes.languagesScreen),
-      ),
-      verticalSpace(16),
-
-      MenuItem(icon: 'moon', title: 'الثيم', onTap: () => _soon(context)),
-      verticalSpace(16),
-
-      MenuItem(
-        icon: 'notifications_gray',
-        title: 'الاشعارات',
-        onTap: () => Navigator.of(context).pushNamed(Routes.notificationsScreen),
-      ),
-      verticalSpace(16),
-
-      Divider(color: ColorsManager.dark100, thickness: 1.h),
-      verticalSpace(20),
-
-      Text('اخرى', style: TextStyles.font20Black500Weight),
-      verticalSpace(20),
-
       MenuItem(
         icon: 'help_center',
         title: 'الدعم الفني',
@@ -413,16 +369,24 @@ class _MenuScreenState extends State<MenuScreen> {
       ),
       verticalSpace(16),
 
-      MenuItem(icon: 'info_gray', title: 'سياسات الاستخدام', onTap: () => _soon(context)),
+      MenuItem(
+        icon: 'info_gray',
+        title: 'سياسات الاستخدام',
+        onTap: () => context.pushNamed(Routes.usagePolicyScreen),
+      ),
       verticalSpace(16),
 
-      MenuItem(icon: 'about_gray', title: 'عن التطبيق', onTap: () => _soon(context)),
+      MenuItem(
+        icon: 'about_gray',
+        title: 'عن التطبيق',
+        onTap: () => context.pushNamed(Routes.aboutAppScreen),
+      ),
       verticalSpace(16),
 
       MenuItem(
         icon: 'close-square',
         title: 'تسجيل الخروج',
-        onTap: widget.menuScreenArgs.onLogout,
+        onTap: () => _handleLogout(context),
       ),
     ];
   }

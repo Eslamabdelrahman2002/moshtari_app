@@ -27,12 +27,20 @@ class MyReceivedOffersScreen extends StatelessWidget {
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
-        body: BlocBuilder<ReceivedOffersCubit, ReceivedOffersState>(
+        body: BlocConsumer<ReceivedOffersCubit, ReceivedOffersState>(
+          listener: (context, state) {
+            // لو فيه خطأ بعد محاولة قبول
+            if (state.error != null && !(state.loading)) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(state.error!)),
+              );
+            }
+          },
           builder: (context, state) {
             if (state.loading && state.offers.isEmpty) {
               return const Center(child: CircularProgressIndicator());
             }
-            if (state.error != null) {
+            if (state.error != null && state.offers.isEmpty) {
               return Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -59,7 +67,21 @@ class MyReceivedOffersScreen extends StatelessWidget {
               child: ListView.builder(
                 padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 16.h),
                 itemCount: state.offers.length,
-                itemBuilder: (_, i) => ReceivedOfferCard(offer: state.offers[i]),
+                itemBuilder: (_, i) {
+                  final offer = state.offers[i];
+                  return ReceivedOfferCard(
+                    offer: offer,
+                    isAccepting: state.actingOfferId == offer.offerId,
+                    onAccept: () async {
+                      final ok = await context.read<ReceivedOffersCubit>().accept(offer.offerId);
+                      if (ok && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('تم قبول العرض بنجاح')),
+                        );
+                      }
+                    },
+                  );
+                },
               ),
             );
           },

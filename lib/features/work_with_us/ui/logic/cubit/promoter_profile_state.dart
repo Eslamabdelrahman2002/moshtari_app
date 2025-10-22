@@ -3,27 +3,30 @@ import '../../../data/model/promoter_profile_models.dart';
 
 class PromoterProfileState extends Equatable {
   final bool loading;
-  final PromoterProfileData? data;
   final String? error;
+  final PromoterProfileResponse? data; // نتعامل في الـ UI مع الـ Response مباشرة
 
   const PromoterProfileState({
     this.loading = false,
-    this.data,
     this.error,
+    this.data,
   });
 
+  // أضفنا clearError/clearData عشان تقدر تصفّر القيم عمداً
   PromoterProfileState copyWith({
     bool? loading,
-    PromoterProfileData? data,
     String? error,
+    bool clearError = false,
+    PromoterProfileResponse? data,
+    bool clearData = false,
   }) {
     return PromoterProfileState(
       loading: loading ?? this.loading,
-      data: data ?? this.data,
-      error: error,
+      error: clearError ? null : (error ?? this.error),
+      data: clearData ? null : (data ?? this.data),
     );
   }
 
   @override
-  List<Object?> get props => [loading, data, error];
+  List<Object?> get props => [loading, error, data];
 }

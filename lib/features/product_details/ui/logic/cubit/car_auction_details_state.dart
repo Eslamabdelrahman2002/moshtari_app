@@ -1,4 +1,5 @@
 // lib/features/car_auctions/ui/logic/cubit/car_auction_details_state.dart
+
 import '../../../data/model/car_auction_details_model.dart';
 
 abstract class CarAuctionDetailsState {}

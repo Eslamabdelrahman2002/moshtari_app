@@ -1,72 +1,113 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mushtary/features/favorites/data/model/favorites_model.dart';
 import 'package:mushtary/features/favorites/data/repo/favorites_repo.dart';
-
 import 'favorites_state.dart';
 
-
 class FavoritesCubit extends Cubit<FavoritesState> {
-  final FavoritesRepo _favoritesRepo;
-  FavoritesCubit(this._favoritesRepo) : super(FavoritesInitial());
+  final FavoritesRepo _repo;
+  FavoritesCubit(this._repo) : super(FavoritesInitial());
 
-  final Set<int> _favoriteIds = {};
+  final Set<int> _favoriteIds = {}; // IDs للإعلان/المزاد
 
-  // For the Home Screen icons
   Future<void> fetchFavorites() async {
-    // This is a simplified version. Ideally, you would fetch all favorite IDs
-    // from an API endpoint when the app starts.
-    emit(FavoritesLoaded(Set.from(_favoriteIds)));
+    try {
+      final ids = await _repo.getFavoriteIds();
+      _favoriteIds
+        ..clear()
+        ..addAll(ids);
+      emit(FavoritesLoaded(Set.from(_favoriteIds)));
+    } catch (_) {
+      emit(FavoritesLoaded(Set.from(_favoriteIds)));
+    }
   }
 
-  // For adding/removing from the Home Screen
   Future<void> toggleFavorite({required String type, required int id}) async {
-    final isCurrentlyFavorite = _favoriteIds.contains(id);
+    final wasFav = _favoriteIds.contains(id);
 
-    if (isCurrentlyFavorite) {
-      _favoriteIds.remove(id);
-    } else {
-      _favoriteIds.add(id);
-    }
+    // Optimistic
+    if (wasFav) _favoriteIds.remove(id); else _favoriteIds.add(id);
     emit(FavoritesLoaded(Set.from(_favoriteIds)));
 
     try {
-      await _favoritesRepo.addFavorite(type: type, id: id);
-    } catch (e) {
-      // Revert the change on failure
-      if (isCurrentlyFavorite) {
-        _favoriteIds.add(id);
+      if (wasFav) {
+        await _repo.removeFavoriteByTypeAndId(type: type, id: id);
       } else {
-        _favoriteIds.remove(id);
+        final ok = await _repo.addFavorite(type: type, id: id);
+        if (!ok) throw Exception('not ok');
       }
+    } catch (e) {
+      // rollback
+      if (wasFav) _favoriteIds.add(id); else _favoriteIds.remove(id);
       emit(FavoritesLoaded(Set.from(_favoriteIds)));
       emit(AddFavoriteFailure(e.toString()));
     }
   }
 
-  // For the main Favorites Screen
   Future<void> getFavoritesScreenItems() async {
     emit(FavoritesLoading());
     try {
-      final auctionFavorites = await _favoritesRepo.getFavorites(type: 'auction');
-      final adFavorites = await _favoritesRepo.getFavorites(type: 'ad');
-      final allFavorites = [...auctionFavorites, ...adFavorites];
-      emit(FavoritesSuccess(allFavorites));
+      final auc = await _repo.getFavorites(type: 'auction');
+      final ads = await _repo.getFavorites(type: 'ad');
+      final all = [...auc, ...ads];
+
+      // حدث IDs العامة (لتلوين القلوب في الهوم)
+      _favoriteIds
+        ..clear()
+        ..addAll(all.map((e) => e.favoriteId));
+
+      // Enrich لو details فاضي
+      final enriched = <FavoriteItemModel>[];
+      for (final f in all) {
+        final d = f.details;
+        final missingTitle = (d.title == null || d.title!.trim().isEmpty);
+        final missingImages = (d.imageUrls == null || d.imageUrls!.isEmpty)
+            && (d.thumbnail == null || d.thumbnail!.isEmpty);
+
+        if (f.favoriteType == 'ad' && (missingTitle || missingImages)) {
+          final det = await _repo.resolveAdDetailsById(f.favoriteId);
+          if (det != null) {
+            enriched.add(FavoriteItemModel(
+              id: f.id,
+              favoriteType: f.favoriteType,
+              favoriteId: f.favoriteId,
+              details: det,
+            ));
+            continue;
+          }
+        }
+        enriched.add(f);
+      }
+
+      emit(FavoritesSuccess(enriched));
+      // لا تبث FavoritesLoaded هنا حتى لا تختفي القائمة في شاشة المفضلة
+      // القلوب في الهوم تتلوّن من fetchFavorites/ toggle فقط
     } catch (e) {
       emit(FavoritesError(e.toString()));
     }
   }
 
-  // For removing from the Favorites Screen
   Future<void> removeFavorite({required int favoriteRecordId}) async {
+    FavoriteItemModel? item;
     if (state is FavoritesSuccess) {
-      final currentItems = (state as FavoritesSuccess).favoriteItems;
-      final updatedItems = currentItems.where((item) => item.id != favoriteRecordId).toList();
-      emit(FavoritesSuccess(updatedItems));
+      final cur = (state as FavoritesSuccess).favoriteItems;
+      item = cur.firstWhere((e) => e.id == favoriteRecordId, orElse: () => null as dynamic);
+      if (item != null) {
+        final updated = List<FavoriteItemModel>.from(cur)..remove(item);
+        emit(FavoritesSuccess(updated));
+      }
+    }
+    if (item == null) {
+      await getFavoritesScreenItems();
+      return;
     }
 
     try {
-      await _favoritesRepo.removeFavorite(favoriteRecordId: favoriteRecordId);
+      await _repo.removeFavoriteByTypeAndId(type: item.favoriteType, id: item.favoriteId);
+      _favoriteIds.remove(item.favoriteId);
+      // لا تبث FavoritesLoaded هنا لتفادي إعادة بناء الشاشة الحالية
     } catch (e) {
-      getFavoritesScreenItems(); // Refresh the list if deletion fails
+      await getFavoritesScreenItems();
+      emit(AddFavoriteFailure(e.toString()));
     }
   }
 }

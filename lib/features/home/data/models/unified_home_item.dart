@@ -16,37 +16,12 @@ class UnifiedHomeItem {
     this.categoryId,
   });
 
-  // منشئات مساعدة لكل قسم
-  factory UnifiedHomeItem.fromCarAd(Map<String, dynamic> j) {
-    return UnifiedHomeItem(
-      id: j['id'] ?? 0,
-      title: (j['title'] ?? '').toString(),
-      price: j['price'] is num ? j['price'] : num.tryParse('${j['price']}'),
-      imageUrls: List<String>.from(j['image_urls'] ?? const []),
-      categoryId: j['category_id'] is int ? j['category_id'] : 1,
-      source: 'car_ads',
-    );
-  }
-
-  factory UnifiedHomeItem.fromCarPartAd(Map<String, dynamic> j) {
-    return UnifiedHomeItem(
-      id: j['id'] ?? 0,
-      title: (j['title'] ?? '').toString(),
-      price: j['price'] is num ? j['price'] : num.tryParse('${j['price']}'),
-      imageUrls: List<String>.from(j['image_urls'] ?? const []),
-      categoryId: j['category_id'] is int ? j['category_id'] : 3,
-      source: 'car_parts_ads',
-    );
-  }
-
-  factory UnifiedHomeItem.fromRealEstateAd(Map<String, dynamic> j) {
-    return UnifiedHomeItem(
-      id: j['id'] ?? 0,
-      title: (j['title'] ?? '').toString(),
-      price: j['price'] is num ? j['price'] : num.tryParse('${j['price']}'),
-      imageUrls: List<String>.from(j['image_urls'] ?? const []),
-      categoryId: j['category_id'] is int ? j['category_id'] : 2,
-      source: 'real_estate_ads',
-    );
-  }
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'price': price,
+    'image_urls': imageUrls,
+    'category_id': categoryId,
+    'source': source,
+  };
 }

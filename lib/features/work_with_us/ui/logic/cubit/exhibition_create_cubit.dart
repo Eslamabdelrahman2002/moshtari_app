@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mushtary/features/work_with_us/data/repo/exhibition_create_repo.dart';
+import '../../../data/model/exhibition_create_models.dart';
+import '../../../data/repo/exhibition_create_repo.dart';
 import 'exhibition_create_state.dart';
 
 class ExhibitionCreateCubit extends Cubit<ExhibitionCreateState> {
@@ -16,10 +17,12 @@ class ExhibitionCreateCubit extends Cubit<ExhibitionCreateState> {
     required int cityId,
     required int regionId,
     required File image,
+    int? promoterId,
   }) async {
-    emit(state.copyWith(submitting: true, success: false, error: null));
+    emit(state.copyWith(submitting: true, success: false, clearError: true, clearId: true));
+
     try {
-      await _repo.create(
+      final req = ExhibitionCreateRequest(
         name: name,
         email: email,
         activityType: activityType,
@@ -28,10 +31,27 @@ class ExhibitionCreateCubit extends Cubit<ExhibitionCreateState> {
         cityId: cityId,
         regionId: regionId,
         image: image,
+        promoterId: promoterId,
       );
-      emit(state.copyWith(submitting: false, success: true));
+
+      final res = await _repo.createExhibition(req);
+
+      if (!res.success) {
+        throw Exception(res.message.isNotEmpty ? res.message : 'تعذر إنشاء الحساب');
+      }
+
+      emit(state.copyWith(
+        submitting: false,
+        success: true,
+        createdId: res.id,
+      ));
     } catch (e) {
-      emit(state.copyWith(submitting: false, success: false, error: e.toString()));
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      emit(state.copyWith(submitting: false, success: false, error: msg));
     }
+  }
+
+  void reset() {
+    emit(const ExhibitionCreateState());
   }
 }
