@@ -18,41 +18,45 @@ class RealEstateApplicationsSimilarAds extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: SizedBox(
-                  width: 300.w,
-                  height: 120.w,
-                  child: FittedBox(
-                    child: PropertyCard(
-                      // FIX: Using valid enum values
-                        applicationType: RealStateApplicationType.building,
-                        propertyUserType: RealStateUserTypes.buyer,
-                        time: DateTime.now().subtract(const Duration(days: 1)),
-                        location: 'الرياض - حي النرجس الشرقي',
-                        title: 'مطلوب فيلا للبيع',
-                        lowestPrice: '1,000,000',
-                        highestPrice: '5,000,000',
-                        lowestArea: '700',
-                        highestArea: '1,000'),
-                  )),
+                width: 300.w,
+                height: 120.w,
+                child: FittedBox(
+                  child: PropertyCard(
+                    // FIX: Using valid enum values
+                    applicationType: RealStateApplicationType.building,
+                    propertyUserType: RealStateUserTypes.buyer,
+                    time: DateTime.now().subtract(const Duration(days: 1)),
+                    location: 'الرياض - حي النرجس الشرقي',
+                    title: 'مطلوب فيلا للبيع',
+                    lowestPrice: '1,000,000',
+                    highestPrice: '5,000,000',
+                    lowestArea: '700',
+                    highestArea: '1,000',
+                  ),
+                ),
+              ),
             ),
             horizontalSpace(12),
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: SizedBox(
-                  width: 300.w,
-                  height: 120.w,
-                  child: FittedBox(
-                    child: PropertyCard(
-                      // FIX: Using valid enum values
-                        applicationType: RealStateApplicationType.villa,
-                        propertyUserType: RealStateUserTypes.seller,
-                        time: DateTime.now().subtract(const Duration(days: 1)),
-                        location: 'الرياض - حي النرجس الشرقي',
-                        title: 'مطلوب فيلا للبيع',
-                        lowestPrice: '1,000,000',
-                        highestPrice: '5,000,000',
-                        lowestArea: '700',
-                        highestArea: '1,000'),
-                  )),
+                width: 300.w,
+                height: 120.w,
+                child: FittedBox(
+                  child: PropertyCard(
+                    // FIX: Using valid enum values
+                    applicationType: RealStateApplicationType.villa,
+                    propertyUserType: RealStateUserTypes.seller,
+                    time: DateTime.now().subtract(const Duration(days: 1)),
+                    location: 'الرياض - حي النرجس الشرقي',
+                    title: 'مطلوب فيلا للبيع',
+                    lowestPrice: '1,000,000',
+                    highestPrice: '5,000,000',
+                    lowestArea: '700',
+                    highestArea: '1,000',
+                  ),
+                ),
+              ),
             ),
           ],
         ),

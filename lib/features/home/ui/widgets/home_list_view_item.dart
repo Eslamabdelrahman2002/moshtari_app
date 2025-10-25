@@ -13,6 +13,7 @@ import '../../../../core/router/routes.dart';
 import '../../../favorites/ui/logic/cubit/favorites_cubit.dart';
 import '../../../favorites/ui/logic/cubit/favorites_state.dart';
 import '../../../../core/utils/helpers/spacing.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class HomeListViewItem extends StatelessWidget {
   final HomeAdModel adModel;
@@ -118,8 +119,15 @@ class HomeListViewItem extends StatelessWidget {
                         ? CachedNetworkImage(
                       imageUrl: imageUrl,
                       fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(color: ColorsManager.grey200, child: const Center(child: CircularProgressIndicator())),
-                      errorWidget: (_, __, ___) => Container(color: ColorsManager.grey200, child: const Icon(Icons.error)),
+                      // Skeletonizer بدل الـ CircularProgressIndicator
+                      placeholder: (_, __) => Skeletonizer(
+                        enabled: true,
+                        child: Container(color: ColorsManager.grey200),
+                      ),
+                      errorWidget: (_, __, ___) => Container(
+                        color: ColorsManager.grey200,
+                        child: const Icon(Icons.error),
+                      ),
                     )
                         : Container(color: ColorsManager.grey200, child: Icon(Icons.image_not_supported, color: Colors.grey[400])),
                   ),

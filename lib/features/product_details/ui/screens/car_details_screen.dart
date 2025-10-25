@@ -30,6 +30,7 @@ import '../widgets/car_details/widgets/car_similar_ads.dart';
 import '../widgets/car_details/widgets/car_story_and_title.dart';
 import '../widgets/car_details/widgets/car_bottom_actions.dart';
 import '../widgets/offer_sheet.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class CarDetailsScreen extends StatelessWidget {
   final int id;
@@ -82,7 +83,7 @@ class CarDetailsScreen extends StatelessWidget {
           child: BlocBuilder<CarDetailsCubit, CarDetailsState>(
             builder: (context, state) {
               if (state is CarDetailsLoading) {
-                return const Center(child: CircularProgressIndicator());
+                return _buildLoadingSkeleton(context);
               } else if (state is CarDetailsFailure) {
                 return Center(child: Text(state.error, textAlign: TextAlign.center));
               } else if (state is CarDetailsSuccess) {
@@ -138,7 +139,6 @@ class CarDetailsScreen extends StatelessWidget {
                       // سوق للإعلان (Marketing)
                       PromoButton(
                         onPressed: () async {
-                          // مهم: لا تستخدم context.select داخل onPressed
                           final myId = context.read<ProfileCubit>().user?.userId;
                           final isOwner = (myId != null && car.userId != null && myId == car.userId);
                           if (isOwner) {
@@ -196,7 +196,6 @@ class CarDetailsScreen extends StatelessWidget {
                 }
               },
 
-              // أضف سومتك => شيت العروض (offers) مثل الريال استيت
               onAddBid: () async {
                 if (isOwner) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -208,6 +207,165 @@ class CarDetailsScreen extends StatelessWidget {
               },
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingSkeleton(BuildContext context) {
+    return Skeletonizer(
+      enabled: true,
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: EdgeInsets.only(bottom: 72.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // AppBar placeholder
+            Container(height: 56.h, width: double.infinity, color: Colors.white),
+            // Images placeholder
+            Container(height: 285.h, width: double.infinity, color: Colors.white),
+            verticalSpace(12),
+
+            // Title placeholders
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(height: 18.h, width: 220.w, color: Colors.white),
+                  verticalSpace(8),
+                  Container(height: 12.h, width: 160.w, color: Colors.white),
+                ],
+              ),
+            ),
+            verticalSpace(12),
+
+            // Panel placeholders
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Row(
+                children: [
+                  Expanded(child: Container(height: 60.h, color: Colors.white)),
+                  horizontalSpace(8),
+                  Expanded(child: Container(height: 60.h, color: Colors.white)),
+                  horizontalSpace(8),
+                  Expanded(child: Container(height: 60.h, color: Colors.white)),
+                ],
+              ),
+            ),
+            verticalSpace(12),
+
+            // Price placeholder
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Container(height: 52.h, width: double.infinity, color: Colors.white),
+            ),
+            verticalSpace(12),
+            const MyDivider(),
+
+            // Info grid placeholders (6 items)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Wrap(
+                spacing: 12.w,
+                runSpacing: 12.h,
+                children: List.generate(
+                  6,
+                      (i) => Container(
+                    width: (MediaQuery.of(context).size.width - 16.w * 2 - 12.w) / 2,
+                    height: 78.h,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            verticalSpace(12),
+
+            // Description placeholders
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Column(
+                children: [
+                  Container(height: 12.h, width: double.infinity, color: Colors.white),
+                  verticalSpace(6),
+                  Container(height: 12.h, width: double.infinity, color: Colors.white),
+                  verticalSpace(6),
+                  Container(height: 12.h, width: 200.w, color: Colors.white),
+                ],
+              ),
+            ),
+            verticalSpace(12),
+
+            // Owner info placeholder
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Row(
+                children: [
+                  Container(width: 44.w, height: 44.w, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
+                  horizontalSpace(12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(height: 12.h, width: 160.w, color: Colors.white),
+                        verticalSpace(6),
+                        Container(height: 12.h, width: 120.w, color: Colors.white),
+                      ],
+                    ),
+                  ),
+                  Container(width: 90.w, height: 28.h, color: Colors.white),
+                ],
+              ),
+            ),
+            verticalSpace(12),
+            const MyDivider(),
+
+            // Comments placeholder (2 items)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Column(
+                children: List.generate(
+                  2,
+                      (i) => Padding(
+                    padding: EdgeInsets.only(bottom: 8.h),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(width: 36.w, height: 36.w, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
+                        horizontalSpace(8),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Container(height: 12.h, width: double.infinity, color: Colors.white),
+                              verticalSpace(6),
+                              Container(height: 12.h, width: double.infinity, color: Colors.white),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            verticalSpace(12),
+
+            // Add comment field placeholder
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Container(height: 48.h, width: double.infinity, color: Colors.white),
+            ),
+            verticalSpace(12),
+            const MyDivider(),
+
+            // Promo button placeholder
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Container(height: 48.h, width: double.infinity, color: Colors.white),
+            ),
+            verticalSpace(12),
+          ],
         ),
       ),
     );

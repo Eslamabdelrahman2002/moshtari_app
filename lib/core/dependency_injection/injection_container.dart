@@ -1,5 +1,4 @@
-// lib/core/dependency_injection/injection_container.dart
-
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:get_it/get_it.dart';
 import 'package:mushtary/core/location/data/repo/location_repo.dart';
@@ -12,8 +11,8 @@ import 'package:mushtary/features/create_ad/ui/screens/real_estate/logic/cubit/r
 import 'package:mushtary/features/create_ad/data/car/data/repo/real_estate_ads_repo.dart';
 import 'package:mushtary/features/create_ad/data/car/data/repo/car_part_ads_create_repo.dart';
 import 'package:mushtary/features/create_ad/ui/screens/car_parts/logic/cubit/car_part_ads_cubit.dart';
-import 'package:mushtary/features/create_ad/data/car/data/repo/other_ads_repo.dart'; // 🟢 تم تحديث الاستيراد
-import 'package:mushtary/features/create_ad/ui/screens/other/logic/cubit/other_ads_cubit.dart'; // 🟢 تم تحديث الاستيراد
+import 'package:mushtary/features/create_ad/data/car/data/repo/other_ads_repo.dart';
+import 'package:mushtary/features/create_ad/ui/screens/other/logic/cubit/other_ads_cubit.dart';
 
 // Auth
 import 'package:mushtary/features/auth/login/data/repo/login_repo.dart';
@@ -52,6 +51,7 @@ import 'package:mushtary/features/product_details/data/repo/ad_reviews_repo.dart
 import 'package:mushtary/features/product_details/ui/logic/cubit/comment_send_cubit.dart';
 import 'package:mushtary/features/product_details/data/repo/marketing_requests_repo.dart';
 import 'package:mushtary/features/product_details/ui/logic/cubit/marketing_request_cubit.dart';
+
 // Real estate domain
 import 'package:mushtary/features/real_estate/data/repo/real_estate_repo.dart';
 import 'package:mushtary/features/real_estate/logic/cubit/real_estate_cubit.dart';
@@ -68,11 +68,16 @@ import 'package:mushtary/features/messages/data/repo/chat_socket_service.dart';
 import 'package:mushtary/features/messages/data/repo/messages_repo.dart';
 import 'package:mushtary/features/messages/logic/cubit/messages_cubit.dart';
 import 'package:mushtary/features/messages/logic/cubit/chat_cubit.dart';
-import 'package:mushtary/features/work_with_us/data/repo/promoter_profile_repo.dart';
 
 // Core
 import '../../features/commission_calculator/data/repo/commission_repo.dart';
 import '../../features/commission_calculator/ui/logic/cubit/commission_cubit.dart';
+
+// Offline chat deps
+import '../../features/messages/data/local/chat_db.dart';
+import '../../features/messages/data/local/chat_local_data_source.dart';
+import '../../features/messages/data/repo/chat_offline_repository.dart';
+
 import '../../features/product_details/data/repo/auction_bid_repo.dart';
 import '../../features/product_details/data/repo/auction_socket_service.dart';
 import '../../features/product_details/data/repo/offers_repo.dart';
@@ -87,7 +92,6 @@ import '../../features/service_request/data/repo/provider_repo.dart' as pr;
 import '../../features/service_request/data/repo/received_offers_repo.dart' as ro;
 import '../../features/service_request/ui/logic/cubit/provider_cubit.dart' as poc;
 import '../../features/service_request/ui/logic/cubit/received_offers_cubit.dart' as roc;
-// ❌ تم إزالة الاستيراد التالي: import '../../features/services/data/repo/dyna_trip_repo.dart';
 import '../../features/services/data/repo/laborer_types_repo.dart';
 import '../../features/services/data/repo/service_offers_repo.dart';
 import '../../features/services/data/repo/service_providers_repo.dart';
@@ -99,7 +103,7 @@ import '../../features/services/logic/cubit/service_providers_cubit.dart';
 import '../../features/services/logic/cubit/service_request_cubit.dart';
 import '../../features/support/data/repo/conversation_report_repo.dart';
 import '../../features/support/ui/logic/conversation_report_cubit.dart';
-import '../../features/trips/data/repo/dyna_trips_repo.dart'; // ✅ هذا هو المستودع المدمج الآن
+import '../../features/trips/data/repo/dyna_trips_repo.dart';
 import '../../features/trips/ui/logic/cubit/dyna_my_trips_cubit.dart';
 import '../../features/trips/ui/logic/cubit/dyna_trip_create_cubit.dart';
 import '../../features/trips/ui/logic/cubit/dyna_trips_list_cubit.dart';
@@ -109,6 +113,7 @@ import '../../features/wallet/ui/data/repo/payment_config_repo.dart';
 import '../../features/work_with_us/data/repo/exhibition_create_repo.dart';
 import '../../features/work_with_us/data/repo/exhibition_details_repo.dart';
 import '../../features/work_with_us/data/repo/exhibitions_repo.dart';
+import '../../features/work_with_us/data/repo/promoter_profile_repo.dart';
 import '../../features/work_with_us/data/repo/work_with_us_repo.dart';
 import '../../features/work_with_us/ui/logic/cubit/exhibition_create_cubit.dart';
 import '../../features/work_with_us/ui/logic/cubit/exhibition_details_cubit.dart';
@@ -196,9 +201,9 @@ void setupServiceLocator() {
   registerLazyIfNeeded<RealEstateAdsRepo>(() => RealEstateAdsRepo(getIt<Dio>()));
   registerFactoryReplacing<RealEstateAdsCubit>(() => RealEstateAdsCubit(getIt<RealEstateAdsRepo>()));
 
-  // 🟢 تسجيل OtherAds Create Repo و Cubit
-  registerLazyIfNeeded<OtherAdsCreateRepo>(() => OtherAdsCreateRepo(getIt<Dio>())); // OtherAdsCreateRepo هو اسم الملف
-  registerFactoryReplacing<OtherAdsCubit>(() => OtherAdsCubit(getIt<OtherAdsCreateRepo>())); // 🟢 تم تسجيل OtherAdsCubit
+  // OtherAds Create
+  registerLazyIfNeeded<OtherAdsCreateRepo>(() => OtherAdsCreateRepo(getIt<Dio>()));
+  registerFactoryReplacing<OtherAdsCubit>(() => OtherAdsCubit(getIt<OtherAdsCreateRepo>()));
 
   // Profile
   registerLazyIfNeeded<ProfileRepo>(() => ProfileRepo(getIt<api.ApiService>()));
@@ -225,7 +230,7 @@ void setupServiceLocator() {
     secure: false,
   ));
 
-  // Auction WebSocket + بث التحديث على الكيوبت الصحيح بالاسم "type-auctionId"
+  // Auction WebSocket
   getIt.registerLazySingleton<AuctionSocketService>(() => AuctionSocketService(
     host: ApiConstants.wsHost,
     secure: false,
@@ -240,10 +245,11 @@ void setupServiceLocator() {
   // Auction Bid Repo
   registerLazyIfNeeded<AuctionBidRepo>(() => AuctionBidRepo(getIt<AuctionSocketService>()));
 
-  // Messages
+  // Messages (online)
   registerLazyIfNeeded<MessagesRepo>(() => MessagesRepo(getIt<ChatSocketService>()));
   registerFactoryReplacing<MessagesCubit>(() => MessagesCubit(getIt<MessagesRepo>()));
-  registerFactoryReplacing<ChatCubit>(() => ChatCubit(getIt<MessagesRepo>()));
+
+  // DO NOT register ChatCubit here. It will be registered in setupChatOfflineLocator()
 
   // Offers
   registerLazyIfNeeded<OffersRepo>(() => OffersRepo(getIt<api.ApiService>()));
@@ -298,25 +304,51 @@ void setupServiceLocator() {
   getIt.registerLazySingleton<ServiceProvidersRepo>(() => ServiceProvidersRepo(getIt<api.ApiService>()));
   getIt.registerFactory<ServiceProvidersCubit>(() => ServiceProvidersCubit(getIt<ServiceProvidersRepo>()));
 
-  // Car catalog (brands/models)
+  // Car catalog
   registerLazyIfNeeded<CarCatalogRepo>(() => CarCatalogRepo(getIt<api.ApiService>()));
   registerFactoryReplacing<CarCatalogCubit>(() => CarCatalogCubit(getIt<CarCatalogRepo>()));
+
+  // Auctions
   registerLazyIfNeeded<CarAuctionRepo>(() => CarAuctionRepo(getIt<api.ApiService>()));
-  // 💡 نستخدم FactoryReplacing لتمكين CarAuctionDetailsCubit من أن يكون له مثيل جديد في كل مرة
   registerFactoryReplacing<CarAuctionDetailsCubit>(() => CarAuctionDetailsCubit(getIt<CarAuctionRepo>()));
   registerLazyIfNeeded<ConversationReportRepo>(() => ConversationReportRepo(getIt<api.ApiService>()));
   registerFactoryReplacing<ConversationReportCubit>(() => ConversationReportCubit(getIt<ConversationReportRepo>()));
-  // Real Estate Auction Cubit remains the same
+
   registerLazyIfNeeded<RealEstateAuctionRepo>(() => RealEstateAuctionRepo(getIt<api.ApiService>()));
   registerFactoryReplacing<RealEstateAuctionDetailsCubit>(() => RealEstateAuctionDetailsCubit(getIt<RealEstateAuctionRepo>()));
   getIt.registerLazySingleton<MyAuctionsRepo>(() => MyAuctionsRepo(getIt<api.ApiService>()));
   registerLazyIfNeeded<PaymentConfigRepo>(() => PaymentConfigRepo(getIt<api.ApiService>()));
   getIt.registerLazySingleton<AdsRepo>(() => AdsRepo(getIt<api.ApiService>()));
 
-  // ✅ تم توجيه DynaTripsCubit لاستخدام DynaTripsRepo المدمج
+  // trips cubit
   getIt.registerFactory<DynaTripsCubit>(() => DynaTripsCubit(getIt<DynaTripsRepo>()));
 
   getIt.registerLazySingleton<ServiceOffersRepo>(() => ServiceOffersRepo(getIt<api.ApiService>()));
   getIt.registerFactory<ServiceOfferCubit>(() => ServiceOfferCubit(getIt<ServiceOffersRepo>()));
+}
 
+// Call this from main.dart after setupServiceLocator()
+Future<void> setupChatOfflineLocator() async {
+  // Database
+  final db = await ChatDB.instance.db;
+
+  if (!getIt.isRegistered<ChatLocalDataSource>()) {
+    getIt.registerLazySingleton<ChatLocalDataSource>(() => ChatLocalDataSource(db));
+  }
+  if (!getIt.isRegistered<Connectivity>()) {
+    getIt.registerLazySingleton<Connectivity>(() => Connectivity());
+  }
+  if (!getIt.isRegistered<ChatOfflineRepository>()) {
+    getIt.registerLazySingleton<ChatOfflineRepository>(() => ChatOfflineRepository(
+      local: getIt<ChatLocalDataSource>(),
+      remote: getIt<MessagesRepo>(),
+      connectivity: getIt<Connectivity>(),
+    ));
+  }
+
+  // Ensure ChatCubit uses ChatOfflineRepository
+  if (getIt.isRegistered<ChatCubit>()) {
+    getIt.unregister<ChatCubit>();
+  }
+  getIt.registerFactory<ChatCubit>(() => ChatCubit(getIt<ChatOfflineRepository>()));
 }

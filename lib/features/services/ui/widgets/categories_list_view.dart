@@ -32,7 +32,7 @@ class _CategoriesListViewState extends State<CategoriesListView> {
               name: c.name,
               isSelected: selectedCategoryIndex == index,
               onTap: () {
-                setState(() => selectedCategoryIndex = index); // تحديث الـ UI
+                setState(() => selectedCategoryIndex = index);
                 widget.onSelect?.call(c);
               },
             );

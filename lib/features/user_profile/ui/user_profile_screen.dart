@@ -18,6 +18,7 @@ import 'package:mushtary/features/user_profile/data/model/user_profile_model.dar
 import 'package:mushtary/features/user_profile/logic/cubit/profile_cubit.dart';
 import 'package:mushtary/features/user_profile/logic/cubit/profile_state.dart';
 import 'package:mushtary/features/user_profile/ui/widgets/ads_auctions_toggle.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({super.key});
@@ -115,12 +116,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         ),
                       ),
                       PopupMenuItem(
-                        value: 'حذف مدير الحساب',
+                        value: 'حذف الحساب',
                         child: Row(
                           children: [
                             MySvg(image: "close-square", color: ColorsManager.darkGray600, height: 20),
                             const SizedBox(width: 8),
-                            Text('حذف مدير الحساب', style: TextStyle(color: ColorsManager.darkGray600)),
+                            Text('حذف الحساب', style: TextStyle(color: ColorsManager.darkGray600)),
                           ],
                         ),
                       ),
@@ -137,7 +138,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Widget _buildBody(ProfileState state) {
     if (state is ProfileLoading || state is ProfileInitial) {
-      return const Center(child: CircularProgressIndicator());
+      return _ProfileSkeleton();
     }
     if (state is ProfileFailure) {
       return Center(child: Text(state.error));
@@ -219,11 +220,72 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
+  // ================= Skeletons =================
+
+  // صفحة سكيليتون لملف المستخدم
+  Widget _ProfileSkeleton() {
+    return Skeletonizer(
+      enabled: true,
+      child: Column(
+        children: [
+          // Header card skeleton
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.all(16),
+            height: 140.h,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 64.w,
+                  height: 64.w,
+                  decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(height: 14.h, width: 140.w, color: Colors.white),
+                      SizedBox(height: 8.h),
+                      Container(height: 12.h, width: 90.w, color: Colors.white),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 16.h),
+          // List skeleton
+          Expanded(
+            child: ListView.separated(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+              itemBuilder: (_, __) => Container(
+                height: 90.h,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+              ),
+              separatorBuilder: (_, __) => SizedBox(height: 12.h),
+              itemCount: 6,
+            ),
+          ),
+          SizedBox(height: 12.h),
+        ],
+      ),
+    );
+  }
+
   // ================= Share dialog =================
 
   String _buildProfileShareLink(UserProfileModel user) {
     final ref = (user.referralCode ?? '').toString().trim();
-    final base = 'https://mushtary.app/user'; // عدّله حسب دومينك
+    final base = 'https://mushtary.app/user';
     return ref.isEmpty ? '$base/${user.userId}' : '$base/${user.userId}?ref=$ref';
   }
 
@@ -285,63 +347,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       ),
     );
   }
+
   void _confirmDeleteAccount(BuildContext context) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('حذف الحساب'),
-          content: const Text(
-            'سيتم حذف حسابك وجميع بياناتك نهائيًا. هل أنت متأكد من المتابعة؟',
-            textAlign: TextAlign.start,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('إلغاء'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: ColorsManager.errorColor,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () async {
-                Navigator.pop(ctx); // اغلق الحوار
-                // حوار تحميل بسيط
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (_) => const Center(child: CircularProgressIndicator()),
-                );
-                final ok = await context.read<ProfileCubit>().deleteAccount();
-                Navigator.of(context, rootNavigator: true).pop(); // اغلق اللودينج
-                if (ok) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('تم حذف الحساب بنجاح')),
-                    );
-                    // اذهب لصفحة تسجيل الدخول وامسح الستاك
-                    Navigator.of(context).pushNamedAndRemoveUntil(
-                      Routes.loginScreen, // غيّرها لو اسم الرت مسمى آخر عندك
-                          (route) => false,
-                    );
-                  }
-                } else {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('فشل حذف الحساب، حاول مرة أخرى')),
-                    );
-                  }
-                }
-              },
-              child: const Text('حذف'),
-            ),
-          ],
-        );
+        return const _DeletingAccountLoadingDialog();
       },
     );
   }
+
   Future<void> _shareToWhatsApp(String text) async {
     final deep = Uri.parse('whatsapp://send?text=${Uri.encodeComponent(text)}');
     final web = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(text)}');
@@ -376,8 +392,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
-  // ================= Verify account bottom sheet =================
-
   void _showVerifyAccountSheet(BuildContext context) {
     final formKey = GlobalKey<FormState>();
     final idCtrl = TextEditingController();
@@ -400,7 +414,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Header with close
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -409,7 +422,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         icon: const Icon(Icons.close),
                       ),
                       Text('توثيق الحساب', style: TextStyles.font18Black500Weight),
-                      const SizedBox(width: 48), // لوسطية العنوان
+                      const SizedBox(width: 48),
                     ],
                   ),
                   verticalSpace(8),
@@ -424,7 +437,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     keyboardType: TextInputType.number,
                     inputFormatters: [
                       FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(14), // عدّل الطول المناسب
+                      LengthLimitingTextInputFormatter(14),
                     ],
                     decoration: InputDecoration(
                       hintText: 'رقم الهوية',
@@ -467,11 +480,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     child: ElevatedButton(
                       onPressed: () async {
                         if (!formKey.currentState!.validate()) return;
-
-                        // TODO: اربطها بطلب API الحقيقي للتوثيق
-                        // مثال:
-                        // await context.read<ProfileCubit>().verifyAccount(nationalId: idCtrl.text);
-
                         if (context.mounted) {
                           Navigator.pop(ctx);
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -498,7 +506,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 }
 
-// زر دائري للأيقونات
 class _ShareCircle extends StatelessWidget {
   final Widget child;
   final VoidCallback onTap;
@@ -513,6 +520,39 @@ class _ShareCircle extends StatelessWidget {
         height: 56.w,
         decoration: const BoxDecoration(shape: BoxShape.circle),
         child: Center(child: child),
+      ),
+    );
+  }
+}
+
+// Dialog تحميل لحذف الحساب كسكيليتون
+class _DeletingAccountLoadingDialog extends StatelessWidget {
+  const _DeletingAccountLoadingDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Skeletonizer(
+        enabled: true,
+        child: Container(
+          width: 140.w,
+          height: 120.h,
+          padding: EdgeInsets.all(16.w),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16.r),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(width: 36.w, height: 36.w, decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white)),
+              SizedBox(height: 12.h),
+              Container(height: 12.h, width: 100.w, color: Colors.white),
+              SizedBox(height: 6.h),
+              Container(height: 12.h, width: 80.w, color: Colors.white),
+            ],
+          ),
+        ),
       ),
     );
   }

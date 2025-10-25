@@ -20,6 +20,7 @@ import 'package:mushtary/features/real_estate/data/model/mock_data.dart';
 import 'package:mushtary/core/dependency_injection/injection_container.dart';
 import 'package:mushtary/features/services/data/model/service_provider_model.dart';
 import 'package:flutter/foundation.dart'; // for debugPrint
+import 'package:skeletonizer/skeletonizer.dart';
 
 class WorkerScreen extends StatefulWidget {
   const WorkerScreen({super.key});
@@ -60,7 +61,7 @@ class _WorkerScreenState extends State<WorkerScreen> {
             delegate: SliverAppBarDelegate(
               maxHeight: 70.h,
               minHeight: 70.h,
-              child: ServiceAppBar()
+              child: ServiceAppBar(),
             ),
           ),
           SliverList(
@@ -73,6 +74,7 @@ class _WorkerScreenState extends State<WorkerScreen> {
             ),
           ),
 
+          // الفئات
           SliverToBoxAdapter(
             child: BlocConsumer<LaborerTypesCubit, LaborerTypesState>(
               listenWhen: (p, c) => p.loading != c.loading || p.types != c.types,
@@ -86,26 +88,7 @@ class _WorkerScreenState extends State<WorkerScreen> {
               },
               builder: (context, state) {
                 if (state.loading) {
-                  return Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w),
-                    child: SizedBox(
-                      height: 45.h,
-                      child: Row(
-                        children: List.generate(
-                          4,
-                              (_) => Container(
-                            width: 90.w,
-                            height: 36.h,
-                            margin: EdgeInsets.only(right: 8.w),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade200,
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
+                  return _categoriesSkeleton();
                 }
 
                 if (state.error != null) {
@@ -147,26 +130,12 @@ class _WorkerScreenState extends State<WorkerScreen> {
             ),
           ),
 
+          // قائمة العمال
           SliverToBoxAdapter(
             child: BlocBuilder<ServiceProvidersCubit, ServiceProvidersState>(
               builder: (context, state) {
                 if (state.loading) {
-                  return Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w),
-                    child: Column(
-                      children: List.generate(
-                        4,
-                            (_) => Container(
-                          height: 0.33.sw * 1.075,
-                          margin: EdgeInsets.only(bottom: 12.h),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
+                  return _workersSkeletonList();
                 }
 
                 if (state.error != null) {
@@ -207,6 +176,102 @@ class _WorkerScreenState extends State<WorkerScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // Skeleton: فئات العمال (شيبس أفقية)
+  Widget _categoriesSkeleton() {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16.w),
+      child: Skeletonizer(
+        enabled: true,
+        child: SizedBox(
+          height: 45.h,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: 6,
+            separatorBuilder: (_, __) => SizedBox(width: 8.w),
+            itemBuilder: (_, __) => Container(
+              width: 90.w,
+              height: 36.h,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Skeleton: قائمة العمال
+  Widget _workersSkeletonList() {
+    final itemHeight = 0.33.sw * 1.075;
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16.w),
+      child: Skeletonizer(
+        enabled: true,
+        child: Column(
+          children: List.generate(
+            4,
+                (_) => Container(
+              margin: EdgeInsets.symmetric(vertical: 8.h),
+              padding: EdgeInsets.all(8.w),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.07),
+                    spreadRadius: 4,
+                    blurRadius: 7,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // صورة
+                  Expanded(
+                    flex: 4,
+                    child: Container(
+                      height: itemHeight,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  // تفاصيل
+                  Expanded(
+                    flex: 7,
+                    child: SizedBox(
+                      height: itemHeight,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(height: 14.h, width: 140.w, color: Colors.white),
+                          SizedBox(height: 8.h),
+                          Container(height: 12.h, width: 180.w, color: Colors.white),
+                          SizedBox(height: 6.h),
+                          Container(height: 12.h, width: 160.w, color: Colors.white),
+                          SizedBox(height: 6.h),
+                          Container(height: 12.h, width: 140.w, color: Colors.white),
+                          const Spacer(),
+                          Container(height: 32.w, width: 120.w, color: Colors.white),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

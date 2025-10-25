@@ -47,7 +47,6 @@ class _MenuScreenState extends State<MenuScreen> {
   final ScrollController scrollController = ScrollController();
   late final ProfileCubit _profileCubit;
 
-  // تبديل واجهة "مقدّم خدمة"
   bool _isServiceMode = false;
 
   @override
@@ -62,22 +61,17 @@ class _MenuScreenState extends State<MenuScreen> {
     super.dispose();
   }
 
-  // دالة موحّدة لتسجيل الخروج (API -> مسح توكن -> توجيه للّوجن من الروت)
   Future<void> _handleLogout(BuildContext context) async {
     try {
-      // 1) Logout من الخادم أولاً (والتوكن لسه موجود)
       try {
         final apiService = getIt<api.ApiService>();
         await apiService.postNoData(ApiConstants.logout);
       } catch (e) {
-        // ما نوقف الخروج لو API فشل
         print('Logout API failed: $e');
       }
 
-      // 2) امسح التوكن محلياً (تأكد أن onLogout لا يعمل أي Navigation داخله)
       await Future.sync(() => widget.menuScreenArgs.onLogout());
 
-      // 3) امسح كل الاستاك وانتقل لشاشة الدخول من الروت
       if (!mounted) return;
       await Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
         Routes.loginScreen,
@@ -115,13 +109,10 @@ class _MenuScreenState extends State<MenuScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // صندوق البروفايل / التسجيل
                       widget.menuScreenArgs.isAuthenticated
                           ? ProfileBox(profileCubit: _profileCubit)
                           : const RegisterBox(),
                       verticalSpace(16),
-
-                      // الأقسام تبعاً للوضع المختار
                       ...(_isServiceMode
                           ? _buildProviderSections(context)
                           : _buildDefaultSections(context)),
@@ -136,14 +127,12 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  // عنصر "الملف الشخصي" مع السويتش كـ trailing
   Widget _profileMenuItem(BuildContext context) {
     return MenuItem(
       icon: 'profile',
       title: 'الملف الشخصي',
       onTap: () {
         if (_isServiceMode) {
-          // لو وضع مقدّم خدمة مفعّل، افتح لوحة مقدم الخدمة
           final providerId = _profileCubit.providerId ?? 0;
           if (providerId <= 0) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -156,7 +145,6 @@ class _MenuScreenState extends State<MenuScreen> {
             arguments: providerId,
           );
         } else {
-          // البروفيـل العادي
           widget.menuScreenArgs.isAuthenticated
               ? widget.menuScreenArgs.onProfileTap()
               : widget.menuScreenArgs.onLoginTap();
@@ -167,7 +155,6 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  // سويتش وضع مقدّم خدمة كـ trailing بجانب "الملف الشخصي"
   Widget _buildServiceSwitchTrailing() {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
@@ -198,7 +185,6 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  // الواجهة الافتراضية
   List<Widget> _buildDefaultSections(BuildContext context) {
     return [
       Text('بيانات اساسية', style: TextStyles.font20Black500Weight),
@@ -207,7 +193,6 @@ class _MenuScreenState extends State<MenuScreen> {
       _profileMenuItem(context),
       verticalSpace(16),
 
-      // جديد: العروض المستلمة
       MenuItem(
         icon: 'document-cloud',
         title: 'العروض المستلمة',
@@ -291,7 +276,6 @@ class _MenuScreenState extends State<MenuScreen> {
     ];
   }
 
-  // واجهة "مقدّم خدمة"
   List<Widget> _buildProviderSections(BuildContext context) {
     return [
       Text('بيانات اساسية', style: TextStyles.font20Black500Weight),
@@ -300,7 +284,6 @@ class _MenuScreenState extends State<MenuScreen> {
       _profileMenuItem(context),
       verticalSpace(16),
 
-      // إدارة رحلاتي
       MenuItem(
         icon: 'chart',
         title: 'إدارة رحلاتي',
@@ -308,7 +291,6 @@ class _MenuScreenState extends State<MenuScreen> {
       ),
       verticalSpace(16),
 
-      // إنشاء رحلة
       MenuItem(
         icon: 'add_gray',
         title: 'إنشاء رحلة',
@@ -411,7 +393,6 @@ class _MenuScreenState extends State<MenuScreen> {
     final routeName = result['routeName']!;
     final serviceType = result['serviceType']!;
 
-    // نقرأ الكيوبت من الشجرة إن وجد، وإلا من getIt
     ServiceRegistrationCubit cubit;
     bool hasProvider = true;
     try {
@@ -428,7 +409,6 @@ class _MenuScreenState extends State<MenuScreen> {
       return;
     }
 
-    // تمرير نفس الكيوبت للشاشة المختارة
     Widget screen;
     switch (routeName) {
       case Routes.completeProfileSteps:

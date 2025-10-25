@@ -9,6 +9,8 @@ plugins {
 
 android {
     namespace = "com.rasad.sa.mushtary"
+
+    @Suppress("UnstableApiUsage")
     compileSdk = flutter.compileSdkVersion.toInt()
     ndkVersion = "28.0.12433566"
 
@@ -23,41 +25,47 @@ android {
     }
 
     defaultConfig {
-<<<<<<< HEAD
         applicationId = "com.rasad.sa.mushtary"
-        minSdk = flutter.minSdkVersion.toInt()
-=======
-        applicationId = "com.example.mushtary"
-        // FIX: Set minSdkVersion to 26 to satisfy the myfatoorah_flutter plugin requirement.
-        minSdk = 26
-        // minSdk = flutter.minSdkVersion.toInt() // <-- The problematic line commented out
 
->>>>>>> 95fc8bb (update)
+        // minSdk 26 required by myfatoorah_flutter plugin
+        minSdk = 26
+
+        @Suppress("UnstableApiUsage")
         targetSdk = flutter.targetSdkVersion.toInt()
+        @Suppress("UnstableApiUsage")
         versionCode = flutter.versionCode.toInt()
+        @Suppress("UnstableApiUsage")
         versionName = flutter.versionName
         multiDexEnabled = true
     }
 
     signingConfigs {
+        // Only release signing; let AGP handle debug keystore automatically
         create("release") {
-            // Load release signing properties from key.properties
             val keystorePropertiesFile = rootProject.file("key.properties")
             val keystoreProperties = Properties()
-            if (keystorePropertiesFile.exists()) {
-                keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-            }
-            
+            var hasSigningProps = false
 
-            storeFile = keystoreProperties["storeFile"]?.let { file(it) }
-            storePassword = keystoreProperties["storePassword"] as String?
-            keyAlias = keystoreProperties["keyAlias"] as String?
-            keyPassword = keystoreProperties["keyPassword"] as String?
+            if (keystorePropertiesFile.exists()) {
+                FileInputStream(keystorePropertiesFile).use { fis ->
+                    keystoreProperties.load(fis)
+                }
+                if (keystoreProperties.containsKey("storeFile")) {
+                    hasSigningProps = true
+                }
+            }
+
+            if (hasSigningProps) {
+                storeFile = file(keystoreProperties["storeFile"].toString())
+                storePassword = keystoreProperties["storePassword"].toString()
+                keyAlias = keystoreProperties["keyAlias"].toString()
+                keyPassword = keystoreProperties["keyPassword"].toString()
+            }
         }
     }
 
     buildTypes {
-        getByName("release") {
+        release {
             isMinifyEnabled = true
             isShrinkResources = true
             isDebuggable = false
@@ -68,13 +76,12 @@ android {
             )
         }
 
-        getByName("debug") {
+        debug {
             isDebuggable = true
-            signingConfig = signingConfigs.getByName("release")
+            // No explicit debug signingConfig; AGP will use the default debug keystore
         }
     }
 
-    // Ensure Flutter assets are properly included
     buildFeatures {
         buildConfig = true
     }

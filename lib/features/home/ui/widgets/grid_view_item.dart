@@ -13,6 +13,7 @@ import '../../../favorites/ui/logic/cubit/favorites_cubit.dart';
 import '../../../favorites/ui/logic/cubit/favorites_state.dart';
 import '../../data/models/home_data_model.dart';
 import '../../../../core/utils/helpers/spacing.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class GridViewItem extends StatelessWidget {
   final HomeAdModel adModel;
@@ -86,10 +87,20 @@ class GridViewItem extends StatelessWidget {
                           ? CachedNetworkImage(
                         imageUrl: imageUrl,
                         fit: BoxFit.cover,
-                        placeholder: (_, __) => Container(color: ColorsManager.grey200, child: const Center(child: CircularProgressIndicator())),
-                        errorWidget: (_, __, ___) => Container(color: ColorsManager.grey200, child: const Icon(Icons.error)),
+                        // Skeletonizer بدل الـ CircularProgressIndicator
+                        placeholder: (_, __) => Skeletonizer(
+                          enabled: true,
+                          child: Container(color: ColorsManager.grey200),
+                        ),
+                        errorWidget: (_, __, ___) => Container(
+                          color: ColorsManager.grey200,
+                          child: const Icon(Icons.error),
+                        ),
                       )
-                          : Container(color: ColorsManager.grey200, child: Icon(Icons.image_not_supported, color: Colors.grey[400])),
+                          : Container(
+                        color: ColorsManager.grey200,
+                        child: Icon(Icons.image_not_supported, color: Colors.grey[400]),
+                      ),
                     ),
                   ),
                   if (isAuction)
@@ -132,7 +143,12 @@ class GridViewItem extends StatelessWidget {
               ),
             ),
             verticalSpace(8),
-            Text(adModel.title.isEmpty ? 'No Title' : adModel.title, style: TextStyles.font12Black400Weight, maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(
+              adModel.title.isEmpty ? 'No Title' : adModel.title,
+              style: TextStyles.font12Black400Weight,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
             verticalSpace(8),
             Row(
               children: [
@@ -146,7 +162,11 @@ class GridViewItem extends StatelessWidget {
                 horizontalSpace(8),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    ListViewItemDataWidget(image: 'riyal_black', isColoredText: true, text: (adModel.price?.trim().isEmpty ?? true) ? 'N/A' : adModel.price!),
+                    ListViewItemDataWidget(
+                      image: 'riyal_black',
+                      isColoredText: true,
+                      text: (adModel.price?.trim().isEmpty ?? true) ? 'N/A' : adModel.price!,
+                    ),
                     verticalSpace(4),
                     ListViewItemDataWidget(image: 'clock', text: createdAgo),
                   ]),

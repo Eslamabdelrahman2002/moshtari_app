@@ -34,6 +34,8 @@ import '../logic/cubit/car_parts_details_state.dart';
 import '../widgets/car_details/widgets/car_part_add_comment_field.dart';
 import '../widgets/car_details/widgets/car_part_comments_view.dart';
 import '../widgets/offer_sheet.dart';
+import 'package:skeletonizer/skeletonizer.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class CarPartDetailsScreen extends StatelessWidget {
   final int id;
@@ -54,7 +56,6 @@ class CarPartDetailsScreen extends StatelessWidget {
             partnerUser: UserModel(id: receiverId, name: receiverName),
           );
 
-          // معلومات الإعلان أعلى شاشة الشات
           final adInfo = AdInfo(
             id: partDetails.id,
             title: partDetails.title,
@@ -64,9 +65,6 @@ class CarPartDetailsScreen extends StatelessWidget {
             price: partDetails.price.toString(),
           );
 
-          // الانتقال للشات فقط (بدون إرسال أول رسالة)
-          // لا نرسل أي رسالة هنا
-          // await Future.delayed(const Duration(milliseconds: 500)); // لو تحب تبقي التأخير احذفه أو اتركه
           context.pushNamed(
             Routes.chatScreen,
             arguments: ChatScreenArgs(chatModel: chatModel, adInfo: adInfo),
@@ -99,7 +97,7 @@ class CarPartDetailsScreen extends StatelessWidget {
           child: BlocBuilder<CarPartsDetailsCubit, CarPartsDetailsState>(
             builder: (context, state) {
               if (state is CarPartsDetailsLoading) {
-                return const Center(child: CircularProgressIndicator());
+                return _buildLoadingSkeleton(context);
               }
               if (state is CarPartsDetailsFailure) {
                 return Center(child: Text(state.message));
@@ -174,9 +172,7 @@ class CarPartDetailsScreen extends StatelessWidget {
                           isVerified: isVerified,
                           rating: rating,
                           reviewsCount: reviewsCount,
-                          onFollow: () {
-                            // إن أردت ربط زر المتابعة أو فتح البروفايل لاحقًا
-                          },
+                          onFollow: () {},
                         ),
                       ),
                       const MyDivider(),
@@ -305,6 +301,115 @@ class CarPartDetailsScreen extends StatelessWidget {
               },
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingSkeleton(BuildContext context) {
+    return Skeletonizer(
+      enabled: true,
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(height: 56.h, width: double.infinity, color: Colors.white),
+            Container(height: 250.h, width: double.infinity, color: Colors.white),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(height: 18.h, width: 220.w, color: Colors.white),
+                  SizedBox(height: 8.h),
+                  Container(height: 12.h, width: 160.w, color: Colors.white),
+                ],
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Container(height: 72.h, width: double.infinity, color: Colors.white),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+              child: Row(
+                children: [
+                  Container(width: 44.w, height: 44.w, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(height: 12.h, width: 160.w, color: Colors.white),
+                        SizedBox(height: 6.h),
+                        Container(height: 12.h, width: 120.w, color: Colors.white),
+                      ],
+                    ),
+                  ),
+                  Container(width: 90.w, height: 28.h, color: Colors.white),
+                ],
+              ),
+            ),
+            const MyDivider(),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Column(
+                children: [
+                  Container(height: 12.h, width: double.infinity, color: Colors.white),
+                  SizedBox(height: 6.h),
+                  Container(height: 12.h, width: double.infinity, color: Colors.white),
+                ],
+              ),
+            ),
+            const MyDivider(),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Column(
+                children: List.generate(
+                  2,
+                      (i) => Padding(
+                    padding: EdgeInsets.only(bottom: 8.h),
+                    child: Row(
+                      children: [
+                        Container(width: 36.w, height: 36.w, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
+                        SizedBox(width: 8.w),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Container(height: 12.h, width: double.infinity, color: Colors.white),
+                              SizedBox(height: 6.h),
+                              Container(height: 12.h, width: double.infinity, color: Colors.white),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+              child: Container(height: 48.h, width: double.infinity, color: Colors.white),
+            ),
+            const MyDivider(),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: List.generate(
+                    2,
+                        (i) => Padding(
+                      padding: EdgeInsets.only(right: i == 1 ? 0 : 12.w, bottom: 16.h),
+                      child: Container(width: 260.w, height: 140.h, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

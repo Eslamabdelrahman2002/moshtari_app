@@ -8,6 +8,7 @@ import 'package:mushtary/core/utils/helpers/navigation.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
 import 'package:mushtary/core/widgets/primary/my_button.dart';
 import 'package:mushtary/core/widgets/primary/my_svg.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class WorkerListViewItem extends StatelessWidget {
   final String name;
@@ -17,7 +18,7 @@ class WorkerListViewItem extends StatelessWidget {
   final String worksCountText;
   final String cityName;
   final String nationality;
-  final int providerId; // جديد: لتحل الـ error
+  final int providerId;
 
   const WorkerListViewItem({
     super.key,
@@ -28,14 +29,14 @@ class WorkerListViewItem extends StatelessWidget {
     required this.worksCountText,
     required this.cityName,
     required this.nationality,
-    required this.providerId, // required الآن
+    required this.providerId,
   });
 
   @override
   Widget build(BuildContext context) {
-    onTap() => context.pushNamed(Routes.workerDetailsScreen, arguments: providerId); // استخدم providerId هنا
-
+    final goDetails = () => context.pushNamed(Routes.workerDetailsScreen, arguments: providerId);
     final displayJobTitle = jobTitle.isEmpty ? 'غير محدد' : jobTitle;
+    final imageHeight = 0.33.sw * 1.075;
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
@@ -48,6 +49,7 @@ class WorkerListViewItem extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // الصورة
           Expanded(
             flex: 4,
             child: Container(
@@ -56,19 +58,32 @@ class WorkerListViewItem extends StatelessWidget {
               child: Stack(
                 children: [
                   InkWell(
-                    onTap: onTap,
+                    onTap: goDetails,
                     child: imageUrl == null || imageUrl!.isEmpty
                         ? Container(
-                      height: 0.33.sw * 1.075,
+                      height: imageHeight,
                       color: Colors.grey.shade200,
                       child: const Center(child: Icon(Icons.person, size: 36)),
                     )
                         : CachedNetworkImage(
-                      height: 0.33.sw * 1.075,
+                      height: imageHeight,
                       fit: BoxFit.cover,
                       imageUrl: imageUrl!,
+                      placeholder: (_, __) => Skeletonizer(
+                        enabled: true,
+                        child: Container(
+                          height: imageHeight,
+                          color: ColorsManager.grey200,
+                        ),
+                      ),
+                      errorWidget: (_, __, ___) => Container(
+                        height: imageHeight,
+                        color: ColorsManager.grey200,
+                        child: const Icon(Icons.person_off_outlined, color: Colors.grey),
+                      ),
                     ),
                   ),
+                  // التقييم
                   Positioned(
                     left: 8,
                     top: 8,
@@ -84,6 +99,7 @@ class WorkerListViewItem extends StatelessWidget {
                       ),
                     ),
                   ),
+                  // مفضلة
                   Positioned(top: 8, right: 8, child: InkWell(child: MySvg(image: 'heart', width: 20.w, height: 20.h))),
                 ],
               ),
@@ -91,10 +107,11 @@ class WorkerListViewItem extends StatelessWidget {
           ),
           horizontalSpace(12),
 
+          // التفاصيل
           Expanded(
             flex: 7,
             child: SizedBox(
-              height: 0.33.sw * 1.075,
+              height: imageHeight,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -108,7 +125,7 @@ class WorkerListViewItem extends StatelessWidget {
                   verticalSpace(4),
 
                   InkWell(
-                    onTap: onTap,
+                    onTap: goDetails,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -181,7 +198,7 @@ class WorkerListViewItem extends StatelessWidget {
 
                   const Spacer(),
                   MyButton(
-                    onPressed: ()=>context.pushNamed(Routes.workerDetailsScreen, arguments: providerId),
+                    onPressed: goDetails,
                     label: 'عرض التفاصيل',
                     backgroundColor: ColorsManager.primary50,
                     radius: 8.r,

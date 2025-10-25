@@ -46,7 +46,11 @@ class FullViewContentWidget extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [ColorsManager.blackBackground, ColorsManager.blackBackground.withOpacity(0.65), ColorsManager.blackBackground.withOpacity(0)],
+          colors: [
+            ColorsManager.blackBackground,
+            ColorsManager.blackBackground.withOpacity(0.65),
+            ColorsManager.blackBackground.withOpacity(0),
+          ],
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
         ),
@@ -65,7 +69,9 @@ class FullViewContentWidget extends StatelessWidget {
                     if (adModel.price != null)
                       Container(
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(colors: [ColorsManager.blueGradient1, ColorsManager.blueGradient2]),
+                          gradient: const LinearGradient(
+                            colors: [ColorsManager.blueGradient1, ColorsManager.blueGradient2],
+                          ),
                           borderRadius: BorderRadius.circular(16.r),
                         ),
                         child: Padding(
@@ -73,31 +79,46 @@ class FullViewContentWidget extends StatelessWidget {
                           child: Row(
                             children: [
                               Text('السعر', style: TextStyles.font12Primary100400Weight),
-                              horizontalSpace(4),
+                              SizedBox(width: 4.w),
                               const MySvg(image: 'send'),
-                              horizontalSpace(8),
+                              SizedBox(width: 8.w),
                               Text(adModel.price ?? '---', style: TextStyles.font16White500Weight),
-                              horizontalSpace(4),
+                              SizedBox(width: 4.w),
                               MySvg(image: 'riyal_onblue', width: 16.w, height: 16.h),
                             ],
                           ),
                         ),
                       ),
-                    verticalSpace(16),
+                    SizedBox(height: 16.h),
                     SizedBox(
                       width: MediaQuery.of(context).size.width * 0.8,
-                      child: Text(adModel.title, style: TextStyles.font20White500Weight, maxLines: 2, overflow: TextOverflow.ellipsis),
+                      child: Text(
+                        adModel.title,
+                        style: TextStyles.font20White500Weight,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    verticalSpace(16),
+                    SizedBox(height: 16.h),
                     Text(_formatCreatedAt(adModel.createdAt), style: TextStyles.font12White400Weight),
-                    verticalSpace(16),
+                    SizedBox(height: 16.h),
                     UserInfoWidget(username: adModel.username, profilePicture: ownerProfilePicture),
-                    verticalSpace(16),
+                    SizedBox(height: 16.h),
                     Row(
                       children: [
-                        ListViewItemDataWidget(text: adModel.location, image: 'location-yellow', width: 20.w, height: 20.h),
-                        horizontalSpace(100),
-                        ListViewItemDataWidget(text: adModel.price ?? '---', image: 'riyal_white', width: 20.w, height: 20.h),
+                        ListViewItemDataWidget(
+                          text: adModel.location,
+                          image: 'location-yellow',
+                          width: 20.w,
+                          height: 20.h,
+                        ),
+                        SizedBox(width: 100.w),
+                        ListViewItemDataWidget(
+                          text: adModel.price ?? '---',
+                          image: 'riyal_white',
+                          width: 20.w,
+                          height: 20.h,
+                        ),
                       ],
                     ),
                   ],
@@ -116,7 +137,7 @@ class FullViewContentWidget extends StatelessWidget {
                       iconColor: isFav ? ColorsManager.redButton : Colors.white,
                     ),
                   ),
-                  verticalSpace(24),
+                  SizedBox(height: 24.h),
                   ViewSideButton(
                     onTap: () {
                       showPrimaryBottomSheet(
@@ -126,13 +147,16 @@ class FullViewContentWidget extends StatelessWidget {
                             BlocProvider<CommentSendCubit>(create: (_) => getIt<CommentSendCubit>()),
                             BlocProvider<ProfileCubit>.value(value: context.read<ProfileCubit>()),
                           ],
-                          child: CommentsBottomSheet(adId: adModel.id, bargains: const <BargainModel>[]),
+                          child: CommentsBottomSheet(
+                            adId: adModel.id,
+                            bargains: const <BargainModel>[],
+                          ),
                         ),
                       );
                     },
                     image: 'comment',
                   ),
-                  verticalSpace(24),
+                  SizedBox(height: 24.h),
                   ViewSideButton(
                     onTap: () {
                       showDialog(
@@ -161,7 +185,7 @@ class FullViewContentWidget extends StatelessWidget {
               ),
             ],
           ),
-          verticalSpace(11),
+          SizedBox(height: 11.h),
         ],
       ),
     );

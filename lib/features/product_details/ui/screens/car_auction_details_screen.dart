@@ -47,6 +47,9 @@ import 'package:mushtary/features/messages/ui/screens/chat_screen.dart';
 // RealEstate Current User Info Widget (لإعادة الاستخدام)
 import 'package:mushtary/features/real_estate_details/ui/widgets/real_estate_current_user_info.dart';
 
+// Skeletonizer
+import 'package:skeletonizer/skeletonizer.dart';
+
 class CarAuctionDetailsScreen extends StatefulWidget {
   final int id;
   const CarAuctionDetailsScreen({super.key, required this.id});
@@ -309,8 +312,19 @@ class _CarAuctionDetailsScreenState extends State<CarAuctionDetailsScreen> {
                                 backgroundColor: ColorsManager.primary400,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
                               ),
+                              // استبدال مؤشر التحميل بسكيليتون
                               child: isLoading
-                                  ? const Center(child: CircularProgressIndicator(color: Colors.white))
+                                  ? Skeletonizer(
+                                enabled: true,
+                                child: Container(
+                                  width: 20.w,
+                                  height: 20.w,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(6.r),
+                                  ),
+                                ),
+                              )
                                   : const Text('قم بالمزايدة'),
                             ),
                           ),
@@ -405,15 +419,17 @@ class _CarAuctionDetailsScreenState extends State<CarAuctionDetailsScreen> {
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.white,
           leading: InkWell(
-              onTap: ()=>Navigator.pop(context),
-              child: Icon(Icons.arrow_back_ios_new,color: ColorsManager.darkGray300,)),
+            onTap: ()=>Navigator.pop(context),
+            child: Icon(Icons.arrow_back_ios_new,color: ColorsManager.darkGray300,),
+          ),
         ),
-        
+
         body: SafeArea(
           child: BlocBuilder<CarAuctionDetailsCubit, CarAuctionDetailsState>(
             builder: (context, state) {
               if (state is CarAuctionDetailsLoading) {
-                return const Center(child: CircularProgressIndicator());
+                // Skeleton بدل المؤشر الدائري
+                return _buildLoadingSkeleton();
               }
               if (state is CarAuctionDetailsFailure) {
                 return Center(child: Text(state.message));
@@ -670,6 +686,130 @@ class _CarAuctionDetailsScreenState extends State<CarAuctionDetailsScreen> {
             }
             return const SizedBox.shrink();
           },
+        ),
+      ),
+    );
+  }
+
+  // صفحة Skeleton للتحميل
+  Widget _buildLoadingSkeleton() {
+    return Skeletonizer(
+      enabled: true,
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: EdgeInsets.only(bottom: 84.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // صور
+            Container(
+              height: 280.h,
+              width: double.infinity,
+              color: Colors.white,
+            ),
+            verticalSpace(16),
+
+            // عنوان وقصة
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(height: 14.h, width: 120.w, color: Colors.white),
+                  verticalSpace(8),
+                  Container(height: 20.h, width: 220.w, color: Colors.white),
+                ],
+              ),
+            ),
+            verticalSpace(12),
+
+            // Panel صغير
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Row(
+                children: [
+                  Expanded(child: Container(height: 60.h, color: Colors.white)),
+                  horizontalSpace(8),
+                  Expanded(child: Container(height: 60.h, color: Colors.white)),
+                  horizontalSpace(8),
+                  Expanded(child: Container(height: 60.h, color: Colors.white)),
+                ],
+              ),
+            ),
+            verticalSpace(12),
+
+            // Grid معلومات السيارة
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Wrap(
+                spacing: 12.w,
+                runSpacing: 12.h,
+                children: List.generate(
+                  4,
+                      (i) => Container(
+                    width: (MediaQuery.of(context).size.width - 16.w * 2 - 12.w) / 2,
+                    height: 80.h,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            verticalSpace(16),
+            const MyDivider(),
+
+            // معلومات المالك
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Row(
+                children: [
+                  Container(width: 40.w, height: 40.w, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
+                  horizontalSpace(8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(height: 12.h, width: 160.w, color: Colors.white),
+                        verticalSpace(6),
+                        Container(height: 12.h, width: 120.w, color: Colors.white),
+                      ],
+                    ),
+                  ),
+                  Container(width: 90.w, height: 28.h, color: Colors.white),
+                ],
+              ),
+            ),
+            verticalSpace(12),
+            const MyDivider(),
+
+            // الوصف
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Column(
+                children: [
+                  Container(height: 12.h, width: double.infinity, color: Colors.white),
+                  verticalSpace(8),
+                  Container(height: 12.h, width: double.infinity, color: Colors.white),
+                  verticalSpace(8),
+                  Container(height: 12.h, width: 220.w, color: Colors.white),
+                ],
+              ),
+            ),
+            verticalSpace(16),
+
+            // شريط أعلى مزايدة
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Container(
+                height: 56.h,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+              ),
+            ),
+            verticalSpace(12),
+            const MyDivider(),
+          ],
         ),
       ),
     );

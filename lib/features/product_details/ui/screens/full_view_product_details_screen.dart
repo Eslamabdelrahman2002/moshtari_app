@@ -29,7 +29,6 @@ class _FullViewProductDetailsScreenState
   late final PageController _pageCtrl;
   int _index = 0;
 
-  // صورة بديلة لو ما في صور
   static const String fallbackImage =
       'https://toyota-cdn.alghanim.com/camry2022.jpg';
 
@@ -46,7 +45,6 @@ class _FullViewProductDetailsScreenState
   }
 
   List<String> get _images {
-    // NOTE: لو اسم الخاصية مختلف في HomeAdModel عدّله هنا
     final imgs = (widget.adModel.imageUrls ?? <String>[]);
     return imgs.isNotEmpty ? imgs : <String>[fallbackImage];
   }
@@ -59,7 +57,6 @@ class _FullViewProductDetailsScreenState
   }
 
   void _openAdDetails() {
-    // نفس منطق التوجيه بحسب التصنيف
     final id = widget.adModel.id;
     final catId = widget.adModel.categoryId;
 
@@ -70,7 +67,6 @@ class _FullViewProductDetailsScreenState
     } else if (catId == 3) {
       context.pushNamed(Routes.realEstateDetailsScreen, arguments: id);
     } else {
-      // لو عندك شاشة أخرى عامة للمنتج
       context.pushNamed(Routes.productDetails, arguments: widget.adModel);
     }
   }
@@ -111,7 +107,6 @@ class _FullViewProductDetailsScreenState
           onTap: () => setState(() => isFullView = !isFullView),
           child: Stack(
             children: [
-              // الخلفية: الصور
               Positioned.fill(
                 child: PageView.builder(
                   controller: _pageCtrl,
@@ -132,7 +127,6 @@ class _FullViewProductDetailsScreenState
                                 size: 48, color: Colors.grey),
                           ),
                         ),
-                        // تدرّج خفيف لتحسين القراءة
                         Positioned.fill(
                           child: DecoratedBox(
                             decoration: BoxDecoration(
@@ -155,7 +149,6 @@ class _FullViewProductDetailsScreenState
                 ),
               ),
 
-              // شريط علوي: رجوع + لوجو + مشاركة/حفظ
               AnimatedPositioned(
                 duration: const Duration(milliseconds: 220),
                 top: showChrome ? 12.h : -80.h,
@@ -173,17 +166,13 @@ class _FullViewProductDetailsScreenState
                     Row(
                       children: [
                         _glassButton(
-                          onTap: () {
-                            // TODO: مشاركة
-                          },
+                          onTap: () {},
                           child: const Icon(Icons.ios_share_rounded,
                               color: Colors.white),
                         ),
                         horizontalSpace(8),
                         _glassButton(
-                          onTap: () {
-                            // TODO: مفضلة
-                          },
+                          onTap: () {},
                           child: const Icon(Icons.favorite_border_rounded,
                               color: Colors.white),
                         ),
@@ -193,7 +182,6 @@ class _FullViewProductDetailsScreenState
                 ),
               ),
 
-              // بادج الحالة أعلى يمين
               if (_statusLabel.isNotEmpty)
                 AnimatedPositioned(
                   duration: const Duration(milliseconds: 220),
@@ -208,7 +196,6 @@ class _FullViewProductDetailsScreenState
                   ),
                 ),
 
-              // عدّاد الصفحات أسفل
               AnimatedPositioned(
                 duration: const Duration(milliseconds: 220),
                 bottom: showChrome ? 112.h : -60.h,
@@ -225,7 +212,6 @@ class _FullViewProductDetailsScreenState
                 ),
               ),
 
-              // محتوى سفلي أبيض (sheet) - نفس الودجت لديك
               AnimatedPositioned(
                 duration: const Duration(milliseconds: 220),
                 left: 0,
@@ -236,7 +222,7 @@ class _FullViewProductDetailsScreenState
                     left: 16.w,
                     right: 16.w,
                     top: 12.h,
-                    bottom: 16.h + 64.h, // مساحة للزر السفلي
+                    bottom: 16.h + 64.h,
                   ),
                   decoration: BoxDecoration(
                     color: ColorsManager.white,
@@ -257,7 +243,6 @@ class _FullViewProductDetailsScreenState
         ),
       ),
 
-      // زر سفلي "عرض الإعلان"
       bottomNavigationBar: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
         height: isFullView ? 0 : 72.h,

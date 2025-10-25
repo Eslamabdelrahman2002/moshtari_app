@@ -1,93 +1,102 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:mushtary/core/utils/helpers/cache_helper.dart';
+
+import '../../data/repo/chat_offline_repository.dart';
 import '../../data/models/messages_model.dart';
-import '../../data/repo/messages_repo.dart';
 import 'chat_state.dart';
 
 class ChatCubit extends Cubit<ChatState> {
-  final MessagesRepo _repo;
-  ChatCubit(this._repo) : super(ChatInitial());
+  final ChatOfflineRepository repo;
+  StreamSubscription? _sub;
 
-  final List<Message> _messages = [];
-  StreamSubscription<Message>? _sub;
-  int? _cid;
-  bool _initialized = false;
+  int? _conversationId;
+  int? _partnerId;
 
-  String _key(Message m) {
-    if (m.id != null) return 'id:${m.id}';
-    final content = (m.messageContent ?? '').trim();
-    final created = (m.createdAt ?? '').split('.').first;
-    return 'tmp:${m.senderId}-${m.receiverId}-$content-$created';
+  ChatCubit(this.repo) : super(ChatInitial());
+
+  int _meId() {
+    final token = CacheHelper.getData(key: 'token') as String?;
+    if (token == null || token.isEmpty) return -1;
+    final payload = JwtDecoder.decode(token);
+    final raw = payload['user_id'] ?? payload['id'] ?? payload['sub'];
+    if (raw is int) return raw;
+    if (raw is num) return raw.toInt();
+    if (raw is String) return int.tryParse(raw) ?? -1;
+    return -1;
   }
 
-  void _upsert(Iterable<Message> batch, {bool replace = false}) {
-    final map = <String, Message>{};
-    if (!replace) {
-      for (final m in _messages) {
-        map[_key(m)] = m;
-      }
-    }
-    for (final m in batch) {
-      map[_key(m)] = m;
-    }
-    final list = map.values.toList();
-    list.sort((a, b) {
-      final ta = DateTime.tryParse(a.createdAt ?? '')?.millisecondsSinceEpoch ?? 0;
-      final tb = DateTime.tryParse(b.createdAt ?? '')?.millisecondsSinceEpoch ?? 0;
-      return tb.compareTo(ta);
-    });
-    _messages
-      ..clear()
-      ..addAll(list);
-    emit(ChatSuccess(List.unmodifiable(_messages)));
-  }
+  Future<void> initChat({
+    int? conversationId,
+    required int partnerId,
+    String? partnerName,
+    String? partnerAvatar,
+  }) async {
+    emit(ChatLoading());
+    _conversationId = conversationId;
+    _partnerId = partnerId;
 
-  Future<void> fetchMessages(int conversationId) async {
-    _cid = conversationId;
-    if (!_initialized) emit(ChatLoading());
-    try {
-      final msgs = await _repo.getConversationMessages(conversationId);
-      _upsert(msgs.reversed, replace: !_initialized);
-      _initialized = true;
-
-      await _sub?.cancel();
-      _sub = _repo.incomingMessages().listen((m) {
-        if (m.conversationId == _cid) {
-          _upsert([m], replace: false);
-        }
-      });
-    } catch (e) {
-      emit(ChatFailure(e.toString()));
-    }
-  }
-
-  Future<void> sendMessage(SendMessageRequestBody body, int conversationId) async {
-    final optimistic = Message(
-      id: null,
-      senderId: _repo.currentUserId(),
-      receiverId: body.receiverId,
+    await repo.initConversation(
       conversationId: conversationId,
-      messageContent: body.messageContent,
-      createdAt: DateTime.now().toIso8601String(),
+      partnerId: partnerId,
+      partnerName: partnerName,
+      partnerAvatar: partnerAvatar,
     );
 
-    final optimisticKey = _key(optimistic);
-    _upsert([optimistic], replace: false);
+    // راقب الرسائل من التخزين المحلي
+    await _sub?.cancel();
+    _sub = repo
+        .watchMessagesLocal(conversationId: conversationId, partnerId: partnerId)
+        .listen((localMsgs) {
+      final msgs = localMsgs.map((lm) {
+        return Message(
+          id: lm.serverId,
+          senderId: lm.senderId,
+          receiverId: lm.receiverId,
+          conversationId: lm.conversationId,
+          messageContent: lm.content,
+          createdAt: lm.createdAt.toIso8601String(),
+        );
+      }).toList();
+      emit(ChatSuccess(msgs));
+    });
 
+    // مزامنة من السيرفر (محميّة من أي خطأ)
     try {
-      await _repo.sendMessage(body, conversationId);
-      // لا نعمل refresh كامل هنا
-    } catch (e) {
-      // Rollback
-      _messages.removeWhere((m) => _key(m) == optimisticKey);
-      emit(ChatFailure(e.toString()));
-      emit(ChatSuccess(List.unmodifiable(_messages)));
+      if (conversationId != null && conversationId > 0) {
+        await repo.syncFromRemote(conversationId: conversationId, meId: _meId());
+      }
+      await repo.syncPendingNow();
+    } catch (_) {
+      // تجاهل أي خطأ هنا لتجنّب كسر الواجهة
     }
   }
 
+  Future<void> sendMessage({required String text, int? adId}) async {
+    if (_partnerId == null) {
+      emit(ChatFailure('لا يمكن تحديد المستلم.'));
+      return;
+    }
+    try {
+      await repo.sendMessage(
+        meId: _meId(),
+        conversationId: _conversationId,
+        partnerId: _partnerId!,
+        content: text,
+        adId: adId,
+      );
+      // لا حاجة للتحديث اليدوي؛ الاستريم المحلي هيبثّ الرسالة pending فوراً
+    } catch (e) {
+      emit(ChatFailure(e.toString()));
+    }
+  }
+
+  Future<void> retryPending() => repo.syncPendingNow();
+
   @override
-  Future<void> close() async {
-    await _sub?.cancel();
+  Future<void> close() {
+    _sub?.cancel();
     return super.close();
   }
 }

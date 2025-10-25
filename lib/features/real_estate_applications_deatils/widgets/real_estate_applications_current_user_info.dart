@@ -55,7 +55,7 @@ class RealEstateApplicationsCurrentUserInfo extends StatelessWidget {
                   horizontalSpace(8),
                   Container(
                     padding:
-                        EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+                    EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
                     decoration: BoxDecoration(
                       color: ColorsManager.lightTeal,
                       borderRadius: BorderRadius.circular(80.r),

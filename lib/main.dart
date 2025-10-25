@@ -8,27 +8,29 @@ import 'package:mushtary/core/utils/helpers/cache_helper.dart';
 import 'package:mushtary/features/mushtary_client_app.dart';
 import 'package:mushtary/generated/codegen_loader.g.dart';
 
+import 'features/messages/data/repo/chat_offline_repository.dart';
+import 'features/messages/logic/cubit/chat_cubit.dart';
 import 'features/register_service/logic/cubit/service_registration_cubit.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-// تهيئة التخزين المحلي أولاً
+  // التخزين واللغة
   await CacheHelper.init();
-
-// تهيئة الترجمة — مهم: await
   await EasyLocalization.ensureInitialized();
-
-// تقييد الاتجاهات (اختياري لكنه مفيد)
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
-// DI (تسجيل الخدمات فقط، مفيش طلبات شبكة هنا)
+  // DI العادي
   setupServiceLocator();
 
-  debugPrint('>> main: init done, running app...');
+  // مهم: تسجيل مكونات الشات الأوفلاين + ChatCubit
+  await setupChatOfflineLocator();
+
+  // تحقق أثناء التطوير (اختياري)
+  assert(getIt.isRegistered<ChatOfflineRepository>(), 'ChatOfflineRepository not registered');
+  assert(getIt.isRegistered<ChatCubit>(), 'ChatCubit not registered');
 
   runApp(
-
     EasyLocalization(
       path: 'assets/translations',
       supportedLocales: const [Locale('ar')],
@@ -42,9 +44,10 @@ Future<void> main() async {
             create: (ctx) => getIt<ServiceRegistrationCubit>(),
           ),
         ],
-      child: MushtaryClientApp(
-        appRouter: AppRouter(),
+        child: MushtaryClientApp(
+          appRouter: AppRouter(),
+        ),
       ),
-    ),)
+    ),
   );
 }

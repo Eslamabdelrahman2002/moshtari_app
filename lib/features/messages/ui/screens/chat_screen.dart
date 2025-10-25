@@ -6,7 +6,6 @@ import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/utils/helpers/cache_helper.dart';
 
 import 'package:mushtary/features/messages/data/models/messages_model.dart';
-import 'package:mushtary/features/messages/data/repo/messages_repo.dart';
 import 'package:mushtary/features/messages/logic/cubit/chat_cubit.dart';
 import 'package:mushtary/features/messages/logic/cubit/chat_state.dart';
 
@@ -14,6 +13,7 @@ import '../../../../core/widgets/safe_cached_image.dart';
 import '../widgets/chats/chat_selled_item.dart';
 import '../widgets/chats/message_data_widget.dart';
 import '../widgets/chats/message_input_box.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class ChatScreenArgs {
   final MessagesModel chatModel;
@@ -40,33 +40,6 @@ class ChatScreen extends StatelessWidget {
     return -1;
   }
 
-  // استنتاج receiverId لو partnerUser.id مش موجود
-  int? _resolveReceiverId(BuildContext context, int meId) {
-    final partnerId = chatModel.partnerUser?.id;
-    if (partnerId != null && partnerId > 0) return partnerId;
-
-    final st = context.read<ChatCubit>().state;
-    if (st is ChatSuccess) {
-      for (final m in st.messages) {
-        if (m.senderId != null && m.senderId != meId) return m.senderId;
-        if (m.receiverId != null && m.receiverId != meId) return m.receiverId;
-      }
-    }
-    return null;
-  }
-
-  // استنتاج chatId لو ناقص
-  int? _resolveChatId(BuildContext context) {
-    final id = chatModel.conversationId;
-    if (id != null && id > 0) return id;
-
-    final st = context.read<ChatCubit>().state;
-    if (st is ChatSuccess && st.messages.isNotEmpty) {
-      return st.messages.first.conversationId;
-    }
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
     final meId = _currentUserId();
@@ -76,78 +49,47 @@ class ChatScreen extends StatelessWidget {
         : 'المحادثة';
 
     return BlocProvider(
-      create: (_) => getIt<ChatCubit>()..fetchMessages(chatModel.conversationId ?? 0),
+      create: (_) => getIt<ChatCubit>()
+        ..initChat(
+          conversationId: chatModel.conversationId,
+          partnerId: chatModel.partnerUser?.id ?? 0,
+          partnerName: chatModel.partnerUser?.name,
+          partnerAvatar: chatModel.partnerUser?.profileImage,
+        ),
       child: Builder(
         builder: (chatContext) {
           Future<void> _safeSend(String messageContent) async {
-            // 1) استنتاج المستلم
-            int? receiverId = _resolveReceiverId(chatContext, meId);
-            if (receiverId == null || receiverId == 0) {
-              ScaffoldMessenger.of(chatContext).showSnackBar(
-                const SnackBar(content: Text('لا يمكن تحديد المستلم الآن، انتظر تحميل الرسائل ثم حاول مجددًا.')),
-              );
-              return;
-            }
-
-            // 2) استنتاج/إنشاء chatId
-            int? chatId = _resolveChatId(chatContext);
-            if (chatId == null || chatId == 0) {
-              try {
-                final repo = getIt<MessagesRepo>();
-                final newChatId = await repo.initiateChat(receiverId);
-                if (newChatId == null) {
-                  ScaffoldMessenger.of(chatContext).showSnackBar(
-                    const SnackBar(content: Text('تعذر بدء المحادثة الآن.')),
-                  );
-                  return;
-                }
-                chatId = newChatId;
-                await chatContext.read<ChatCubit>().fetchMessages(chatId);
-              } catch (e) {
-                ScaffoldMessenger.of(chatContext).showSnackBar(
-                  SnackBar(content: Text('خطأ في بدء المحادثة: $e')),
-                );
-                return;
-              }
-            }
-
-            // 3) الإرسال مع message_type='text'
-            chatContext.read<ChatCubit>().sendMessage(
-              SendMessageRequestBody(
-                receiverId: receiverId,
-                messageContent: messageContent,
-                listingId: adInfo?.id,
-                messageType: 'text',
-              ),
-              chatId!,
+            await chatContext.read<ChatCubit>().sendMessage(
+              text: messageContent,
+              adId: adInfo?.id,
             );
           }
 
           return Scaffold(
-              appBar: AppBar(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.black,
-                elevation: 0.5,
-                surfaceTintColor: Colors.white,
-                leading: IconButton(
-                  icon:  Icon(Icons.arrow_back_ios,color: ColorsManager.darkGray300,),
-                  onPressed: () => Navigator.of(context).pop(),
-                  tooltip: 'رجوع',
-                ),
-                title: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SafeCircleAvatar(url: avatarUrl, radius: 12),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        name,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+              elevation: 0.5,
+              surfaceTintColor: Colors.white,
+              leading: IconButton(
+                icon: Icon(Icons.arrow_back_ios, color: ColorsManager.darkGray300),
+                onPressed: () => Navigator.of(context).pop(),
+                tooltip: 'رجوع',
               ),
+              title: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SafeCircleAvatar(url: avatarUrl, radius: 12),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      name,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
             resizeToAvoidBottomInset: true,
             body: Column(
               children: [
@@ -156,7 +98,7 @@ class ChatScreen extends StatelessWidget {
                   child: BlocBuilder<ChatCubit, ChatState>(
                     builder: (context, state) {
                       if (state is ChatLoading || state is ChatInitial) {
-                        return const Center(child: CircularProgressIndicator());
+                        return const ChatMessagesSkeleton();
                       }
                       if (state is ChatFailure) {
                         return Center(child: Text(state.error));
@@ -192,6 +134,47 @@ class ChatScreen extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class ChatMessagesSkeleton extends StatelessWidget {
+  const ChatMessagesSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    return Skeletonizer(
+      enabled: true,
+      child: ListView.builder(
+        reverse: true,
+        padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
+        itemCount: 12,
+        itemBuilder: (_, i) {
+          final isMe = i % 2 == 0;
+          final bubbleWidth = width * (isMe ? 0.58 : 0.72);
+          return Align(
+            alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+            child: Container(
+              width: bubbleWidth,
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(height: 12, width: bubbleWidth * 0.8, color: Colors.white),
+                  const SizedBox(height: 8),
+                  Container(height: 12, width: bubbleWidth * 0.55, color: Colors.white),
+                ],
+              ),
             ),
           );
         },

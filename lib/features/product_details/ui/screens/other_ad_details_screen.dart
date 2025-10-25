@@ -28,6 +28,7 @@ import '../logic/cubit/other_ad_details_state.dart';
 import '../widgets/car_details/widgets/other_ad_add_comment_field.dart';
 import '../widgets/car_details/widgets/other_ad_comments_view.dart';
 import '../widgets/offer_sheet.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 class OtherAdDetailsScreen extends StatefulWidget {
   final int id;
@@ -101,7 +102,7 @@ class _OtherAdDetailsScreenState extends State<OtherAdDetailsScreen> {
           child: BlocBuilder<OtherAdDetailsCubit, OtherAdDetailsState>(
             builder: (context, state) {
               if (state is OtherAdDetailsLoading) {
-                return const Center(child: CircularProgressIndicator());
+                return _buildLoadingSkeleton(context);
               }
               if (state is OtherAdDetailsFailure) {
                 return Center(child: Text(state.message));
@@ -227,7 +228,7 @@ class _OtherAdDetailsScreenState extends State<OtherAdDetailsScreen> {
                           isVerified: isVerified,
                           rating: rating,
                           reviewsCount: reviewsCount,
-                          onFollow: () {}, // اختياري
+                          onFollow: () {},
                         ),
                       ),
                       const MyDivider(),
@@ -380,7 +381,6 @@ class _OtherAdDetailsScreenState extends State<OtherAdDetailsScreen> {
                 }
               },
 
-              // أضف سومتك => offers
               onAddBid: () async {
                 if (isOwner) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -392,6 +392,116 @@ class _OtherAdDetailsScreenState extends State<OtherAdDetailsScreen> {
               },
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingSkeleton(BuildContext context) {
+    return Skeletonizer(
+      enabled: true,
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(height: 56, width: double.infinity, color: Colors.white),
+            Container(height: 285, width: double.infinity, color: Colors.white),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(height: 18, width: 220, color: Colors.white),
+                  const SizedBox(height: 8),
+                  Container(height: 12, width: 160, color: Colors.white),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(height: 72, width: double.infinity, color: Colors.white),
+            ),
+            const MyDivider(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Container(width: 44, height: 44, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        SizedBox(height: 12, child: ColoredBox(color: Colors.white)),
+                        SizedBox(height: 6),
+                        SizedBox(height: 12, child: ColoredBox(color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                  Container(width: 90, height: 28, color: Colors.white),
+                ],
+              ),
+            ),
+            const MyDivider(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: [
+                  Container(height: 12, width: double.infinity, color: Colors.white),
+                  const SizedBox(height: 6),
+                  Container(height: 12, width: double.infinity, color: Colors.white),
+                ],
+              ),
+            ),
+            const MyDivider(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: List.generate(
+                  2,
+                      (i) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Container(width: 36, height: 36, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Container(height: 12, width: double.infinity, color: Colors.white),
+                              const SizedBox(height: 6),
+                              Container(height: 12, width: double.infinity, color: Colors.white),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Container(height: 48, width: double.infinity, color: Colors.white),
+            ),
+            const MyDivider(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: List.generate(
+                    2,
+                        (i) => Padding(
+                      padding: EdgeInsets.only(right: i == 1 ? 0 : 12, bottom: 16),
+                      child: Container(width: 260, height: 140, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

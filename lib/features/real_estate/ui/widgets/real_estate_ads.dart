@@ -26,18 +26,18 @@ class RealEstateAds extends StatelessWidget {
     return Column(
       children: [
         Visibility(
-            visible: (!isMapView && !isApplications),
-            child: setupListOrGridView()),
+          visible: (!isMapView && !isApplications),
+          child: setupListOrGridView(),
+        ),
         Visibility(
-            visible: (isApplications),
-            // This Expanded is okay because its parent is a Column.
-            child: const Expanded(child: RealEstateApplications())),
+          visible: (isApplications),
+          child: const Expanded(child: RealEstateApplications()),
+        ),
       ],
     );
   }
 
   Widget setupListOrGridView() {
-    // This will now work correctly because of the added imports
     if (isListView) {
       return RealEstateListView(properties: properties);
     } else {
