@@ -59,5 +59,9 @@
 		<string>This app needs access to your location to show relevant ads and services in your area.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>This app needs access to your photo library to let you select and upload profile images, ad listing photos, and share photos in chats.</string>
+		<key>NSUserNotificationsUsageDescription</key>
+		<string>This app needs permission to send you notifications about important updates, messages, and offers.</string>
+		<key>UNUserNotificationCenterDelegate</key>
+		<string>AppDelegate</string>
 	</dict>
 </plist>
