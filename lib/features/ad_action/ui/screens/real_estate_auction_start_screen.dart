@@ -1293,7 +1293,10 @@ class _RealEstateAuctionStartScreenState
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(title: const Text('إنشاء مزاد')),
+        appBar: AppBar(
+            leading: IconButton(onPressed:()=>Navigator.pop(context),
+              icon: Icon(Icons.arrow_back_ios_new),color: ColorsManager.darkGray300,),
+            title:  Text('إنشاء مزاد',style: TextStyles.font20Black500Weight,)),
         body: SafeArea(
           child: Column(
             children: [

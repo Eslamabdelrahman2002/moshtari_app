@@ -5,31 +5,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import 'package:mushtary/features/product_details/ui/logic/cubit/comment_send_cubit.dart';
-import 'package:mushtary/features/user_profile/logic/cubit/profile_cubit.dart';
 import 'package:mushtary/core/dependency_injection/injection_container.dart';
 import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
 import 'package:mushtary/core/widgets/primary/my_divider.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:mushtary/core/widgets/primary/my_svg.dart';
 
 import '../../../../core/router/routes.dart';
 import '../../../../core/utils/helpers/launcher.dart';
 import '../../../../core/utils/helpers/navigation.dart';
-import '../../../../core/widgets/primary/my_svg.dart';
+
 import '../../../favorites/ui/logic/cubit/favorites_cubit.dart';
-import '../../../favorites/ui/logic/cubit/favorites_state.dart';
 import '../logic/cubit/car_auction_details_cubit.dart';
 import '../logic/cubit/car_auction_details_state.dart';
 
-// WS Bidding Logic
+// WS bidding
 import 'package:mushtary/features/product_details/data/repo/auction_bid_repo.dart';
 import 'package:mushtary/features/product_details/ui/logic/cubit/auction_bid_cubit.dart';
-
-// Share dialog model
-import 'package:mushtary/features/home/data/models/home_data_model.dart';
-import '../widgets/full_view_widget/advertising_market_dialog.dart';
 
 // Widgets
 import '../widgets/auction_car_info_grid_view.dart';
@@ -38,16 +31,20 @@ import '../widgets/car_details/widgets/car_details_panel.dart';
 import '../widgets/car_details/widgets/car_info_description.dart';
 import '../widgets/car_details/widgets/car_story_and_title.dart';
 
-// Chat models
+// Chat
 import 'package:mushtary/features/messages/data/models/messages_model.dart';
 import 'package:mushtary/features/messages/data/repo/messages_repo.dart';
 import 'package:mushtary/features/messages/ui/widgets/chats/chat_initiation_sheet.dart';
 import 'package:mushtary/features/messages/ui/screens/chat_screen.dart';
 
-// RealEstate Current User Info Widget (لإعادة الاستخدام)
+// Owner info (reused)
 import 'package:mushtary/features/real_estate_details/ui/widgets/real_estate_current_user_info.dart';
 
-// Skeletonizer
+// Profile + comments
+import 'package:mushtary/features/product_details/ui/logic/cubit/comment_send_cubit.dart';
+import 'package:mushtary/features/user_profile/logic/cubit/profile_cubit.dart';
+
+// Skeleton
 import 'package:skeletonizer/skeletonizer.dart';
 
 class CarAuctionDetailsScreen extends StatefulWidget {
@@ -59,32 +56,14 @@ class CarAuctionDetailsScreen extends StatefulWidget {
 }
 
 class _CarAuctionDetailsScreenState extends State<CarAuctionDetailsScreen> {
+  // Format helpers
   String _fmt(num? v) {
     if (v == null) return '0';
     final s = v.toString();
     return s.replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
   }
 
-  String _fmtStr(String? s) {
-    if (s == null || s.isEmpty) return '0';
-    final n = num.tryParse(s);
-    return _fmt(n);
-  }
-
-  Future<void> openPdf(String url) async {
-    final uri = Uri.parse(url);
-    if (!mounted) return;
-    try {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('لا يمكن فتح الملف')),
-      );
-    }
-  }
-
-  // بدء محادثة
+  // Chat
   void _startChat(BuildContext context, int receiverId, String receiverName, dynamic auctionDetails) {
     showChatInitiationSheet(
       context,
@@ -109,7 +88,7 @@ class _CarAuctionDetailsScreenState extends State<CarAuctionDetailsScreen> {
             price: (auctionDetails.maxBid ?? num.tryParse(auctionDetails.minBidValue ?? '') ?? 0).toString(),
           );
 
-          context.pushNamed(
+          NavX(context).pushNamed(
             Routes.chatScreen,
             arguments: ChatScreenArgs(chatModel: chatModel, adInfo: adInfo),
           );
@@ -130,7 +109,7 @@ class _CarAuctionDetailsScreenState extends State<CarAuctionDetailsScreen> {
     );
   }
 
-  // Dialog المزايدة - يعمل مع WS
+  // Bid dialog
   Future<void> _showBidDialog({
     required num currentHighest,
     required num minBid,
@@ -142,7 +121,6 @@ class _CarAuctionDetailsScreenState extends State<CarAuctionDetailsScreen> {
     final controller = TextEditingController();
     final incs = <int>[500, 1000, 1500, 2000];
 
-    // استخدم نفس نسخة الكيوبت المسجلة باسم المزاد
     final key = 'car-$auctionId';
     AuctionBidCubit bidCubit;
     if (getIt.isRegistered<AuctionBidCubit>(instanceName: key)) {
@@ -178,7 +156,6 @@ class _CarAuctionDetailsScreenState extends State<CarAuctionDetailsScreen> {
                         ScaffoldMessenger.of(listenerCtx).showSnackBar(SnackBar(content: Text(bidState.message)));
                       }
                       if (bidState is AuctionBidSuccess) {
-                        // أعطِ فرصة لواجهة الديالوج تعرض القيمة الجديدة قبل الإغلاق
                         await Future.delayed(const Duration(milliseconds: 200));
                         if (Navigator.of(listenerCtx).canPop()) {
                           Navigator.pop(listenerCtx);
@@ -312,7 +289,6 @@ class _CarAuctionDetailsScreenState extends State<CarAuctionDetailsScreen> {
                                 backgroundColor: ColorsManager.primary400,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
                               ),
-                              // استبدال مؤشر التحميل بسكيليتون
                               child: isLoading
                                   ? Skeletonizer(
                                 enabled: true,
@@ -339,58 +315,139 @@ class _CarAuctionDetailsScreenState extends State<CarAuctionDetailsScreen> {
         );
       },
     );
-
-    // لا نعمل leave/unregister هنا؛ التنظيف يتم في dispose الخاص بالشاشة
   }
 
-  // نافذة المشاركة
-  void _showShareDialog(BuildContext context, dynamic auctionDetails, String location, String? phone) {
-    final int auctionId = auctionDetails.id;
-    final String auctionTitle = auctionDetails.title;
-    final String price = _fmt(auctionDetails.maxBid ?? num.tryParse(auctionDetails.minBidValue ?? '') ?? 0);
-    final List<String> images = (auctionDetails.activeItem.images is List && auctionDetails.activeItem.images.isNotEmpty)
-        ? auctionDetails.activeItem.images.cast<String>()
-        : (auctionDetails.thumbnail != null ? [auctionDetails.thumbnail] : []);
-
-    final adModelForDialog = HomeAdModel(
-      id: auctionId,
-      title: auctionTitle,
-      price: price,
-      location: location,
-      imageUrls: images,
-      createdAt: auctionDetails.createdAt?.toIso8601String() ?? '',
-      username: '',
-    );
-
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (context) {
-        final size = MediaQuery.of(context).size;
-        return Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24.r),
+  // Small square icon button helper
+  Widget _squareIconBtn({required Widget icon, required Color bg, Color? borderColor, VoidCallback? onTap}) {
+    final disabled = onTap == null;
+    return Material(
+      color: disabled ? Colors.grey.shade300 : bg,
+      borderRadius: BorderRadius.circular(12.r),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12.r),
+        child: Container(
+          width: 48.w,
+          height: 48.w,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: borderColor ?? Colors.transparent, width: 1.w),
           ),
-          insetPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: 380.w, maxHeight: size.height * 0.85),
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-              child: AdvertisingMarketDialog(
-                adModel: adModelForDialog,
-                phone: phone,
+          child: Center(child: icon),
+        ),
+      ),
+    );
+  }
+
+  // Loading skeleton
+  Widget _buildLoadingSkeleton() {
+    return Skeletonizer(
+      enabled: true,
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: EdgeInsets.only(bottom: 84.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(height: 280.h, width: double.infinity, color: Colors.white),
+            verticalSpace(16),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(height: 14.h, width: 120.w, color: Colors.white),
+                  verticalSpace(8),
+                  Container(height: 20.h, width: 220.w, color: Colors.white),
+                ],
               ),
             ),
-          ),
-        );
-      },
+            verticalSpace(12),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Row(
+                children: [
+                  Expanded(child: Container(height: 60.h, color: Colors.white)),
+                  horizontalSpace(8),
+                  Expanded(child: Container(height: 60.h, color: Colors.white)),
+                  horizontalSpace(8),
+                  Expanded(child: Container(height: 60.h, color: Colors.white)),
+                ],
+              ),
+            ),
+            verticalSpace(12),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Wrap(
+                spacing: 12.w,
+                runSpacing: 12.h,
+                children: List.generate(
+                  4,
+                      (i) => Container(
+                    width: (MediaQuery.of(context).size.width - 16.w * 2 - 12.w) / 2,
+                    height: 80.h,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            verticalSpace(16),
+            const MyDivider(),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Row(
+                children: [
+                  Container(width: 40.w, height: 40.w, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
+                  horizontalSpace(8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(height: 12.h, width: 160.w, color: Colors.white),
+                        verticalSpace(6),
+                        Container(height: 12.h, width: 120.w, color: Colors.white),
+                      ],
+                    ),
+                  ),
+                  Container(width: 90.w, height: 28.h, color: Colors.white),
+                ],
+              ),
+            ),
+            verticalSpace(12),
+            const MyDivider(),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Column(
+                children: [
+                  Container(height: 12.h, width: double.infinity, color: Colors.white),
+                  verticalSpace(8),
+                  Container(height: 12.h, width: double.infinity, color: Colors.white),
+                  verticalSpace(8),
+                  Container(height: 12.h, width: 220.w, color: Colors.white),
+                ],
+              ),
+            ),
+            verticalSpace(16),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Container(
+                height: 56.h,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+              ),
+            ),
+            verticalSpace(12),
+            const MyDivider(),
+          ],
+        ),
+      ),
     );
   }
 
   @override
   void dispose() {
-    // تنظيف الكيوبت المشترك عند مغادرة الشاشة
     final key = 'car-${widget.id}';
     if (getIt.isRegistered<AuctionBidCubit>(instanceName: key)) {
       final c = getIt<AuctionBidCubit>(instanceName: key);
@@ -419,16 +476,14 @@ class _CarAuctionDetailsScreenState extends State<CarAuctionDetailsScreen> {
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.white,
           leading: InkWell(
-            onTap: ()=>Navigator.pop(context),
-            child: Icon(Icons.arrow_back_ios_new,color: ColorsManager.darkGray300,),
+            onTap: () => Navigator.pop(context),
+            child: Icon(Icons.arrow_back_ios_new, color: ColorsManager.darkGray300),
           ),
         ),
-
         body: SafeArea(
           child: BlocBuilder<CarAuctionDetailsCubit, CarAuctionDetailsState>(
             builder: (context, state) {
               if (state is CarAuctionDetailsLoading) {
-                // Skeleton بدل المؤشر الدائري
                 return _buildLoadingSkeleton();
               }
               if (state is CarAuctionDetailsFailure) {
@@ -464,9 +519,7 @@ class _CarAuctionDetailsScreenState extends State<CarAuctionDetailsScreen> {
                 final isOwner = (myId != null && ownerId != null && myId == ownerId) ||
                     ((myUsername?.trim().isNotEmpty ?? false) && (ownerName.trim() == myUsername?.trim()));
 
-                const String defaultLocation = 'الموقع غير متوفر';
-
-                // إنشاء/جلب الكيوبت المشترك للشاشة
+                // shared WS cubit
                 final key = 'car-${a.id}';
                 AuctionBidCubit auctionBidCubit;
                 if (getIt.isRegistered<AuctionBidCubit>(instanceName: key)) {
@@ -495,13 +548,8 @@ class _CarAuctionDetailsScreenState extends State<CarAuctionDetailsScreen> {
                       children: [
                         CarDetailsImages(
                           images: imgs,
-                          status: a.status,
-                          adTitle: a.title,
-                          adPrice: _fmt(highest),
-                          shareUrl: 'https://mushtary.com/auction/${a.id}',
-                          shareLocation: defaultLocation,
-                          createdAt: a.createdAt?.toIso8601String(),
-                          onShareTap: () => _showShareDialog(context, a, defaultLocation, phone),
+                          adId: a.id,              // المفضلة على سجل المزاد
+                          favoriteType: 'auction',
                         ),
                         CarStoryAndTitle(title: a.title),
                         CarDetailsPanel(
@@ -518,14 +566,23 @@ class _CarAuctionDetailsScreenState extends State<CarAuctionDetailsScreen> {
 
                         const MyDivider(),
 
-                        // معلومات المالك
+                        // Owner
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 16.w),
                           child: RealEstateCurrentUserInfo(
                             ownerName: ownerName,
+                            onTap: () { // ✅ تم إضافة onTap
+                              if (ownerId != null) {
+                                Navigator.of(context).pushNamed(
+                                  Routes.userProfileScreenId,
+                                  arguments: ownerId,
+                                );
+                              }
+                            },
                             ownerPicture: ownerPicture,
                             userTitle: 'مالك السيارة',
                           ),
+
                         ),
                         verticalSpace(8),
                         const MyDivider(),
@@ -554,294 +611,139 @@ class _CarAuctionDetailsScreenState extends State<CarAuctionDetailsScreen> {
           ),
         ),
 
-        // الشريط السفلي
         bottomNavigationBar: BlocBuilder<CarAuctionDetailsCubit, CarAuctionDetailsState>(
           builder: (context, state) {
-            if (state is CarAuctionDetailsSuccess) {
-              final a = state.details;
-              final ended = DateTime.now().isAfter(a.endDate);
+            if (state is! CarAuctionDetailsSuccess) return const SizedBox.shrink();
+            final a = state.details;
+            final ended = DateTime.now().isAfter(a.endDate);
 
-              String? phone;
-              int? ownerId;
-              String ownerName = a.ownerName;
+            String? phone;
+            int? ownerId;
+            String ownerName = a.ownerName;
 
-              try {
-                final dyn = a as dynamic;
-                ownerId = dyn.user_id as int? ?? dyn.user?.id as int? ?? dyn.id as int?;
-                phone = (dyn.phone ?? dyn.user?.phone_number)?.toString();
-              } catch (_) {}
+            try {
+              final dyn = a as dynamic;
+              ownerId = dyn.user_id as int? ?? dyn.user?.id as int? ?? dyn.id as int?;
+              phone = (dyn.phone ?? dyn.user?.phone_number)?.toString();
+            } catch (_) {}
 
-              final myId = context.select<ProfileCubit, int?>((c) => c.user?.userId);
-              final myUsername = context.select<ProfileCubit, String?>((c) => c.user?.username);
+            final myId = context.select<ProfileCubit, int?>((c) => c.user?.userId);
+            final myUsername = context.select<ProfileCubit, String?>((c) => c.user?.username);
+            final isOwner = (myId != null && ownerId != null && myId == ownerId) ||
+                ((myUsername?.trim().isNotEmpty ?? false) && (ownerName.trim() == myUsername?.trim()));
 
-              final isOwner = (myId != null && ownerId != null && myId == ownerId) ||
-                  ((myUsername?.trim().isNotEmpty ?? false) && (ownerName.trim() == myUsername?.trim()));
+            final highest = a.maxBid ??
+                num.tryParse(a.activeItem.startingPrice ?? '') ??
+                num.tryParse(a.minBidValue) ??
+                0;
+            final minBid = num.tryParse(a.minBidValue) ?? 0;
+            final itemId = a.activeItem.id;
 
-              final highest = a.maxBid ??
-                  num.tryParse(a.activeItem.startingPrice ?? '') ??
-                  num.tryParse(a.minBidValue) ??
-                  0;
-              final minBid = num.tryParse(a.minBidValue) ?? 0;
-              final itemId = a.activeItem.id;
-
-              return Container(
-                padding: EdgeInsets.only(left: 16.w, right: 16.w, bottom: 24.h, top: 12.w),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x0F000000),
-                      blurRadius: 10,
-                      offset: Offset(0, -5),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    // زر قم بالمزايدة
-                    Expanded(
-                      child: SizedBox(
-                        height: 48.h,
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            if (isOwner) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('لا يمكنك المزايدة على إعلانك.')),
-                              );
-                              return;
-                            }
-                            if (ended) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('انتهى وقت المزايدة على هذا الإعلان.')),
-                              );
-                              return;
-                            }
-                            await _showBidDialog(
-                              currentHighest: highest,
-                              minBid: minBid,
-                              endDate: a.endDate,
-                              auctionId: a.id,
-                              itemId: itemId,
+            return Container(
+              padding: EdgeInsets.only(left: 16.w, right: 16.w, bottom: 24.h, top: 12.w),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x0F000000),
+                    blurRadius: 10,
+                    offset: Offset(0, -5),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 48.h,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          if (isOwner) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('لا يمكنك المزايدة على إعلانك.')),
                             );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF14457F),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-                          ),
-                          child: const Text('قم بالمزايدة', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            return;
+                          }
+                          if (ended) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('انتهى وقت المزايدة على هذا الإعلان.')),
+                            );
+                            return;
+                          }
+                          await _showBidDialog(
+                            currentHighest: highest,
+                            minBid: minBid,
+                            endDate: a.endDate,
+                            auctionId: a.id,
+                            itemId: itemId,
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF14457F),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
                         ),
+                        child: const Text('قم بالمزايدة', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
                     ),
-                    horizontalSpace(12),
-
-                    // زر المحادثة
-                    _squareIconBtn(
-                      icon:  MySvg(image: 'message', color: ColorsManager.primaryColor),
-                      bg: ColorsManager.primary50,
-                      borderColor: const Color(0xFFEAEAEA),
-                      onTap: ended
-                          ? null
-                          : () {
-                        final myId = context.read<ProfileCubit>().user?.userId;
-                        if (myId == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('يجب تسجيل الدخول أولاً لبدء المحادثة.')),
-                          );
-                          return;
-                        }
-                        if (isOwner) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('لا يمكنك المحادثة مع نفسك.')),
-                          );
-                          return;
-                        }
-                        if (ownerId == null || ownerName.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('تعذر تحديد معلومات المالك لبدء المحادثة.')),
-                          );
-                          return;
-                        }
-                        _startChat(context, ownerId, ownerName, a);
-                      },
-                    ),
-
-                    horizontalSpace(8),
-                    // زر الاتصال
-                    _squareIconBtn(
-                      icon:  MySvg(image: 'phone', color: ColorsManager.primaryColor),
-                      bg: ColorsManager.primary50,
-                      borderColor: const Color(0xFFEAEAEA),
-                      onTap: ended ? null : (phone?.isNotEmpty ?? false) ? () => launchCaller(context, phone!) : null,
-                    ),
-                    horizontalSpace(8),
-                    // زر الواتساب
-                    _squareIconBtn(
-                      icon: const MySvg(image: 'logos_whatsapp'),
-                      bg: ColorsManager.success200,
-                      onTap: ended ? null : (phone?.isNotEmpty ?? false) ? () => launchWhatsApp(context, phone!, message: 'مرحباً 👋 بخصوص إعلان المزاد: ${a.title}') : null,
-                    ),
-                  ],
-                ),
-              );
-            }
-            return const SizedBox.shrink();
+                  ),
+                  horizontalSpace(12),
+                  _squareIconBtn(
+                    icon: const MySvg(image: 'message', color: ColorsManager.primaryColor),
+                    bg: ColorsManager.primary50,
+                    borderColor: const Color(0xFFEAEAEA),
+                    onTap: ended
+                        ? null
+                        : () {
+                      final myId = context.read<ProfileCubit>().user?.userId;
+                      if (myId == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('يجب تسجيل الدخول أولاً لبدء المحادثة.')),
+                        );
+                        return;
+                      }
+                      if (isOwner) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('لا يمكنك المحادثة مع نفسك.')),
+                        );
+                        return;
+                      }
+                      if (ownerId == null || ownerName.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('تعذر تحديد معلومات المالك لبدء المحادثة.')),
+                        );
+                        return;
+                      }
+                      _startChat(context, ownerId, ownerName, a);
+                    },
+                  ),
+                  horizontalSpace(8),
+                  _squareIconBtn(
+                    icon: const MySvg(image: 'phone', color: ColorsManager.primaryColor),
+                    bg: ColorsManager.primary50,
+                    borderColor: const Color(0xFFEAEAEA),
+                    onTap: ended ? null : (phone?.isNotEmpty ?? false) ? () => launchCaller(context, phone!) : null,
+                  ),
+                  horizontalSpace(8),
+                  _squareIconBtn(
+                    icon: const MySvg(image: 'logos_whatsapp'),
+                    bg: ColorsManager.success200,
+                    onTap: ended ? null : (phone?.isNotEmpty ?? false) ? () => launchWhatsApp(context, phone!, message: 'مرحباً 👋 بخصوص إعلان المزاد: ${a.title}') : null,
+                  ),
+                ],
+              ),
+            );
           },
-        ),
-      ),
-    );
-  }
-
-  // صفحة Skeleton للتحميل
-  Widget _buildLoadingSkeleton() {
-    return Skeletonizer(
-      enabled: true,
-      child: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: EdgeInsets.only(bottom: 84.h),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // صور
-            Container(
-              height: 280.h,
-              width: double.infinity,
-              color: Colors.white,
-            ),
-            verticalSpace(16),
-
-            // عنوان وقصة
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(height: 14.h, width: 120.w, color: Colors.white),
-                  verticalSpace(8),
-                  Container(height: 20.h, width: 220.w, color: Colors.white),
-                ],
-              ),
-            ),
-            verticalSpace(12),
-
-            // Panel صغير
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Row(
-                children: [
-                  Expanded(child: Container(height: 60.h, color: Colors.white)),
-                  horizontalSpace(8),
-                  Expanded(child: Container(height: 60.h, color: Colors.white)),
-                  horizontalSpace(8),
-                  Expanded(child: Container(height: 60.h, color: Colors.white)),
-                ],
-              ),
-            ),
-            verticalSpace(12),
-
-            // Grid معلومات السيارة
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Wrap(
-                spacing: 12.w,
-                runSpacing: 12.h,
-                children: List.generate(
-                  4,
-                      (i) => Container(
-                    width: (MediaQuery.of(context).size.width - 16.w * 2 - 12.w) / 2,
-                    height: 80.h,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-            verticalSpace(16),
-            const MyDivider(),
-
-            // معلومات المالك
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Row(
-                children: [
-                  Container(width: 40.w, height: 40.w, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
-                  horizontalSpace(8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(height: 12.h, width: 160.w, color: Colors.white),
-                        verticalSpace(6),
-                        Container(height: 12.h, width: 120.w, color: Colors.white),
-                      ],
-                    ),
-                  ),
-                  Container(width: 90.w, height: 28.h, color: Colors.white),
-                ],
-              ),
-            ),
-            verticalSpace(12),
-            const MyDivider(),
-
-            // الوصف
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Column(
-                children: [
-                  Container(height: 12.h, width: double.infinity, color: Colors.white),
-                  verticalSpace(8),
-                  Container(height: 12.h, width: double.infinity, color: Colors.white),
-                  verticalSpace(8),
-                  Container(height: 12.h, width: 220.w, color: Colors.white),
-                ],
-              ),
-            ),
-            verticalSpace(16),
-
-            // شريط أعلى مزايدة
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Container(
-                height: 56.h,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-              ),
-            ),
-            verticalSpace(12),
-            const MyDivider(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // أزرار UI
-  Widget _squareIconBtn({required Widget icon, required Color bg, Color? borderColor, VoidCallback? onTap}) {
-    return Material(
-      color: bg,
-      borderRadius: BorderRadius.circular(12.r),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12.r),
-        child: Container(
-          width: 48.w,
-          height: 48.w,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: borderColor ?? Colors.transparent, width: 1.w),
-          ),
-          child: Center(child: icon),
         ),
       ),
     );
   }
 }
 
-// شريط أعلى مزايدة
+// Standalone widget (outside State)
 class _HighestBidBar extends StatefulWidget {
   final String highestText;
   final DateTime endDate;
-  const _HighestBidBar({super.key, required this.highestText, required this.endDate});
+  const _HighestBidBar({required this.highestText, required this.endDate});
 
   @override
   State<_HighestBidBar> createState() => _HighestBidBarState();
@@ -850,13 +752,11 @@ class _HighestBidBar extends StatefulWidget {
 class _HighestBidBarState extends State<_HighestBidBar> {
   late Timer _timer;
   late Duration _left;
-  late String _lastHighestText;
 
   @override
   void initState() {
     super.initState();
     _left = widget.endDate.difference(DateTime.now());
-    _lastHighestText = widget.highestText;
     _start();
   }
 
@@ -868,7 +768,6 @@ class _HighestBidBarState extends State<_HighestBidBar> {
       _timer.cancel();
       _start();
     }
-    _lastHighestText = widget.highestText;
   }
 
   void _start() {
@@ -895,8 +794,6 @@ class _HighestBidBarState extends State<_HighestBidBar> {
     final hours = _left.inHours % 24;
     final mins = _left.inMinutes % 60;
     final secs = _left.inSeconds % 60;
-
-    final highestTextDisplay = widget.highestText;
 
     return Container(
       height: 56.h,
@@ -935,7 +832,7 @@ class _HighestBidBarState extends State<_HighestBidBar> {
             children: [
               const Text('ريال', style: TextStyle(color: Colors.white)),
               horizontalSpace(6),
-              Text(highestTextDisplay, style: TextStyles.font24White500Weight),
+              Text(widget.highestText, style: TextStyles.font24White500Weight),
             ],
           ),
         ],

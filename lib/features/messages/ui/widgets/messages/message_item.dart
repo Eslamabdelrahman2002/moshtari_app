@@ -37,7 +37,7 @@ class MessageItem extends StatelessWidget {
         : 'مستخدم';
 
     return InkWell(
-      onTap: () => context.pushNamed(
+      onTap: () => NavX(context).pushNamed(
         Routes.chatScreen,
         arguments: ChatScreenArgs(chatModel: message),
       ),

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:image_picker/image_picker.dart'; // ✅ لـ pickMultiImage
 
 import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
@@ -35,7 +36,7 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
   final _offerDescCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
 
-  final List<File> _picked = [];
+  final List<File> _picked = []; // ✅ قائمة للصور/الملفات المتعددة
 
   String priceType = 'fixed'; // fixed | negotiable
   bool allowComments = true;
@@ -69,6 +70,7 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
     whatsapp = methods.contains('whatsapp');
     phone = methods.contains('call') || methods.contains('phone');
 
+    // ✅ تهيئة _picked من State (دعم متعدد)
     if (s.images.isNotEmpty) {
       _picked.addAll(s.images);
     }
@@ -89,7 +91,7 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
   }
 
   Future<File> _compressImageIfNeeded(File file) async {
-    // بدون ضغط
+    // بدون ضغط (يمكن إضافة flutter_image_compress إذا مطلوب)
     return file;
   }
 
@@ -104,23 +106,36 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
     );
   }
 
+  // ✅ اختيار صور/ملفات متعددة (حد أقصى 10)
   Future<void> pickImages() async {
     final cubit = context.read<CarPartAdsCubit>();
-    final picker = PhotoPicker(context);
+    final picker = ImagePicker(); // ✅ استخدام ImagePicker بدلاً من PhotoPicker للدعم الأفضل
 
-    final files = await picker.pickMedia();
-    if (!mounted || files.isEmpty) return;
+    final images = await picker.pickMultiImage(
+      imageQuality: 85,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      limit: 10, // حد أقصى 10 ملفات
+    );
 
-    for (final f in files) {
-      if (!_isSupportedMedia(f)) {
-        _showError('الملف ${p.basename(f.path)} ليس بصيغة مدعومة (png, jpg, mp4).');
+    if (!mounted || images.isEmpty) return;
+
+    for (final x in images) {
+      final file = File(x.path);
+      if (!_isSupportedMedia(file)) {
+        _showError('الملف ${p.basename(file.path)} ليس بصيغة مدعومة (png, jpg, mp4).');
         continue;
       }
 
-      final finalFile = await _compressImageIfNeeded(f);
+      final finalFile = await _compressImageIfNeeded(file);
       _picked.add(finalFile);
-      cubit.addImage(finalFile);
-      setState(() {});
+      cubit.addImage(finalFile); // ✅ إضافة إلى Cubit
+      print('>>> Added image: ${finalFile.path}'); // Debug
+    }
+
+    setState(() {}); // تحديث UI
+    if (_picked.length >= 10) {
+      _showError('تم الوصول للحد الأقصى (10 ملفات)');
     }
   }
 
@@ -160,17 +175,18 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      // ✅ قسم الوسائط (دعم متعدد)
                       if (_picked.isEmpty)
                         _addMediaBox(onTap: pickImages)
                       else
                         MediaGridPicker(
-                          files: _picked,
-                          onAdd: pickImages,
+                          files: _picked, // ✅ تمرير القائمة المتعددة
+                          onAdd: pickImages, // إضافة أكثر
                           onRemove: (i) {
-                            cubit.removeImageAt(i);
-                            setState(() => _picked.removeAt(i));
+                            cubit.removeImageAt(i); // ✅ حذف من Cubit
+                            setState(() => _picked.removeAt(i)); // تحديث UI
                           },
-                          maxCount: 10,
+                          maxCount: 10, // حد أقصى
                           title: 'الصور ومقاطع الفيديو',
                         ),
                       verticalSpace(16),
@@ -310,8 +326,14 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
                             child: PrimaryButton(
                               text: s.submitting ? 'جارٍ النشر...' : 'نشر الاعلان',
                               onPressed: () {
-                                cubit.setPriceType(priceType);
-                                cubit.submit();
+                                // ✅ تحديث نهائي للقيم قبل Submit
+                                cubit
+                                  ..setTitle(_titleCtrl.text)
+                                  ..setDescription(_offerDescCtrl.text)
+                                  ..setPhoneNumber(_phoneCtrl.text)
+                                  ..setPrice(num.tryParse(_priceCtrl.text));
+
+                                cubit.submit(); // ✅ Submit مع الصور المتعددة
                               },
                             ),
                           );
@@ -351,7 +373,7 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
               Text('إضافة صورة أو مقطع فيديو', style: TextStyles.font14Blue500Weight),
               SizedBox(height: 6.h),
               Text(
-                'ندعم صيغ png, jpg, mp4',
+                'ندعم صيغ png, jpg, mp4 (حتى 10 ملفات)',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey[600], fontSize: 11.sp),
               ),

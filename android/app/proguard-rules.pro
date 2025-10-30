@@ -101,3 +101,7 @@
 -keep public class com.facebook.imageutils.** {
    public *;
 }
+-keepattributes *Annotation*
+-dontwarn com.google.firebase.**
+-keep class com.google.firebase.messaging.** { *; }
+-keep class com.google.android.gms.** { *; }

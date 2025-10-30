@@ -18,17 +18,12 @@ class CreateAdAppBar extends StatelessWidget {
     return AppBar(
       backgroundColor: Colors.white,
       elevation: 0,
+      leading:  IconButton(onPressed: ()=>Navigator.pop(context), icon: Icon(Icons.arrow_back_ios_new,
+        color: ColorsManager.darkGray300,)),
+
       surfaceTintColor: ColorsManager.transparent,
       title: Row(
         children: [
-          Visibility(
-            visible: pop != null,
-            child: InkWell(
-              onTap: pop,
-              child:Icon(Icons.arrow_forward_ios)
-            ),
-          ),
-          horizontalSpace(8.w),
           Text(
             'إنشاء إعلان',
             style: TextStyles.font20Black500Weight,

@@ -9,13 +9,16 @@ import 'package:mushtary/core/utils/helpers/cache_helper.dart';
 class ApiService {
   final Dio _dio;
 
-  // رسالة ودّية لعدم وجود الإنترنت
-  static const String _noInternetMsg = 'لا يوجد اتصال بالإنترنت، يرجى التحقق من الشبكة ثم إعادة المحاولة.';
+  // رسائل ودّية للمستخدم
+  static const String _noInternetMsg =
+      'لا يوجد اتصال بالإنترنت، يرجى التحقق من الشبكة ثم إعادة المحاولة.';
+  static const String _noTokenMsg =
+      'يبدو أنك غير مسجل الدخول أو أن الجلسة انتهت. يرجى تسجيل الدخول ثم إعادة المحاولة.';
 
   ApiService(this._dio) {
     _dio.options
       ..baseUrl = ApiConstants.baseUrl
-      ..connectTimeout = const Duration(seconds: 60) // مهلة أطول
+      ..connectTimeout = const Duration(seconds: 60)
       ..receiveTimeout = const Duration(minutes: 2)
       ..responseType = ResponseType.json
       ..headers = {'Accept': 'application/json'};
@@ -23,7 +26,8 @@ class ApiService {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
-          final token = CacheHelper.getData(key: 'token') as String?;
+          final token = _getToken();
+          // نضيف التوكن إن وجد (لا يفرض المصادقة)
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
@@ -49,6 +53,16 @@ class ApiService {
 
   // ============== Helpers ==============
 
+  String? _getToken() => CacheHelper.getData(key: 'token') as String?;
+
+  Future<void> _ensureAuth(bool requireAuth) async {
+    if (!requireAuth) return;
+    final token = _getToken();
+    if (token == null || token.isEmpty) {
+      throw AppException(_noTokenMsg);
+    }
+  }
+
   bool _isNetworkTimeoutOrError(DioException e) {
     return e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.sendTimeout ||
@@ -62,7 +76,6 @@ class ApiService {
       final res = await Connectivity().checkConnectivity();
       return res == ConnectivityResult.none;
     } on MissingPluginException {
-      // أحيانًا بعد Hot Restart البلجن لا يكون جاهزًا؛ لا نكسر الواجهة
       return false;
     } catch (_) {
       return false;
@@ -71,21 +84,33 @@ class ApiService {
 
   Future<bool> _looksLikeNoInternet(DioException e) async {
     if (_isNetworkTimeoutOrError(e)) return true;
-    // تأكيد إضافي عبر Connectivity (اختياري)
     return await _isOfflineNow();
+  }
+
+  Future<Never> _handleDioError(DioException error) async {
+    if (await _looksLikeNoInternet(error)) {
+      throw AppException(_noInternetMsg);
+    }
+    final status = error.response?.statusCode ?? 0;
+    if (status == 401 || status == 403) {
+      throw AppException(_noTokenMsg);
+    }
+    throw AppException.create(error);
   }
 
   // ============== Requests ==============
 
-  Future<dynamic> get(String endpoint, {Map<String, dynamic>? queryParameters}) async {
+  Future<dynamic> get(
+      String endpoint, {
+        Map<String, dynamic>? queryParameters,
+        bool requireAuth = false, // الافتراضي الآن بدون مصادقة
+      }) async {
+    await _ensureAuth(requireAuth);
     try {
       final response = await _dio.get(endpoint, queryParameters: queryParameters);
       return response.data;
     } on DioException catch (error) {
-      if (await _looksLikeNoInternet(error)) {
-        throw AppException(_noInternetMsg);
-      }
-      throw AppException.create(error);
+      await _handleDioError(error);
     } catch (e) {
       throw AppException(e.toString());
     }
@@ -95,40 +120,51 @@ class ApiService {
       String endpoint, {
         Map<String, dynamic>? queryParameters,
         bool relaxStatus = false,
+        bool requireAuth = false, // الافتراضي الآن بدون مصادقة
       }) async {
+    await _ensureAuth(requireAuth);
     try {
       final response = await _dio.get(
         endpoint,
         queryParameters: queryParameters,
-        options: relaxStatus ? Options(validateStatus: (s) => s != null && s < 500) : null,
+        options: relaxStatus
+            ? Options(validateStatus: (s) => s != null && s < 500)
+            : null,
       );
       return response;
     } on DioException catch (error) {
-      // في بعض الحالات نعيد الـ response بدل الخطأ (نفس سلوكك السابق)
-      if (error.response != null) return error.response!;
-      if (await _looksLikeNoInternet(error)) {
-        throw AppException(_noInternetMsg);
+      if (error.response != null) {
+        final status = error.response?.statusCode ?? 0;
+        if (status == 401 || status == 403) {
+          throw AppException(_noTokenMsg);
+        }
+        return error.response!;
       }
-      throw AppException.create(error);
+      await _handleDioError(error);
     }
   }
 
-  Future<Map<String, dynamic>> post(String endpoint, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>> post(
+      String endpoint,
+      Map<String, dynamic> data, {
+        bool requireAuth = false, // الافتراضي الآن بدون مصادقة
+      }) async {
+    await _ensureAuth(requireAuth);
     try {
       final response = await _dio.post(endpoint, data: data);
       return response.data;
     } on DioException catch (error) {
-      if (await _looksLikeNoInternet(error)) {
-        throw AppException(_noInternetMsg);
-      }
-      throw AppException.create(error);
+      await _handleDioError(error);
     } catch (e) {
       throw AppException(e.toString());
     }
   }
 
-  // POST بدون Body (مثل الخروج)
-  Future<Map<String, dynamic>> postNoData(String endpoint) async {
+  Future<Map<String, dynamic>> postNoData(
+      String endpoint, {
+        bool requireAuth = false, // الافتراضي الآن بدون مصادقة
+      }) async {
+    await _ensureAuth(requireAuth);
     try {
       final response = await _dio.post(endpoint);
       final d = response.data;
@@ -136,16 +172,18 @@ class ApiService {
       if (d is Map<String, dynamic>) return d;
       return {'success': true, 'data': d};
     } on DioException catch (error) {
-      if (await _looksLikeNoInternet(error)) {
-        throw AppException(_noInternetMsg);
-      }
-      throw AppException.create(error);
+      await _handleDioError(error);
     } catch (e) {
       throw AppException(e.toString());
     }
   }
 
-  Future<Map<String, dynamic>> postForm(String endpoint, FormData formData) async {
+  Future<Map<String, dynamic>> postForm(
+      String endpoint,
+      FormData formData, {
+        bool requireAuth = false, // الافتراضي الآن بدون مصادقة
+      }) async {
+    await _ensureAuth(requireAuth);
     try {
       final response = await _dio.post(
         endpoint,
@@ -159,24 +197,23 @@ class ApiService {
       );
       return response.data;
     } on DioException catch (error) {
-      if (await _looksLikeNoInternet(error)) {
-        throw AppException(_noInternetMsg);
-      }
-      throw AppException.create(error);
+      await _handleDioError(error);
     } catch (e) {
       throw AppException(e.toString());
     }
   }
 
-  Future<Map<String, dynamic>> put(String endpoint, {dynamic data}) async {
+  Future<Map<String, dynamic>> put(
+      String endpoint, {
+        dynamic data,
+        bool requireAuth = false, // الافتراضي الآن بدون مصادقة
+      }) async {
+    await _ensureAuth(requireAuth);
     try {
       final response = await _dio.put(endpoint, data: data);
       return response.data;
     } on DioException catch (error) {
-      if (await _looksLikeNoInternet(error)) {
-        throw AppException(_noInternetMsg);
-      }
-      throw AppException.create(error);
+      await _handleDioError(error);
     } catch (e) {
       throw AppException(e.toString());
     }
@@ -185,7 +222,9 @@ class ApiService {
   Future<Map<String, dynamic>> deleteWithBody(
       String endpoint, {
         Map<String, dynamic>? data,
+        bool requireAuth = false, // الافتراضي الآن بدون مصادقة
       }) async {
+    await _ensureAuth(requireAuth);
     try {
       final response = await _dio.delete(
         endpoint,
@@ -201,10 +240,7 @@ class ApiService {
       if (d is Map<String, dynamic>) return d;
       return {'success': true, 'data': d};
     } on DioException catch (error) {
-      if (await _looksLikeNoInternet(error)) {
-        throw AppException(_noInternetMsg);
-      }
-      throw AppException.create(error);
+      await _handleDioError(error);
     } catch (e) {
       throw AppException(e.toString());
     }

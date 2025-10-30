@@ -15,6 +15,7 @@
 //   static const String fontsDIN NEXT™ ARABIC ULTRALIGHT = 'assets/fonts/DIN NEXT™ ARABIC ULTRALIGHT.otf';
 //   static const String iconsAboutGray = 'assets/icons/about_gray.svg';
 //   static const String iconsActiveCircle = 'assets/icons/active_circle.svg';
+//   static const String iconsAdRealState = 'assets/icons/ad_real_state.svg';
 //   static const String iconsAdd = 'assets/icons/add.svg';
 //   static const String iconsAddActive = 'assets/icons/add_active.svg';
 //   static const String iconsAddBorder = 'assets/icons/add_border.svg';
@@ -57,6 +58,7 @@
 //   static const String iconsCommercial = 'assets/icons/commercial.svg';
 //   static const String iconsCopy = 'assets/icons/copy.svg';
 //   static const String iconsCopyIcon = 'assets/icons/copy_icon.svg';
+//   static const String iconsCreateRealState = 'assets/icons/create_real_state.svg';
 //   static const String iconsCylinder = 'assets/icons/cylinder.svg';
 //   static const String iconsDinat = 'assets/icons/dinat.svg';
 //   static const String iconsDiscount = 'assets/icons/discount.svg';
@@ -183,6 +185,7 @@
 //   static const String iconsRulerPrimary400 = 'assets/icons/ruler-primary400.svg';
 //   static const String iconsSatha = 'assets/icons/satha.svg';
 //   static const String iconsSearchNormal = 'assets/icons/search-normal.svg';
+//   static const String iconsSearchStatus = 'assets/icons/search-status.svg';
 //   static const String iconsSend = 'assets/icons/send.svg';
 //   static const String iconsSend1 = 'assets/icons/send-1.svg';
 //   static const String iconsSend2 = 'assets/icons/send-2.svg';

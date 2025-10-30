@@ -7,13 +7,38 @@ import 'package:mushtary/core/utils/helpers/spacing.dart';
 import 'package:mushtary/core/widgets/primary/my_svg.dart';
 
 class RealEstatePrice extends StatelessWidget {
-  // Added the 'price' parameter to accept data.
-  final num? price;
+  // يدعم رقم أو نص
+  final dynamic price;
 
   const RealEstatePrice({super.key, this.price});
 
+  String _formatPrice(dynamic p) {
+    if (p == null) return 'غير محدد';
+    if (p is num) {
+      try {
+        // لو عندك toCurrency() اشتغل به، وإلا fallback
+        return p.toCurrency();
+      } catch (_) {
+        return p.toStringAsFixed(0);
+      }
+    }
+    if (p is String) {
+      final v = num.tryParse(p);
+      if (v != null) {
+        try {
+          return v.toCurrency();
+        } catch (_) {
+          return v.toStringAsFixed(0);
+        }
+      }
+      return p; // نص كما هو (مثلاً "حسب الاتفاق")
+    }
+    return p.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final display = _formatPrice(price);
     return Container(
       height: 48.h,
       width: 358.w,
@@ -24,26 +49,21 @@ class RealEstatePrice extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(
-              'السعر:',
-              style: TextStyles.font14Primary300500Weight,
-            ),
+            Text('السعر:', style: TextStyles.font14Primary300500Weight),
             const Spacer(),
             Align(
               alignment: Alignment.topCenter,
               child: Padding(
                 padding: EdgeInsets.only(top: 3.h),
-                child: Text(
-                  // The widget now displays the price it receives.
-                  price != null ? price!.toStringAsFixed(0) : "غير محدد",   // أو باستخدام toCurrency()
-                  style: TextStyles.font24Primary500Weight,
-                ),
+                child: Text(display, style: TextStyles.font24Primary500Weight),
               ),
             ),
             horizontalSpace(4),
-            MySvg(image: 'riyal_onblue', width: 24.w, height: 24.h),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: MySvg(image: 'riyal_onblue', width: 24.w, height: 24.h),
+            ),
           ],
         ),
       ),

@@ -169,7 +169,7 @@ class _HomeReelsViewState extends State<HomeReelsView> {
                                     ),
                                   ),
                                 ),
-                                const MySvg(image: 'white_logo_with_name'),
+                                const MySvg(image: 'logo'),
                                 const SizedBox.shrink(),
                               ],
                             ),
@@ -202,7 +202,7 @@ class _HomeReelsViewState extends State<HomeReelsView> {
                     isPrefixIconInCenter: true,
                     prefixIcon: const MySvg(image: 'eye_white'),
                     onPressed: () {
-                      context.pushNamed(
+                      NavX(context).pushNamed(
                         Routes.productDetails,
                         arguments: ad,
                       );
@@ -364,6 +364,7 @@ class _ReelSkeletonSlide extends StatelessWidget {
       ),
     );
   }
+
 
   Widget _circleSkeleton(double size) => Container(
     width: size,

@@ -74,7 +74,7 @@ class _MenuScreenState extends State<MenuScreen> {
 
       if (!mounted) return;
       await Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
-        Routes.loginScreen,
+        Routes.menuScreen,
             (Route<dynamic> route) => false,
       );
     } catch (e) {
@@ -250,21 +250,21 @@ class _MenuScreenState extends State<MenuScreen> {
       MenuItem(
         icon: 'help_center',
         title: 'الدعم الفني',
-        onTap: () => context.pushNamed(Routes.technicalSupportScreen),
+        onTap: () => NavX(context).pushNamed(Routes.technicalSupportScreen),
       ),
       verticalSpace(16),
 
       MenuItem(
         icon: 'info_gray',
         title: 'سياسات الاستخدام',
-        onTap: () => context.pushNamed(Routes.usagePolicyScreen),
+        onTap: () => NavX(context).pushNamed(Routes.usagePolicyScreen),
       ),
       verticalSpace(16),
 
       MenuItem(
         icon: 'about_gray',
         title: 'عن التطبيق',
-        onTap: () => context.pushNamed(Routes.aboutAppScreen),
+        onTap: () => NavX(context).pushNamed(Routes.aboutAppScreen),
       ),
       verticalSpace(16),
 
@@ -347,21 +347,21 @@ class _MenuScreenState extends State<MenuScreen> {
       MenuItem(
         icon: 'help_center',
         title: 'الدعم الفني',
-        onTap: () => context.pushNamed(Routes.technicalSupportScreen),
+        onTap: () => NavX(context).pushNamed(Routes.technicalSupportScreen),
       ),
       verticalSpace(16),
 
       MenuItem(
         icon: 'info_gray',
         title: 'سياسات الاستخدام',
-        onTap: () => context.pushNamed(Routes.usagePolicyScreen),
+        onTap: () => NavX(context).pushNamed(Routes.usagePolicyScreen),
       ),
       verticalSpace(16),
 
       MenuItem(
         icon: 'about_gray',
         title: 'عن التطبيق',
-        onTap: () => context.pushNamed(Routes.aboutAppScreen),
+        onTap: () => NavX(context).pushNamed(Routes.aboutAppScreen),
       ),
       verticalSpace(16),
 

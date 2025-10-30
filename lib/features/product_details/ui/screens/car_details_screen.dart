@@ -15,7 +15,9 @@ import 'package:mushtary/core/utils/helpers/navigation.dart';
 import 'package:mushtary/features/messages/data/models/messages_model.dart';
 import 'package:mushtary/features/messages/data/repo/messages_repo.dart';
 import 'package:mushtary/features/messages/ui/widgets/chats/chat_initiation_sheet.dart';
+import '../../../favorites/ui/logic/cubit/favorites_cubit.dart';
 import '../../../real_estate_details/ui/widgets/real_estate_promo_button.dart';
+import '../../data/model/car_details_model.dart';
 import '../logic/cubit/car_details_cubit.dart';
 import '../widgets/car_details/widgets/car_add_comment_field.dart';
 import '../widgets/car_details/widgets/car_comments_view.dart';
@@ -34,6 +36,7 @@ import 'package:skeletonizer/skeletonizer.dart';
 
 class CarDetailsScreen extends StatelessWidget {
   final int id;
+
   const CarDetailsScreen({super.key, required this.id});
 
   void _startChat(BuildContext context, int receiverId, String receiverName) {
@@ -51,7 +54,7 @@ class CarDetailsScreen extends StatelessWidget {
             partnerUser: UserModel(id: receiverId, name: receiverName),
             lastMessage: initialMessage,
           );
-          context.pushNamed(Routes.chatScreen, arguments: chatModel);
+          NavX(context).pushNamed(Routes.chatScreen, arguments: chatModel);
 
           await Future.delayed(const Duration(milliseconds: 500));
 
@@ -74,9 +77,16 @@ class CarDetailsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider<CarDetailsCubit>(create: (_) => getIt<CarDetailsCubit>()..fetchCarDetails(id)),
-        BlocProvider<CommentSendCubit>(create: (_) => getIt<CommentSendCubit>()),
-        BlocProvider<ProfileCubit>(create: (_) => getIt<ProfileCubit>()..loadProfile()),
+        BlocProvider<CarDetailsCubit>(
+          create: (_) => getIt<CarDetailsCubit>()..fetchCarDetails(id),
+        ),
+        BlocProvider<CommentSendCubit>(
+          create: (_) => getIt<CommentSendCubit>(),
+        ),
+        BlocProvider<ProfileCubit>(
+          create: (_) => getIt<ProfileCubit>()..loadProfile(),
+        ),
+        BlocProvider<FavoritesCubit>(create: (_) => getIt<FavoritesCubit>()..fetchFavorites()),
       ],
       child: Scaffold(
         body: SafeArea(
@@ -88,6 +98,7 @@ class CarDetailsScreen extends StatelessWidget {
                 return Center(child: Text(state.error, textAlign: TextAlign.center));
               } else if (state is CarDetailsSuccess) {
                 final car = state.details;
+                final List<SimilarCarAdModel> similar = car.similarAds ?? [];
 
                 return SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
@@ -95,8 +106,22 @@ class CarDetailsScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       const CarDetailsAppBar(),
-                      CarDetailsImages(images: car.imageUrls, status: car.condition),
-                      CarStoryAndTitle(title: car.title),
+                      CarDetailsImages( images: car.imageUrls,
+
+                        adId: id,
+                        favoriteType: 'ad', // مثل العقار
+                        ),
+
+                      // ستوري + العنوان (مثل العقار)
+                      CarStoryAndTitle(
+                        title: car.title ?? '',
+                        similarAds: similar,
+                        onOpenDetails: (ad) {
+                          // افتح تفاصيل إعلان سيارة مشابهة
+                          NavX(context).pushNamed(Routes.carDetailsScreen, arguments: ad.id);
+                        },
+                      ),
+
                       CarDetailsPanel(
                         city: car.city,
                         region: car.region,
@@ -121,6 +146,15 @@ class CarDetailsScreen extends StatelessWidget {
                       CarOwnerInfo(
                         username: car.username.isEmpty ? 'مستخدم' : car.username,
                         phone: car.userPhoneNumber,
+                        onTap: () {
+                          final ownerId = car.userId;
+                          if (ownerId != null) {
+                            NavX(context).pushNamed( // ✅ استخدام NavX
+                              Routes.userProfileScreenId,
+                              arguments: ownerId,
+                            );
+                          }
+                        },
                       ),
                       const MyDivider(),
                       CarCommentsView(comments: car.comments),
@@ -151,7 +185,13 @@ class CarDetailsScreen extends StatelessWidget {
                         },
                       ),
 
-                      CarSimilarAds(similarAds: car.similarAds),
+                      // إعلانات مشابهة (مثل العقار)
+                      CarSimilarAds(
+                        similarAds: similar,
+                        onTapAd: (ad) {
+                          NavX(context).pushNamed(Routes.carDetailsScreen, arguments: ad.id);
+                        },
+                      ),
                     ],
                   ),
                 );
@@ -164,16 +204,21 @@ class CarDetailsScreen extends StatelessWidget {
           builder: (context, state) {
             if (state is! CarDetailsSuccess) return const SizedBox.shrink();
             final car = state.details;
+
             final myId = context.select<ProfileCubit, int?>((c) => c.user?.userId);
             final ownerId = car.userId;
             final isOwner = (myId != null && ownerId != null && myId == ownerId);
+
             final phone = car.userPhoneNumber;
             final ownerName = car.username;
 
             return CarBottomActions(
-              onWhatsapp: () => launchWhatsApp(context, phone, message: 'مرحباً 👋 بخصوص إعلان: ${car.title}'),
+              onWhatsapp: () => launchWhatsApp(
+                context,
+                phone,
+                message: 'مرحباً 👋 بخصوص إعلان: ${car.title}',
+              ),
               onCall: () => launchCaller(context, phone),
-
               onChat: () {
                 if (myId == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -195,7 +240,6 @@ class CarDetailsScreen extends StatelessWidget {
                   );
                 }
               },
-
               onAddBid: () async {
                 if (isOwner) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -302,7 +346,11 @@ class CarDetailsScreen extends StatelessWidget {
               padding: EdgeInsets.symmetric(horizontal: 16.w),
               child: Row(
                 children: [
-                  Container(width: 44.w, height: 44.w, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
+                  Container(
+                    width: 44.w,
+                    height: 44.w,
+                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                  ),
                   horizontalSpace(12),
                   Expanded(
                     child: Column(
@@ -332,7 +380,11 @@ class CarDetailsScreen extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(width: 36.w, height: 36.w, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
+                        Container(
+                          width: 36.w,
+                          height: 36.w,
+                          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                        ),
                         horizontalSpace(8),
                         Expanded(
                           child: Column(

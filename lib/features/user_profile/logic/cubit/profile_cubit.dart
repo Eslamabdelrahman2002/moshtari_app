@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/utils/helpers/cache_helper.dart';
+import '../../../../core/utils/helpers/cache_helper.dart'; // تأكد من وجود هذا الاستيراد
 import '../../data/model/my_ads_model.dart';
 import '../../data/model/my_auctions_model.dart';
 import '../../data/model/user_profile_model.dart';
@@ -39,6 +39,10 @@ class ProfileCubit extends Cubit<ProfileState> {
         emit(const ProfileFailure('فشل في جلب بيانات المستخدم'));
         return;
       }
+
+      // 🚀 الخطوة المفقودة والمُضافة لحل مشكلة الإشعارات
+      // حفظ userId في CacheHelper حتى يتمكن NotificationsRepo من استخدامه.
+      await CacheHelper.saveData(key: 'userId', value: user!.userId);
 
       emit(ProfileSuccess(
         user: user!,
@@ -97,6 +101,7 @@ class ProfileCubit extends Cubit<ProfileState> {
     try {
       await _profileRepo.deleteAccount();
       await CacheHelper.removeData(key: 'token'); // امسح التوكن
+      await CacheHelper.removeData(key: 'userId'); // ✅ مسح userId عند حذف الحساب
       return true;
     } catch (e) {
       // ممكن تسجّل الخطأ أو تعرضه

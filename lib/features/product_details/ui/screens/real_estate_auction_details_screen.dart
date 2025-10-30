@@ -1,5 +1,3 @@
-// lib/features/product_details/ui/screens/real_estate_auction_details_screen.dart
-
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,8 +9,6 @@ import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
 import 'package:mushtary/core/widgets/primary/my_divider.dart';
-import 'package:mushtary/core/widgets/primary/my_svg.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/router/routes.dart';
 import '../../../../core/utils/helpers/launcher.dart';
@@ -21,6 +17,7 @@ import '../../../../core/widgets/reminder.dart';
 
 import 'package:mushtary/features/product_details/ui/logic/cubit/comment_send_cubit.dart';
 import 'package:mushtary/features/user_profile/logic/cubit/profile_cubit.dart';
+
 import 'package:mushtary/features/product_details/ui/widgets/auction_comments_view.dart';
 import 'package:mushtary/features/product_details/ui/widgets/full_view_widget/auction_add_comment_field.dart';
 import 'package:mushtary/features/product_details/ui/widgets/marketing_request_sheet.dart';
@@ -64,16 +61,6 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
   final NumberFormat _nf = NumberFormat.decimalPattern('ar');
   String _fmt(num? v) => v == null ? '0' : _nf.format(v);
 
-  Future<void> _openPdf(String url) async {
-    final uri = Uri.parse(url);
-    try {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا يمكن فتح الملف')));
-    }
-  }
-
   // بدء محادثة
   void _startChat(BuildContext context, int receiverId, String receiverName, dynamic auctionDetails) {
     showChatInitiationSheet(
@@ -90,7 +77,6 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
             lastMessage: initialMessage,
           );
 
-          // استخلاص معلومات الإعلان (AdInfo) من بيانات المزاد
           final adInfo = AdInfo(
             id: auctionDetails.id,
             title: auctionDetails.title,
@@ -100,13 +86,11 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
             price: (auctionDetails.maxBid ?? num.tryParse(auctionDetails.startPrice ?? '') ?? 0).toString(),
           );
 
-          // الانتقال لشاشة الشات مع تمرير ChatScreenArgs
-          context.pushNamed(
+          NavX(context).pushNamed(
             Routes.chatScreen,
             arguments: ChatScreenArgs(chatModel: chatModel, adInfo: adInfo),
           );
 
-          // إرسال أول رسالة بعد فتح الشاشة
           await Future.delayed(const Duration(milliseconds: 500));
           final body = SendMessageRequestBody(
             receiverId: receiverId,
@@ -123,7 +107,7 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
     );
   }
 
-  // نافذة المشاركة
+  // نافذة المشاركة (تُستخدم إذا رغبت باستبدال ShareDialog لاحقًا)
   void _showShareDialog(BuildContext context, dynamic auctionDetails, String location, String? phone) {
     final int auctionId = auctionDetails.id;
     final String auctionTitle = auctionDetails.title;
@@ -190,7 +174,6 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
     final controller = TextEditingController(text: '');
     final incs = <int>[500, 1000, 1500];
 
-    // استخدم نفس نسخة الكيوبت المسجلة (أو أنشئها مرة واحدة)
     final key = 'real_estate-$auctionId';
     AuctionBidCubit bidCubit;
     if (getIt.isRegistered<AuctionBidCubit>(instanceName: key)) {
@@ -226,7 +209,6 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
                         ScaffoldMessenger.of(listenerCtx).showSnackBar(SnackBar(content: Text(bidState.message)));
                       }
                       if (bidState is AuctionBidSuccess) {
-                        // اترك الواجهة تُحدّث أولاً ثم أغلق
                         await Future.delayed(const Duration(milliseconds: 200));
                         if (Navigator.of(listenerCtx).canPop()) {
                           Navigator.pop(listenerCtx);
@@ -254,7 +236,6 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Header
                           Row(
                             children: [
                               Text('قم بالمزايدة', style: TextStyles.font18Black500Weight),
@@ -268,7 +249,6 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
                           ),
                           verticalSpace(8),
 
-                          // شريط أعلى مزايدة
                           Container(
                             width: double.infinity,
                             padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
@@ -288,7 +268,6 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
                           ),
                           verticalSpace(12),
 
-                          // حقل إدخال
                           TextField(
                             controller: controller,
                             keyboardType: TextInputType.number,
@@ -309,7 +288,6 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
                           ),
                           verticalSpace(12),
 
-                          // أزرار زيادات سريعة
                           Wrap(
                             spacing: 8.w,
                             children: incs.map((e) {
@@ -328,7 +306,6 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
                           ),
                           verticalSpace(16),
 
-                          // زر تأكيد
                           SizedBox(
                             width: double.infinity,
                             height: 48.h,
@@ -345,7 +322,6 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
                                   ScaffoldMessenger.of(consumerCtx).showSnackBar(const SnackBar(content: Text('لابد أن تزيد على أعلى مزايدة')));
                                   return;
                                 }
-                                // فحص خطوة السوم بدقة
                                 final diff = v - currentMaxBid;
                                 final steps = diff / step;
                                 const eps = 1e-9;
@@ -353,7 +329,6 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
                                   ScaffoldMessenger.of(consumerCtx).showSnackBar(SnackBar(content: Text('يجب الالتزام بخطوة السوم (${_fmt(step)})')));
                                   return;
                                 }
-
                                 bidCubit.placeBid(bidAmount: v);
                               },
                               style: ElevatedButton.styleFrom(
@@ -401,7 +376,6 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
         BlocProvider<FavoritesCubit>(create: (_) => getIt<FavoritesCubit>()..fetchFavorites()),
       ],
       child: Scaffold(
-
         body: SafeArea(
           child: BlocBuilder<RealEstateAuctionDetailsCubit, RealEstateAuctionDetailsState>(
             builder: (context, state) {
@@ -479,45 +453,11 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
                       children: [
                         product_appbar.ProductScreenAppBar(),
 
-                        Stack(
-                          children: [
-                            RealEstateDetailsProductImages(images: images),
-                            Positioned(
-                              top: 12.h,
-                              left: 12.w,
-                              child: Row(
-                                children: [
-                                  BlocSelector<FavoritesCubit, FavoritesState, bool>(
-                                    selector: (state) {
-                                      if (state is FavoritesLoaded) {
-                                        return state.favoriteIds.contains(auctionId);
-                                      }
-                                      return false;
-                                    },
-                                    builder: (context, isFavourited) {
-                                      final Color? favoriteColor =
-                                      isFavourited ? ColorsManager.redButton : Colors.white;
-
-                                      return _circleIcon(
-                                        child: MySvg(image: 'favorites', color: favoriteColor),
-                                        onTap: () {
-                                          context.read<FavoritesCubit>().toggleFavorite(
-                                            type: 'auction',
-                                            id: auctionId,
-                                          );
-                                        },
-                                      );
-                                    },
-                                  ),
-                                  horizontalSpace(8),
-                                  _circleIcon(
-                                    child: const MySvg(image: 'share', color: ColorsManager.white),
-                                    onTap: () => _showShareDialog(context, d, location, phone),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                        // الصور بنفس نمط بقية الشاشات (المشاركة + المفضلة داخل الودجت)
+                        RealEstateDetailsProductImages(
+                          images: images,
+                          adId: auctionId,
+                          favoriteType: 'auction',
                         ),
 
                         // العنوان
@@ -570,6 +510,15 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
                             ownerName: ownerName,
                             ownerPicture: ownerPicture,
                             userTitle: 'وسيط عقاري',
+                            onTap: () { // ✅ تم إضافة onTap
+                              // ✅ ownerId مستخلص في بداية حالة النجاح
+                              if (ownerId != null) {
+                                NavX(context).pushNamed( // ✅ استخدام NavX
+                                  Routes.userProfileScreenId,
+                                  arguments: ownerId,
+                                );
+                              }
+                            },
                           ),
                         ),
                         verticalSpace(8),
@@ -675,7 +624,7 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
 
                     // أيقونات التواصل
                     _squareIconBtn(
-                      icon:  MySvg(image: 'message', color: ColorsManager.primaryColor),
+                      icon:  const Icon(Icons.message, color: ColorsManager.primaryColor),
                       bg: ColorsManager.primary50,
                       borderColor: const Color(0xFFEAEAEA),
                       onTap: ended
@@ -706,14 +655,14 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
 
                     horizontalSpace(8),
                     _squareIconBtn(
-                      icon:  MySvg(image: 'phone', color: ColorsManager.primaryColor),
+                      icon:  const Icon(Icons.phone, color: ColorsManager.primaryColor),
                       bg: ColorsManager.primary50,
                       borderColor: const Color(0xFFEAEAEA),
                       onTap: ended ? null : (phone?.isNotEmpty ?? false) ? () => launchCaller(context, phone!) : null,
                     ),
                     horizontalSpace(8),
                     _squareIconBtn(
-                      icon: const MySvg(image: 'logos_whatsapp'),
+                      icon: const MyDivider(), // ضع أيقونة واتساب الخاصة بك هنا
                       bg: ColorsManager.success200,
                       onTap: ended ? null : (phone?.isNotEmpty ?? false) ? () => launchWhatsApp(context, phone!, message: 'مرحباً 👋 بخصوص مزاد: ${d.title}') : null,
                     ),
@@ -728,36 +677,8 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
     );
   }
 
-  // أزرار UI
-  Widget _circleIcon({required Widget child, VoidCallback? onTap, Color? color}) {
-    return Material(
-      color: Colors.transparent,
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: Container(
-          width: 36.w,
-          height: 36.w,
-          decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          alignment: Alignment.center,
-          child: child,
-        ),
-      ),
-    );
-  }
-
   Widget _squareIconBtn({required Widget icon, required Color bg, Color? borderColor, VoidCallback? onTap}) {
     final bgColor = onTap == null ? Colors.grey.shade300 : bg;
-    final iconChild = (icon is MySvg && onTap == null) ? MySvg(image: icon.image, color: Colors.grey.shade600) : icon;
 
     return Material(
       color: bgColor,
@@ -772,7 +693,7 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
             borderRadius: BorderRadius.circular(12.r),
             border: Border.all(color: borderColor ?? Colors.transparent, width: 1.w),
           ),
-          child: Center(child: iconChild),
+          child: Center(child: icon),
         ),
       ),
     );

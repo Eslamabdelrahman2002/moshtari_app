@@ -5,6 +5,8 @@ import 'package:mushtary/core/utils/helpers/spacing.dart';
 import 'package:mushtary/core/widgets/primary/my_svg.dart';
 import 'package:mushtary/core/widgets/primary/primary_button.dart';
 
+import '../../../../../core/router/routes.dart';
+
 class MessagesEmptyCase extends StatelessWidget {
   const MessagesEmptyCase({super.key});
 
@@ -29,7 +31,9 @@ class MessagesEmptyCase extends StatelessWidget {
           verticalSpace(32),
           PrimaryButton(
             text: 'الذهاب للاعلانات',
-            onPressed: () {},
+            onPressed: () {
+              Navigator.of(context).pushNamed(Routes.bottomNavigationBar);
+            },
           ),
           const Spacer(),
         ],

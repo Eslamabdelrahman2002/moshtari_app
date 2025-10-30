@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+
 import 'package:mushtary/core/dependency_injection/injection_container.dart';
 import 'package:mushtary/core/widgets/primary/my_divider.dart';
 import 'package:mushtary/core/widgets/reminder.dart';
+import 'package:mushtary/core/utils/helpers/navigation.dart';
+import 'package:mushtary/core/utils/helpers/launcher.dart';
+
 import 'package:mushtary/features/product_details/ui/widgets/app_bar.dart';
 import 'package:mushtary/features/product_details/ui/widgets/car_details/widgets/car_bottom_actions.dart';
 import 'package:mushtary/features/product_details/ui/widgets/current_user_info.dart';
@@ -16,26 +21,34 @@ import 'package:mushtary/features/product_details/ui/logic/cubit/comment_send_cu
 import 'package:mushtary/features/user_profile/logic/cubit/profile_cubit.dart';
 
 import '../../../../core/router/routes.dart';
-import '../../../../core/utils/helpers/launcher.dart';
-import 'package:mushtary/core/utils/helpers/navigation.dart';
 
-// موديلات الشات
+// الشات
 import 'package:mushtary/features/messages/data/models/messages_model.dart';
 import 'package:mushtary/features/messages/data/repo/messages_repo.dart';
 import 'package:mushtary/features/messages/ui/widgets/chats/chat_initiation_sheet.dart';
 import 'package:mushtary/features/messages/ui/screens/chat_screen.dart';
 
+// Favorites
+import '../../../favorites/ui/logic/cubit/favorites_cubit.dart';
+
+// موديل الهوم لتمرير الإعلانات المشابهة للقسمين (Story + SimilarAds)
 import '../../../home/data/models/home_data_model.dart';
+
+// برومو مثل العقار
 import '../../../real_estate_details/ui/widgets/real_estate_promo_button.dart';
+
+// Cubit/details
 import '../logic/cubit/car_parts_details_cubit.dart';
 import '../logic/cubit/car_parts_details_state.dart';
 
-// التعليقات + المؤلف
+// التعليقات + المؤلف + الصور
 import '../widgets/car_details/widgets/car_part_add_comment_field.dart';
 import '../widgets/car_details/widgets/car_part_comments_view.dart';
+import '../widgets/car_part_details_images.dart';
+import '../widgets/car_part_specs_card.dart';
 import '../widgets/offer_sheet.dart';
+
 import 'package:skeletonizer/skeletonizer.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class CarPartDetailsScreen extends StatelessWidget {
   final int id;
@@ -65,7 +78,7 @@ class CarPartDetailsScreen extends StatelessWidget {
             price: partDetails.price.toString(),
           );
 
-          context.pushNamed(
+          NavX(context).pushNamed(
             Routes.chatScreen,
             arguments: ChatScreenArgs(chatModel: chatModel, adInfo: adInfo),
           );
@@ -82,15 +95,12 @@ class CarPartDetailsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
+        BlocProvider<FavoritesCubit>(create: (_) => getIt<FavoritesCubit>()..fetchFavorites()),
         BlocProvider<CarPartsDetailsCubit>(
           create: (_) => getIt<CarPartsDetailsCubit>()..fetchCarPartDetails(id),
         ),
-        BlocProvider<CommentSendCubit>(
-          create: (_) => getIt<CommentSendCubit>(),
-        ),
-        BlocProvider<ProfileCubit>(
-          create: (_) => getIt<ProfileCubit>()..loadProfile(),
-        ),
+        BlocProvider<CommentSendCubit>(create: (_) => getIt<CommentSendCubit>()),
+        BlocProvider<ProfileCubit>(create: (_) => getIt<ProfileCubit>()..loadProfile()),
       ],
       child: Scaffold(
         body: SafeArea(
@@ -105,9 +115,24 @@ class CarPartDetailsScreen extends StatelessWidget {
               if (state is CarPartsDetailsSuccess) {
                 final part = state.details;
 
+                // حوّل الإعلانات المشابهة إلى HomeAdModel لاستخدامها في Story + SimilarAds
+                final List<HomeAdModel> similarHomeAds = part.similarAds.map((s) {
+                  return HomeAdModel.fromJson({
+                    "id": s.id,
+                    "title": s.title,
+                    "price": s.price,
+                    "name_ar": s.brandName,
+                    "created_at": DateTime.now().toIso8601String(),
+                    "username": "",
+                    "image_urls": s.imageUrls,
+                    "condition": "",
+                    "category_id": 2,
+                  });
+                }).toList();
+
                 // بيانات المالك
                 final ownerId = part.user.id as int;
-                final ownerName = (part.user.username?.toString() ?? part.user.username?.toString() ?? '—').trim();
+                final ownerName = (part.user.username?.toString() ?? '—').trim();
 
                 String? ownerPicture;
                 bool isVerified = false;
@@ -143,27 +168,27 @@ class CarPartDetailsScreen extends StatelessWidget {
                     children: [
                       const ProductScreenAppBar(),
 
-                      // الصور
-                      SizedBox(
-                        height: 250,
-                        child: PageView(
-                          children: part.imageUrls.map((url) {
-                            return Image.network(url, fit: BoxFit.cover);
-                          }).toList(),
-                        ),
+                      // الصور (نفس العقار)
+                      CarPartDetailsImages(
+                        images: part.imageUrls,
+                        adId: id,
+                        favoriteType: 'ad',
                       ),
 
-                      // العنوان
-                      StoryAndTitleWidget(title: part.title),
+                      // الستوري + العنوان (نفس العقار/السيارات)
+                      StoryAndTitleWidget(
+                        title: part.title,
+                        similarAds: similarHomeAds,
+                      ),
 
-                      // البانيل: مدينة + تاريخ + سعر
+                      // البانيل: موقع + وقت + سعر
                       DetailsPanel(
                         location: "${part.city} - ${part.region}",
                         time: part.createdAt,
                         price: part.price,
                       ),
 
-                      // معلومات المالك (مرتبطة بالبيانات)
+                      // معلومات المالك
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: CurrentUserInfo(
@@ -172,22 +197,26 @@ class CarPartDetailsScreen extends StatelessWidget {
                           isVerified: isVerified,
                           rating: rating,
                           reviewsCount: reviewsCount,
+                          onTap: () {
+                            final ownerId = part.user.id;
+                            if (ownerId != null) {
+                              NavX(context).pushNamed( // ✅ استخدام NavX
+                                Routes.userProfileScreenId,
+                                arguments: ownerId,
+                              );
+                            }
+                          },
                           onFollow: () {},
                         ),
                       ),
                       const MyDivider(),
 
                       // معلومات إضافية
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("حالة القطعة: ${part.carPartDetail.condition}"),
-                            Text("البراند: ${part.carPartDetail.brandName}"),
-                            Text("الموديلات المدعومة: ${part.carPartDetail.supportedModels.join(", ")}"),
-                          ],
-                        ),
+                      CarPartSpecsCardElevated(
+                        condition: part.carPartDetail.condition,
+                        brand: part.carPartDetail.brandName,
+                        supportedModels: part.carPartDetail.supportedModels,
+                        elevation: 5, // لو حاب تكبّر الظل شوي
                       ),
 
                       InfoDescription(description: part.description),
@@ -213,6 +242,7 @@ class CarPartDetailsScreen extends StatelessWidget {
                       ),
 
                       const MyDivider(),
+
                       // سوق للإعلان (Marketing)
                       PromoButton(
                         onPressed: () async {
@@ -228,22 +258,8 @@ class CarPartDetailsScreen extends StatelessWidget {
                         },
                       ),
 
-                      // إعلانات مشابهة
-                      SimilarAds(
-                        similarAds: part.similarAds.map((s) {
-                          return HomeAdModel.fromJson({
-                            "id": s.id,
-                            "title": s.title,
-                            "price": s.price,
-                            "name_ar": s.brandName,
-                            "created_at": DateTime.now().toIso8601String(),
-                            "username": "",
-                            "image_urls": s.imageUrls,
-                            "condition": "",
-                            "category_id": 2,
-                          });
-                        }).toList(),
-                      ),
+                      // إعلانات مشابهة (نفس اللي فوق لكن نعيد استخدامها هنا)
+                      SimilarAds(similarAds: similarHomeAds),
                     ],
                   ),
                 );
@@ -262,7 +278,7 @@ class CarPartDetailsScreen extends StatelessWidget {
             final isOwner = (myId != null && ownerId == myId);
 
             final phone = part.phoneNumber;
-            final ownerName = part.user.username?.toString() ?? part.user.username?.toString() ?? '—';
+            final ownerName = part.user.username?.toString() ?? '—';
 
             return CarBottomActions(
               onWhatsapp: () => launchWhatsApp(

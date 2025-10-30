@@ -34,7 +34,7 @@ class WorkerListViewItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final goDetails = () => context.pushNamed(Routes.workerDetailsScreen, arguments: providerId);
+    final goDetails = () => NavX(context).pushNamed(Routes.workerDetailsScreen, arguments: providerId);
     final displayJobTitle = jobTitle.isEmpty ? 'غير محدد' : jobTitle;
     final imageHeight = 0.33.sw * 1.075;
 

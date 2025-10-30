@@ -1,15 +1,30 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
 import 'package:mushtary/core/widgets/primary/my_svg.dart';
 import 'package:mushtary/features/product_details/ui/widgets/share_dialog.dart';
 
+import '../../../favorites/ui/logic/cubit/favorites_cubit.dart';
+import '../../../favorites/ui/logic/cubit/favorites_state.dart';
+
 class RealEstateDetailsProductImages extends StatefulWidget {
   final List<String> images;
-  const RealEstateDetailsProductImages({super.key, required this.images});
+
+  // جديد: نحتاج هوية الإعلان ونوعه (ad/auction)
+  final int adId;
+  final String favoriteType; // 'ad' أو 'auction' (هنا غالباً 'ad')
+
+  const RealEstateDetailsProductImages({
+    super.key,
+    required this.images,
+    required this.adId,
+    this.favoriteType = 'ad',
+  });
 
   @override
   State<RealEstateDetailsProductImages> createState() =>
@@ -18,74 +33,133 @@ class RealEstateDetailsProductImages extends StatefulWidget {
 
 class _RealEstateDetailsProductImagesState
     extends State<RealEstateDetailsProductImages> {
-  PageController pageController = PageController();
+  final PageController pageController = PageController();
   int currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // في حال ما تم تحميل المفضلة سابقاً، نطلبها مرة واحدة بعد بناء الودجت
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final cubit = context.read<FavoritesCubit>();
+      if (cubit.state is FavoritesInitial) {
+        cubit.fetchFavorites();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    pageController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final total = widget.images.length;
+
     return SizedBox(
-      height: 285.h,
+      height: 300.h,
       width: double.infinity,
       child: Stack(
+        alignment: Alignment.bottomCenter,
         children: [
+          // ✅ PageView مع تأثير تمرير جميل
           PageView.builder(
-            scrollDirection: Axis.horizontal,
             controller: pageController,
-            itemCount: widget.images.length,
-            itemBuilder: (context, index) {
-              return SizedBox(
-                width: double.infinity,
-                height: 285.h,
-                child: CachedNetworkImage(
-                    imageUrl: widget.images[index], fit: BoxFit.cover),
+            itemCount: total,
+            onPageChanged: (i) => setState(() => currentIndex = i),
+            itemBuilder: (context, i) {
+              final url = widget.images[i];
+              // نعطي انميشن scale بسيط
+              final scale = (i == currentIndex) ? 1.0 : 0.9;
+              return AnimatedScale(
+                duration: const Duration(milliseconds: 300),
+                scale: scale,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16.r),
+                    child: CachedNetworkImage(
+                      imageUrl: url,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: 300.h,
+                      placeholder: (_, __) =>
+                          Container(color: Colors.grey.shade200),
+                      errorWidget: (_, __, ___) =>
+                      const Icon(Icons.broken_image, size: 80, color: Colors.grey),
+                    ),
+                  ),
+                ),
               );
             },
-            onPageChanged: (index) {
-              setState(() {
-                currentIndex = index;
-              });
-            },
           ),
-          Padding(
-            padding: const EdgeInsets.all(16),
+
+          // ✅ عدّاد نقطي أنيق أسفل الصور
+          if (total > 1)
+            Positioned(
+              bottom: 10.h,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(total, (i) {
+                  final isActive = i == currentIndex;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    margin: EdgeInsets.symmetric(horizontal: 3.w),
+                    height: 6.h,
+                    width: isActive ? 20.w : 8.w,
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? ColorsManager.primary400
+                          : Colors.white.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                  );
+                }),
+              ),
+            ),
+
+          // ✅ شريط علوي: مفضلة + مشاركة
+          Positioned(
+            top: 12.h,
+            left: 12.w,
             child: Row(
               children: [
-                const Spacer(),
+                // مشاركة
                 IconButton(
-                  padding: EdgeInsets.zero,
-                  style: const ButtonStyle(
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  icon: Icon(
-                    Icons.share,
-                    size: 20.w,
-                  ),
-                  color: ColorsManager.white,
                   onPressed: () {
                     showDialog(
                       context: context,
-                      builder: (BuildContext context) {
-                        return const ShareDialog();
-                      },
+                      builder: (_) => const ShareDialog(),
                     );
                   },
+                  icon: const Icon(Icons.share, color: Colors.white),
                 ),
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  style: const ButtonStyle(
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  icon: Icon(
-                    Icons.favorite_outlined,
-                    size: 20.w,
-                  ),
-                  color: ColorsManager.white,
-                  onPressed: () {},
+                // مفضلة
+                BlocBuilder<FavoritesCubit, FavoritesState>(
+                  builder: (context, state) {
+                    bool isFav = false;
+                    if (state is FavoritesLoaded) {
+                      isFav = state.favoriteIds.contains(widget.adId);
+                    }
+                    return IconButton(
+                      onPressed: () {
+                        context.read<FavoritesCubit>().toggleFavorite(
+                          type: widget.favoriteType,
+                          id: widget.adId,
+                        );
+                      },
+                      icon: Icon(
+                        isFav ? Icons.favorite : Icons.favorite_border,
+                        color: isFav ? ColorsManager.redButton : Colors.white,
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
           ),
-
-
         ],
       ),
     );

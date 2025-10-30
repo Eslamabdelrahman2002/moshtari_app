@@ -145,7 +145,7 @@ class _RealEstateMapViewState extends State<RealEstateMapView> {
           bottom: 10,
           child: InkWell(
               onTap: () {
-                context.pushNamed(Routes.realEstateDetailsScreen);
+                NavX(context).pushNamed(Routes.realEstateDetailsScreen);
               },
               child: const RealEstateMapItemDetails()),
         ),

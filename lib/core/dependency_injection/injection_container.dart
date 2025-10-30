@@ -32,6 +32,9 @@ import 'package:mushtary/features/home/logic/cubit/home_cubit.dart';
 import 'package:mushtary/features/favorites/data/repo/favorites_repo.dart';
 import 'package:mushtary/features/favorites/ui/logic/cubit/favorites_cubit.dart';
 
+// Search
+import 'package:mushtary/features/home/logic/cubit/ads_query_cubit.dart';
+
 // Profile
 import 'package:mushtary/features/user_profile/data/repo/profile_repo.dart';
 import 'package:mushtary/features/user_profile/logic/cubit/profile_cubit.dart';
@@ -68,8 +71,14 @@ import 'package:mushtary/features/messages/data/repo/chat_socket_service.dart';
 import 'package:mushtary/features/messages/data/repo/messages_repo.dart';
 import 'package:mushtary/features/messages/logic/cubit/messages_cubit.dart';
 import 'package:mushtary/features/messages/logic/cubit/chat_cubit.dart';
+import 'package:mushtary/features/user_profile_id/data/repo/user_reviews_repo.dart';
+import 'package:mushtary/features/user_profile_id/ui/cubit/user_reviews_cubit.dart';
 
 // Core
+import '../../features/ real_estate_request_details/data/repo/real_estate_requests_create_repo.dart';
+import '../../features/ real_estate_request_details/data/repo/real_estate_requests_repo.dart';
+import '../../features/ real_estate_request_details/ui/cubit/real_estate_request_details_cubit.dart';
+import '../../features/ real_estate_request_details/ui/cubit/real_estate_requests_cubit.dart';
 import '../../features/commission_calculator/data/repo/commission_repo.dart';
 import '../../features/commission_calculator/ui/logic/cubit/commission_cubit.dart';
 
@@ -78,12 +87,16 @@ import '../../features/messages/data/local/chat_db.dart';
 import '../../features/messages/data/local/chat_local_data_source.dart';
 import '../../features/messages/data/repo/chat_offline_repository.dart';
 
+import '../../features/notifications/data/repo/notifications_repo.dart';
+import '../../features/notifications/ui/cubit/notifications_cubit.dart';
 import '../../features/product_details/data/repo/auction_bid_repo.dart';
 import '../../features/product_details/data/repo/auction_socket_service.dart';
 import '../../features/product_details/data/repo/offers_repo.dart';
 import '../../features/product_details/ui/logic/cubit/auction_bid_cubit.dart';
 import '../../features/product_details/ui/logic/cubit/offer_cubit.dart';
 import '../../features/product_details/ui/widgets/full_view_widget/comments_bottom_sheet.dart';
+import '../../features/real_estate/data/repo/real_estate_listings_repo.dart';
+import '../../features/real_estate/logic/cubit/real_estate_listings_cubit.dart';
 import '../../features/register_service/data/repo/service_registration_repo.dart';
 import '../../features/register_service/logic/cubit/service_registration_cubit.dart';
 import '../../features/service_profile/data/repo/service_provider_repo.dart';
@@ -109,6 +122,9 @@ import '../../features/trips/ui/logic/cubit/dyna_trip_create_cubit.dart';
 import '../../features/trips/ui/logic/cubit/dyna_trips_list_cubit.dart';
 import '../../features/user_profile/data/repo/ads_repo.dart';
 import '../../features/user_profile/data/repo/my_auctions_repo.dart';
+import '../../features/user_profile_id/data/repo/publisher_repo.dart';
+import '../../features/user_profile_id/ui/cubit/user_ads_cubit.dart';
+import '../../features/user_profile_id/ui/cubit/user_auctions_cubit.dart';
 import '../../features/wallet/ui/data/repo/payment_config_repo.dart';
 import '../../features/work_with_us/data/repo/exhibition_create_repo.dart';
 import '../../features/work_with_us/data/repo/exhibition_details_repo.dart';
@@ -129,7 +145,9 @@ import '../utils/helpers/cache_helper.dart';
 // GetIt
 final getIt = GetIt.instance;
 
-// Helpers to avoid duplicate registrations
+// Helpers لحماية التسجيل من التكرار
+bool _diInitialized = false;
+
 void registerLazyIfNeeded<T extends Object>(T Function() factory) {
   if (!getIt.isRegistered<T>()) {
     getIt.registerLazySingleton<T>(factory);
@@ -144,6 +162,9 @@ void registerFactoryReplacing<T extends Object>(T Function() factory) {
 }
 
 void setupServiceLocator() {
+  if (_diInitialized) return;
+  _diInitialized = true;
+
   // Dio & ApiService
   registerLazyIfNeeded<Dio>(() => Dio());
   registerLazyIfNeeded<api.ApiService>(() => api.ApiService(getIt<Dio>()));
@@ -160,9 +181,14 @@ void setupServiceLocator() {
   registerLazyIfNeeded<ResetPasswordRepo>(() => ResetPasswordRepo(getIt<api.ApiService>()));
   registerFactoryReplacing<ResetPasswordCubit>(() => ResetPasswordCubit(getIt<ResetPasswordRepo>()));
 
-  // Home
+  // Home + Search
   registerLazyIfNeeded<HomeRepo>(() => HomeRepo(getIt<api.ApiService>()));
   registerFactoryReplacing<HomeCubit>(() => HomeCubit(getIt<HomeRepo>()));
+  registerFactoryReplacing<AdsQueryCubit>(() => AdsQueryCubit(getIt<HomeRepo>()));
+
+  // Notifications
+  registerLazyIfNeeded<NotificationsRepo>(() => NotificationsRepo(getIt<api.ApiService>()));
+  registerFactoryReplacing<NotificationsCubit>(() => NotificationsCubit(getIt<NotificationsRepo>()));
 
   // Favorites
   registerLazyIfNeeded<FavoritesRepo>(() => FavoritesRepo(getIt<api.ApiService>()));
@@ -190,6 +216,15 @@ void setupServiceLocator() {
   registerFactoryReplacing<reDetailsCubit.RealEstateDetailsCubit>(
         () => reDetailsCubit.RealEstateDetailsCubit(getIt<RealEstateRepo>()),
   );
+  registerLazyIfNeeded<RealEstateListingsRepo>(() => RealEstateListingsRepo(getIt<api.ApiService>()));
+  registerFactoryReplacing<RealEstateListingsCubit>(() => RealEstateListingsCubit(getIt<RealEstateListingsRepo>()));
+
+  // ✅ تسجيل Repos و Cubits للطلبات العقارية (تصحيح)
+  registerLazyIfNeeded<RealEstateRequestsRepo>(() => RealEstateRequestsRepo(getIt<api.ApiService>()));
+  registerFactoryReplacing<RealEstateRequestDetailsCubit>(() => RealEstateRequestDetailsCubit(getIt<RealEstateRequestsRepo>()));
+
+  registerLazyIfNeeded<RealEstateRequestsCreateRepo>(() => RealEstateRequestsCreateRepo(getIt<api.ApiService>()));
+  registerFactoryReplacing<RealEstateRequestsCubit>(() => RealEstateRequestsCubit(getIt<RealEstateRequestsCreateRepo>()));
 
   // Create ads
   registerLazyIfNeeded<CarPartAdsCreateRepo>(() => CarPartAdsCreateRepo(getIt<Dio>()));
@@ -223,7 +258,7 @@ void setupServiceLocator() {
   registerFactoryReplacing<RealEstateAuctionStartCubit>(() => RealEstateAuctionStartCubit(getIt<RealEstateAuctionStartRepo>()));
 
   // Chat WebSocket
-  getIt.registerLazySingleton<ChatSocketService>(() => ChatSocketService(
+  registerLazyIfNeeded<ChatSocketService>(() => ChatSocketService(
     tokenProvider: () => CacheHelper.getData(key: 'token') as String?,
     host: ApiConstants.wsHost,
     path: '/socket.io',
@@ -231,7 +266,7 @@ void setupServiceLocator() {
   ));
 
   // Auction WebSocket
-  getIt.registerLazySingleton<AuctionSocketService>(() => AuctionSocketService(
+  registerLazyIfNeeded<AuctionSocketService>(() => AuctionSocketService(
     host: ApiConstants.wsHost,
     secure: false,
     onMaxBidUpdate: (maxBid, type, auctionId) {
@@ -248,8 +283,6 @@ void setupServiceLocator() {
   // Messages (online)
   registerLazyIfNeeded<MessagesRepo>(() => MessagesRepo(getIt<ChatSocketService>()));
   registerFactoryReplacing<MessagesCubit>(() => MessagesCubit(getIt<MessagesRepo>()));
-
-  // DO NOT register ChatCubit here. It will be registered in setupChatOfflineLocator()
 
   // Offers
   registerLazyIfNeeded<OffersRepo>(() => OffersRepo(getIt<api.ApiService>()));
@@ -288,6 +321,7 @@ void setupServiceLocator() {
   registerFactoryReplacing<DynaTripsListCubit>(() => DynaTripsListCubit(getIt<DynaTripsRepo>()));
   registerFactoryReplacing<DynaMyTripsCubit>(() => DynaMyTripsCubit(getIt<DynaTripsRepo>()));
   registerFactoryReplacing<DynaTripCreateCubit>(() => DynaTripCreateCubit(getIt<DynaTripsRepo>()));
+  getIt.registerFactory<DynaTripsCubit>(() => DynaTripsCubit(getIt<DynaTripsRepo>()));
 
   // ServiceProfile
   registerLazyIfNeeded<ServiceProviderRepo>(() => ServiceProviderRepo(getIt<api.ApiService>()));
@@ -296,40 +330,37 @@ void setupServiceLocator() {
   registerFactoryReplacing<roc.ReceivedOffersCubit>(() => roc.ReceivedOffersCubit(getIt<ro.ReceivedOffersRepo>()));
   registerLazyIfNeeded<pr.ProviderRepo>(() => pr.ProviderRepo(getIt<api.ApiService>()));
   registerFactoryReplacing<poc.ProviderOffersCubit>(() => poc.ProviderOffersCubit(getIt<pr.ProviderRepo>()));
+  registerLazyIfNeeded<PublisherRepo>(() => PublisherRepo(getIt<api.ApiService>()));
 
+  // 💡 تم استخدام PublisherRepo لحل الخطأ
+  registerFactoryReplacing<UserAdsCubit>(() => UserAdsCubit(getIt<PublisherRepo>()));
+  registerFactoryReplacing<UserAuctionsCubit>(() => UserAuctionsCubit(getIt<PublisherRepo>()));
   // laborer
-  getIt.registerLazySingleton<LaborerTypesRepo>(() => LaborerTypesRepo(getIt<api.ApiService>()));
-  getIt.registerFactory<LaborerTypesCubit>(() => LaborerTypesCubit(getIt<LaborerTypesRepo>()));
-
-  getIt.registerLazySingleton<ServiceProvidersRepo>(() => ServiceProvidersRepo(getIt<api.ApiService>()));
-  getIt.registerFactory<ServiceProvidersCubit>(() => ServiceProvidersCubit(getIt<ServiceProvidersRepo>()));
+  registerLazyIfNeeded<LaborerTypesRepo>(() => LaborerTypesRepo(getIt<api.ApiService>()));
+  registerFactoryReplacing<LaborerTypesCubit>(() => LaborerTypesCubit(getIt<LaborerTypesRepo>()));
+  registerLazyIfNeeded<ServiceProvidersRepo>(() => ServiceProvidersRepo(getIt<api.ApiService>()));
+  registerFactoryReplacing<ServiceProvidersCubit>(() => ServiceProvidersCubit(getIt<ServiceProvidersRepo>()));
 
   // Car catalog
   registerLazyIfNeeded<CarCatalogRepo>(() => CarCatalogRepo(getIt<api.ApiService>()));
   registerFactoryReplacing<CarCatalogCubit>(() => CarCatalogCubit(getIt<CarCatalogRepo>()));
 
-  // Auctions
-  registerLazyIfNeeded<CarAuctionRepo>(() => CarAuctionRepo(getIt<api.ApiService>()));
-  registerFactoryReplacing<CarAuctionDetailsCubit>(() => CarAuctionDetailsCubit(getIt<CarAuctionRepo>()));
+  // Conversation reports
   registerLazyIfNeeded<ConversationReportRepo>(() => ConversationReportRepo(getIt<api.ApiService>()));
   registerFactoryReplacing<ConversationReportCubit>(() => ConversationReportCubit(getIt<ConversationReportRepo>()));
 
-  registerLazyIfNeeded<RealEstateAuctionRepo>(() => RealEstateAuctionRepo(getIt<api.ApiService>()));
-  registerFactoryReplacing<RealEstateAuctionDetailsCubit>(() => RealEstateAuctionDetailsCubit(getIt<RealEstateAuctionRepo>()));
-  getIt.registerLazySingleton<MyAuctionsRepo>(() => MyAuctionsRepo(getIt<api.ApiService>()));
+  // Auctions/My auctions, wallet, ads repo
+  registerLazyIfNeeded<RealEstateAuctionRepo>(() => RealEstateAuctionRepo(getIt<api.ApiService>())); // لو مستخدم بمكان آخر
+  registerLazyIfNeeded<MyAuctionsRepo>(() => MyAuctionsRepo(getIt<api.ApiService>()));
   registerLazyIfNeeded<PaymentConfigRepo>(() => PaymentConfigRepo(getIt<api.ApiService>()));
-  getIt.registerLazySingleton<AdsRepo>(() => AdsRepo(getIt<api.ApiService>()));
-
-  // trips cubit
-  getIt.registerFactory<DynaTripsCubit>(() => DynaTripsCubit(getIt<DynaTripsRepo>()));
-
-  getIt.registerLazySingleton<ServiceOffersRepo>(() => ServiceOffersRepo(getIt<api.ApiService>()));
-  getIt.registerFactory<ServiceOfferCubit>(() => ServiceOfferCubit(getIt<ServiceOffersRepo>()));
+  registerLazyIfNeeded<AdsRepo>(() => AdsRepo(getIt<api.ApiService>()));
+  registerLazyIfNeeded<UserReviewsRepo>(() => UserReviewsRepo(getIt<api.ApiService>()));
+  registerFactoryReplacing<UserReviewsCubit>(() => UserReviewsCubit(getIt<UserReviewsRepo>()));
 }
+
 
 // Call this from main.dart after setupServiceLocator()
 Future<void> setupChatOfflineLocator() async {
-  // Database
   final db = await ChatDB.instance.db;
 
   if (!getIt.isRegistered<ChatLocalDataSource>()) {
@@ -346,7 +377,7 @@ Future<void> setupChatOfflineLocator() async {
     ));
   }
 
-  // Ensure ChatCubit uses ChatOfflineRepository
+  // ChatCubit يعتمد على الـ OfflineRepo (نُحدّث التسجيل لو موجود)
   if (getIt.isRegistered<ChatCubit>()) {
     getIt.unregister<ChatCubit>();
   }

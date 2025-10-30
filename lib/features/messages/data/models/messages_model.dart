@@ -73,14 +73,14 @@ class MessagesModel {
   };
 }
 
-// 3) رسالة
 class Message {
   final int? id;
   final int? senderId;
   final int? receiverId;
   final int? conversationId;
-  final String? messageContent; // content / message
+  final String? messageContent;
   final String? createdAt;
+  final String? messageType; // ✅ جديد
 
   Message({
     this.id,
@@ -89,48 +89,41 @@ class Message {
     this.conversationId,
     this.messageContent,
     this.createdAt,
+    this.messageType,
   });
 
   factory Message.fromJson(Map<String, dynamic> json) => Message(
     id: _asInt(json['id']),
     senderId: _asInt(json['sender_id'] ?? json['senderId']),
     receiverId: _asInt(json['receiver_id'] ?? json['receiverId']),
-    conversationId: _asInt(json['conversation_id'] ?? json['conversationId'] ?? json['chat_id'] ?? json['chatId']),
-    messageContent: _asString(json['message_content'] ?? json['messageContent'] ?? json['content'] ?? json['message']),
+    conversationId: _asInt(json['conversation_id'] ?? json['conversationId']),
+    messageContent:
+    _asString(json['message_content'] ?? json['content'] ?? json['message']),
     createdAt: _asString(json['created_at'] ?? json['createdAt']),
+    messageType: _asString(json['message_type'] ?? json['type'] ?? 'text'),
   );
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'sender_id': senderId,
-    'receiver_id': receiverId,
-    'conversation_id': conversationId,
-    'message_content': messageContent,
-    'created_at': createdAt,
-  };
 }
 
-// 4) Body لإرسال رسالة
 class SendMessageRequestBody {
   final int receiverId;
   final String messageContent;
-  final int? listingId;      // اختياري
-  final String? messageType; // مثل "text"
+  final int? listingId;
+  final String messageType; // text, image, file, voice
   final int? repliedToId;
 
   SendMessageRequestBody({
     required this.receiverId,
     required this.messageContent,
     this.listingId,
-    this.messageType,
+    this.messageType = 'text',
     this.repliedToId,
   });
 
   Map<String, dynamic> toMap() => {
     'receiver_id': receiverId,
     'message_content': messageContent,
+    'message_type': messageType,
     if (listingId != null) 'listing_id': listingId,
-    if (messageType != null) 'message_type': messageType,
     if (repliedToId != null) 'replied_to_id': repliedToId,
   };
 }

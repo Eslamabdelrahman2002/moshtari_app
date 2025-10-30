@@ -27,7 +27,7 @@ class RegisterBox extends StatelessWidget {
           PrimaryButton(
             text: 'تسجيل الدخول',
             onPressed: () {
-              context.pushNamed(Routes.loginScreen);
+              NavX(context).pushNamed(Routes.loginScreen);
             },
           ),
         ],

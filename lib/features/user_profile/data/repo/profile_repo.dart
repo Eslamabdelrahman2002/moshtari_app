@@ -53,6 +53,29 @@ class ProfileRepo {
     await apiService.deleteWithBody(ApiConstants.deleteAccount);
   }
 
+  // ✅ Methods جديدة لجلب إعلانات ومزادات مستخدم آخر بناءً على userId
+  Future<List<MyAdsModel>> getUserAds(int userId, {int page = 1, int limit = 10}) async {
+    // ✅ استخدام endpoint لمستخدم آخر (افتراضي: 'car-ads/user/{userId}')
+    // يمكن تعديل المسار حسب الـ API الحقيقي
+    final data = await apiService.get(
+      '${ApiConstants.carAds}/user/$userId', // أو 'car-ads/user/{userId}'
+      queryParameters: {'page': page, 'limit': limit},
+    );
+    final List list = (data['data'] as List?) ?? const [];
+    return list.map((e) => MyAdsModel.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<List<MyAuctionModel>> getUserAuctions(int userId, {int page = 1, int limit = 10}) async {
+    // ✅ استخدام endpoint لمستخدم آخر (افتراضي: 'car-auctions/user/{userId}')
+    // يمكن تعديل المسار حسب الـ API الحقيقي
+    final data = await apiService.get(
+      'car-auctions/user/$userId', // أو استخدم ApiConstants إذا كان موجودًا
+      queryParameters: {'page': page, 'limit': limit},
+    );
+    final List list = (data['data'] as List?) ?? const [];
+    return list.map((e) => MyAuctionModel.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
   // يحدد مسار الخدمة حسب نوع الإعلان
   String _segmentForCategory(int? categoryId) {
     switch (categoryId) {

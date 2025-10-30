@@ -101,17 +101,17 @@ class ProductItem extends StatelessWidget {
       switch (m.categoryId) {
         case 5:
         case 1:
-          context.pushNamed(Routes.carDetailsScreen, arguments: id);
+          NavX(context).pushNamed(Routes.carDetailsScreen, arguments: id);
           break;
         case 2:
-          context.pushNamed(Routes.carPartDetailsScreen, arguments: id);
+          NavX(context).pushNamed(Routes.carPartDetailsScreen, arguments: id);
           break;
         case 3:
-          context.pushNamed(Routes.realEstateDetailsScreen, arguments: id);
+          NavX(context).pushNamed(Routes.realEstateDetailsScreen, arguments: id);
           break;
         case 4:
         default:
-          context.pushNamed(Routes.otherAdDetailsScreen, arguments: id);
+          NavX(context).pushNamed(Routes.otherAdDetailsScreen, arguments: id);
       }
     } else if (model is MyAuctionModel) {
       _showAuctionDialog(context, model as MyAuctionModel);

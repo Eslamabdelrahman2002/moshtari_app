@@ -55,7 +55,7 @@ class WorkWithUsIntroScreen extends StatelessWidget {
             PrimaryButton(
               text: 'التالي',
               onPressed: () {
-                context.pushNamed(Routes.workWithUsFormScreen);
+                NavX(context).pushNamed(Routes.workWithUsFormScreen);
               },
             ),
           ],

@@ -24,19 +24,19 @@ class MessagesAppBar extends StatelessWidget {
         ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const SizedBox.shrink(),
           Text(
             'الرسائل',
             style: TextStyles.font20Black500Weight,
           ),
-          InkWell(
-            onTap: () {},
-            child: const MySvg(
-              image: 'more',
-            ),
-          ),
+          // InkWell(
+          //   onTap: () {},
+          //   child: const MySvg(
+          //     image: 'more',
+          //   ),
+          // ),
         ],
       ),
     );

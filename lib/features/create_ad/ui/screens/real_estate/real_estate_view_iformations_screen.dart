@@ -1,5 +1,3 @@
-// lib/features/create_ad/ui/screens/real_estate/real_estate_view_iformations_screen.dart
-
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmap;
+import 'package:path/path.dart' as p; // ✅ للتحقق من extension
 
 import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
@@ -40,11 +39,36 @@ class _RealEstateViewIformationsScreenState
   gmap.LatLng? _pickedLatLng;
   String? _pickedAddressAr;
 
-  Future<void> _pickImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      context.read<RealEstateAdsCubit>().addImage(File(image.path));
-      if (mounted) setState(() {});
+  static const List<String> kAllowedMediaExt = ['.jpg', '.jpeg', '.png', '.mp4']; // ✅ صيغ مدعومة
+
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: Colors.red.shade600),
+    );
+  }
+
+  // ✅ اختيار صور متعددة (حد أقصى 10)
+  Future<void> _pickImages() async {
+    final images = await _picker.pickMultiImage(
+      imageQuality: 85,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      limit: 10, // حد أقصى 10 صور
+    );
+    if (images.isNotEmpty) {
+      final cubit = context.read<RealEstateAdsCubit>();
+      for (final x in images) {
+        final file = File(x.path);
+        if (!kAllowedMediaExt.contains(p.extension(file.path).toLowerCase())) {
+          _showError('الملف ${p.basename(file.path)} ليس بصيغة مدعومة (png, jpg, mp4).');
+          continue;
+        }
+        cubit.addImage(file); // ✅ إضافة إلى Cubit
+      }
+      if (mounted) setState(() {}); // تحديث UI
+      print('>>> Added ${images.length} images'); // Debug
+    } else if (context.read<RealEstateAdsCubit>().state.images.length >= 10) {
+      _showError('تم الوصول للحد الأقصى (10 صور)');
     }
   }
 
@@ -171,14 +195,14 @@ class _RealEstateViewIformationsScreenState
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // الصور/الفيديو
+                  // ✅ الصور/الفيديو (دعم متعدد)
                   CreateRealEstateAdAddPhotoVideo(
-                    pickImage: _pickImage,
+                    pickImage: _pickImages, // ✅ اختيار متعدد
                     remove: (index) {
                       context.read<RealEstateAdsCubit>().removeImageAt(index);
                       if (mounted) setState(() {});
                     },
-                    pickedImages: state.images,
+                    pickedImages: state.images, // ✅ عرض المتعددة
                   ),
                   verticalSpace(16.h),
 

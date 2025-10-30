@@ -1,3 +1,5 @@
+// lib/core/router/routes.dart
+
 class Routes {
   // Core
   static const String splashScreen = '/';
@@ -18,8 +20,11 @@ class Routes {
 
   // User/Profile
   static const String userProfileScreen = '/userProfileScreen';
+  static const String userProfileScreenId = '/userProfileScreenId';
   static const String updateProfileScreen = '/updateProfileScreen';
-
+  static const searchScreen = '/search';
+  static const filterScreen = '/filter';
+  static const filterResultsScreen = '/filter-results';
   // Menu/Settings/Wallet
   static const String menuScreen = '/menuScreen';
   static const String languagesScreen = '/languagesScreen';
@@ -45,6 +50,7 @@ class Routes {
   static const String realEstateScreen = '/realEstatesScreen';
   static const String realEstateDetailsScreen = '/realEstateDetailsScreen';
   static const String realEstateApplicationsDetailsScreen = '/realEstateApplicationsDetailsScreen';
+  static const String realEstateRequestDetailsScreen = 'realEstateRequestDetailsScreen';
 
   // Auctions
   static const String carAuctionDetailsScreen = '/carAuctionDetailsScreen';
@@ -58,6 +64,7 @@ class Routes {
   static const String createAdScreen = '/createAdScreen';
   static const String createCarAdFlow = '/createCarAdFlow';
   static const String createRealEstateAdFlow = '/createRealEstateAdFlow';
+  static const String createRealEstateRequestFlow = '/createRealEstateRequestFlow'; // ✅ مسار جديد لتدفق الطلب
 
   // Car parts create flow
   static const String createCarPartAdScreen = '/createCarPartAdScreen';
@@ -89,8 +96,9 @@ class Routes {
   static const String serviceRequestsScreen = '/serviceRequestsScreen';
   static const String myReceivedOffersScreen = '/myReceivedOffersScreen';
   static const String workWithUsProfileScreen = '/workWithUsProfileScreen ';
- static const String usagePolicyScreen = '/usagePolicyScreen';
+  static const String usagePolicyScreen = '/usagePolicyScreen';
   static const String aboutAppScreen = '/aboutAppScreen';
-
+  static const String realEstateRequestDetailsCreate = '/real-estate-request-details-create'; // للإنشاء
+  static const String realEstateRequestDetailsView = '/real-estate-request-details-view/:id';
 
 }

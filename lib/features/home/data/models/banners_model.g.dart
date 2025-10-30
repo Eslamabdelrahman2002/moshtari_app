@@ -10,14 +10,12 @@ BannersModel _$BannersModelFromJson(Map<String, dynamic> json) => BannersModel(
   id: json['id'] as String?,
   url: json['url'] as String?,
   image: json['image'] as String?,
-  createdAt:
-      json['createdAt'] == null
-          ? null
-          : DateTime.parse(json['createdAt'] as String),
-  updatedAt:
-      json['updatedAt'] == null
-          ? null
-          : DateTime.parse(json['updatedAt'] as String),
+  createdAt: json['createdAt'] == null
+      ? null
+      : DateTime.parse(json['createdAt'] as String),
+  updatedAt: json['updatedAt'] == null
+      ? null
+      : DateTime.parse(json['updatedAt'] as String),
 );
 
 Map<String, dynamic> _$BannersModelToJson(BannersModel instance) =>

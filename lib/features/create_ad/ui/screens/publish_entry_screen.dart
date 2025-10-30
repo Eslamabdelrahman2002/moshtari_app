@@ -1,5 +1,3 @@
-// lib/features/product_details/ui/widgets/publish_entry_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mushtary/core/router/routes.dart';
@@ -9,7 +7,6 @@ import 'package:mushtary/core/widgets/primary/my_svg.dart';
 import 'package:mushtary/core/widgets/primary/primary_button.dart';
 
 import '../../../ad_action/ui/widgets/bid_type_dialog.dart';
-import '../../../home/ui/widgets/home_screen_app_bar.dart';
 import '../../../services/ui/widgets/service_app_bar.dart';
 
 class PublishEntryScreen extends StatelessWidget {
@@ -29,56 +26,55 @@ class PublishEntryScreen extends StatelessWidget {
               _ProHeader(),
               SizedBox(height: 16.h),
 
-              // كرت إنشاء إعلان
-              _ActionCard(
-                title: 'إنشاء إعلان',
-                subtitle: 'اعرض منتجك أو خدمتك بسرعة واحترافية',
-                icon: Icons.campaign_rounded,
-                filled: true,
-                onTap: () => Navigator.of(context).pushNamed(Routes.createAdScreen),
-              ),
-              SizedBox(height: 12.h),
+              // الأزرار جنب بعض تحت البانر
+              Row(
+                children: [
+                  Expanded(
+                    child: _MiniFilledButton(
+                      title: 'إنشاء إعلان',
+                      icon: Icons.campaign_rounded,
+                      onPressed: () => Navigator.of(context).pushNamed(Routes.createAdScreen),
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: _MiniOutlinedButton(
+                      title: 'بدء مزاد',
+                      icon: Icons.gavel_rounded,
+                      onPressed: () async {
+                        // 1) اختر التصنيف (سيارات/عقارات)
+                        final selectedCategory = await showAuctionCategoryDialog(context);
+                        if (selectedCategory == null) return;
 
-              // كرت بدء مزاد (يستخدم الديالوج لتحديد النوع أولاً)
-              _ActionCard(
-                title: 'بدء مزاد',
-                subtitle: 'إدارة مزاد بسيط أو متعدد العناصر',
-                icon: Icons.gavel_rounded,
-                filled: false,
-                onTap: () async {
-                  // 1) اختر التصنيف (سيارات/عقارات)
-                  final selectedCategory = await showAuctionCategoryDialog(context);
-                  if (selectedCategory == null) return;
-
-                  // 2) اختر نوع المزاد (فردي/متعدد)
-                  await showBidTypeDialog(
-                    context,
-                    initial: 'single',
-                    onContinue: (type) {
-                      if (selectedCategory == 'cars') {
-                        Navigator.of(context).pushNamed(
-                          Routes.createCarAuctionScreen,
-                          // تمرير نوع المزاد المختار: single أو multiple
-                          arguments: {'auctionType': type},
+                        // 2) اختر نوع المزاد (فردي/متعدد)
+                        await showBidTypeDialog(
+                          context,
+                          initial: 'single',
+                          onContinue: (type) {
+                            if (selectedCategory == 'cars') {
+                              Navigator.of(context).pushNamed(
+                                Routes.createCarAuctionScreen,
+                                arguments: {'auctionType': type},
+                              );
+                            } else if (selectedCategory == 'real_estate') {
+                              Navigator.of(context).pushNamed(
+                                Routes.createRealEstateAuctionScreen,
+                                arguments: {'auctionType': type},
+                              );
+                            }
+                          },
+                          onBackHome: () {
+                            Navigator.of(context).popUntil((route) => route.isFirst);
+                          },
                         );
-                      } else if (selectedCategory == 'real_estate') {
-                        Navigator.of(context).pushNamed(
-                          Routes.createRealEstateAuctionScreen,
-                          // تمرير نوع المزاد المختار: single أو multiple
-                          arguments: {'auctionType': type},
-                        );
-                      }
-                    },
-                    onBackHome: () {
-                      Navigator.of(context).popUntil((route) => route.isFirst);
-                    },
-                  );
-                },
+                      },
+                    ),
+                  ),
+                ],
               ),
 
               const Spacer(),
 
-              // شريط معلومات
               _InfoStrip(
                 text: 'يمكنك متابعة حالة المزادات والإعلانات من لوحة التحكم.',
                 icon: Icons.info_outline_rounded,
@@ -90,6 +86,8 @@ class PublishEntryScreen extends StatelessWidget {
     );
   }
 }
+
+/* =================== Header =================== */
 
 class _ProHeader extends StatelessWidget {
   @override
@@ -206,85 +204,66 @@ class _CircleBlur extends StatelessWidget {
   }
 }
 
-class _ActionCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final VoidCallback onTap;
-  final bool filled;
+/* =================== Mini buttons (side-by-side) =================== */
 
-  const _ActionCard({
+class _MiniFilledButton extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  const _MiniFilledButton({
     required this.title,
-    required this.subtitle,
     required this.icon,
-    required this.onTap,
-    this.filled = false,
+    required this.onPressed,
   });
 
   @override
   Widget build(BuildContext context) {
-    final bg = filled
-        ? LinearGradient(
-      colors: [ColorsManager.primaryColor, ColorsManager.primaryColor.withOpacity(0.9)],
-      begin: Alignment.topRight,
-      end: Alignment.bottomLeft,
-    )
-        : null;
-
-    final Color textColor = filled ? Colors.white : Colors.black;
-    final Color subColor = filled ? Colors.white.withOpacity(0.85) : ColorsManager.darkGray;
-    final Color borderColor = filled ? Colors.transparent : ColorsManager.dark200;
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16.r),
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        padding: EdgeInsets.zero,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+      ),
       child: Ink(
         decoration: BoxDecoration(
-          color: filled ? null : Colors.white,
-          gradient: bg,
+          gradient: const LinearGradient(
+            colors: [ColorsManager.primaryColor, ColorsManager.primary400],
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
+          ),
           borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: borderColor, width: 1.2),
           boxShadow: [
-            if (filled)
-              BoxShadow(
-                color: ColorsManager.primaryColor.withOpacity(0.18),
-                blurRadius: 18,
-                offset: const Offset(0, 10),
-              )
-            else
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              ),
+            BoxShadow(
+              color: ColorsManager.primaryColor.withOpacity(0.18),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
           ],
         ),
-        child: Padding(
-          padding: EdgeInsets.all(16.w),
+        child: Container(
+          height: 64.h,
+          padding: EdgeInsets.symmetric(horizontal: 14.w),
           child: Row(
             children: [
-              Container(
-                width: 46.w,
-                height: 46.w,
-                decoration: BoxDecoration(
-                  color: filled ? Colors.white.withOpacity(0.18) : ColorsManager.primary50,
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Icon(icon, color: filled ? Colors.white : ColorsManager.primaryColor),
-              ),
-              SizedBox(width: 12.w),
+
+
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title,
-                        style: filled ? TextStyles.font16White500Weight : TextStyles.font16Black500Weight),
-                    SizedBox(height: 2.h),
-                    Text(subtitle, style: TextStyle(color: subColor, fontSize: 12.sp)),
-                  ],
-                ),
+                child: Text(title, style: TextStyles.font16White500Weight, maxLines: 1, overflow: TextOverflow.ellipsis),
               ),
-              _ArrowCircle(filled: filled),
+              SizedBox(width: 10.w),
+              Container(
+                width: 34.w,
+                height: 34.w,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Icon(icon, color: Colors.white, size: 18),
+              ),
+
             ],
           ),
         ),
@@ -293,31 +272,64 @@ class _ActionCard extends StatelessWidget {
   }
 }
 
-class _ArrowCircle extends StatelessWidget {
-  final bool filled;
-  const _ArrowCircle({required this.filled});
+class _MiniOutlinedButton extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  const _MiniOutlinedButton({
+    required this.title,
+    required this.icon,
+    required this.onPressed,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 32.w,
-      height: 32.w,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: filled ? Colors.white.withOpacity(0.2) : ColorsManager.primary50,
-        border: Border.all(
-          color: filled ? Colors.white.withOpacity(0.35) : ColorsManager.primaryColor,
-        ),
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        padding: EdgeInsets.zero,
+        side: BorderSide(color: ColorsManager.dark200, width: 1.2),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
       ),
-      child: Icon(
-        Icons.arrow_back_ios_new_rounded,
-        size: 16.sp,
-        color: filled ? Colors.white : ColorsManager.primary400,
-        textDirection: TextDirection.ltr,
+      child: Container(
+        height: 64.h,
+        padding: EdgeInsets.symmetric(horizontal: 14.w),
+        child: Row(
+          children: [
+            // Container(
+            //   width: 30.w,
+            //   height: 30.w,
+            //   decoration: BoxDecoration(
+            //     shape: BoxShape.circle,
+            //     color: ColorsManager.primary50,
+            //     border: Border.all(color: ColorsManager.dark200),
+            //   ),
+            //   child: const Icon(Icons.arrow_back_ios_new_rounded, size: 14, color: ColorsManager.primary400, textDirection: TextDirection.ltr),
+            // ),
+            SizedBox(width: 10.w),
+            Expanded(
+              child: Text(title, style: TextStyles.font16Black500Weight, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+            Container(
+              width: 30.w,
+              height: 30.w,
+              decoration: BoxDecoration(
+                color: ColorsManager.dark50,
+                borderRadius: BorderRadius.circular(8.r),
+                border: Border.all(color: ColorsManager.dark200),
+              ),
+              child: Icon(icon, color: ColorsManager.primary400, size: 18),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
+
+/* =================== Info strip =================== */
 
 class _InfoStrip extends StatelessWidget {
   final String text;
@@ -344,88 +356,77 @@ class _InfoStrip extends StatelessWidget {
   }
 }
 
-/// دايالوج اختيار نوع المزاد (تصنيف رئيسي)
+/* =================== مزاد: اختيار التصنيف (BottomSheet) =================== */
+
 Future<String?> showAuctionCategoryDialog(BuildContext context) async {
   String? selected; // 'cars' | 'real_estate'
 
-  return showDialog<String>(
+  return showModalBottomSheet<String>(
     context: context,
-    barrierDismissible: false,
+    isScrollControlled: true,
+    backgroundColor: Colors.white,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
+    ),
     builder: (ctx) {
-      return Dialog(
-        insetPadding: EdgeInsets.symmetric(horizontal: 16.w),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-        child: StatefulBuilder(
-          builder: (context, setState) {
-            return Padding(
-              padding: EdgeInsets.all(16.w),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Text('اختر نوع المزاد', style: TextStyles.font16Black500Weight),
-                            SizedBox(width: 6.w),
-                            const Tooltip(
-                              message: 'اختر تصنيف المزاد للمتابعة',
-                              child: Icon(Icons.info_outline, size: 18),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 16.h),
+      return StatefulBuilder(
+        builder: (ctx, setState) {
+          return Padding(
+            padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 16.h + MediaQuery.of(ctx).viewInsets.bottom),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // عنوان
+                Row(
+                  children: [
+                    const Spacer(),
+                    Text('اختر نوع المزاد', style: TextStyles.font16Black500Weight),
+                    const Spacer(),
+                    IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.of(ctx).pop()),
+                  ],
+                ),
+                SizedBox(height: 12.h),
 
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _AuctionChoiceCard(
-                          title: 'عقارات',
-                          selected: selected == 'real_estate',
-                          onTap: () => setState(() => selected = 'real_estate'),
-                          icon: 'real_state_actions',
-                        ),
+                // خيارات
+                Row(
+                  children: [
+                    Expanded(
+                      child: _AuctionChoiceCard(
+                        title: 'عقارات',
+                        selected: selected == 'real_estate',
+                        onTap: () => setState(() => selected = 'real_estate'),
+                        iconSvg: 'real_state_actions',
                       ),
-                      SizedBox(width: 12.w),
-                      Expanded(
-                        child: _AuctionChoiceCard(
-                          title: 'سيارات',
-                          selected: selected == 'cars',
-                          onTap: () => setState(() => selected = 'cars'),
-                          icon: 'car_actions',
-                        ),
+                    ),
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: _AuctionChoiceCard(
+                        title: 'سيارات',
+                        selected: selected == 'cars',
+                        onTap: () => setState(() => selected = 'cars'),
+                        iconSvg: 'car_actions',
                       ),
-                    ],
-                  ),
-                  SizedBox(height: 16.h),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 16.h),
 
-                  Row(
-                    children: [
-                      Expanded(
-                        child: PrimaryButton(
-                          text: 'التالي',
-                          onPressed: () {
-                            if (selected == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('الرجاء اختيار نوع المزاد')),
-                              );
-                              return;
-                            }
-                            Navigator.of(ctx).pop(selected);
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
+                PrimaryButton(
+                  text: 'التالي',
+                  onPressed: () {
+                    if (selected == null) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(content: Text('الرجاء اختيار نوع المزاد')),
+                      );
+                      return;
+                    }
+                    Navigator.of(ctx).pop(selected);
+                  },
+                ),
+              ],
+            ),
+          );
+        },
       );
     },
   );
@@ -435,13 +436,13 @@ class _AuctionChoiceCard extends StatelessWidget {
   final String title;
   final bool selected;
   final VoidCallback onTap;
-  final String icon;
+  final String? iconSvg;
 
   const _AuctionChoiceCard({
     required this.title,
     required this.selected,
     required this.onTap,
-    required this.icon,
+    this.iconSvg,
   });
 
   @override
@@ -475,10 +476,7 @@ class _AuctionChoiceCard extends StatelessWidget {
                   child: Container(
                     width: 10.w,
                     height: 10.w,
-                    decoration: BoxDecoration(
-                      color: dotColor,
-                      shape: BoxShape.circle,
-                    ),
+                    decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
                   ),
                 ),
               ),
@@ -491,7 +489,9 @@ class _AuctionChoiceCard extends StatelessWidget {
                 color: ColorsManager.primary50,
                 borderRadius: BorderRadius.circular(12.r),
               ),
-              child: MySvg(image: icon),
+              child: iconSvg != null
+                  ? MySvg(image: iconSvg!)
+                  : const Icon(Icons.category_rounded, color: ColorsManager.primary400),
             ),
             SizedBox(height: 8.h),
             Text(title, style: TextStyles.font14Dark500Weight),

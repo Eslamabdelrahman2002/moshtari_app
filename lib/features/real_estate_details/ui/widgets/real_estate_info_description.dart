@@ -33,7 +33,7 @@ class _RealEstateInfoDescriptionState extends State<RealEstateInfoDescription> {
             // 💡 تم تعديل الـ Style ليطابق الـ UI المطلوب
             child: Text(
               'الوصف',
-              style: TextStyles.font14Dark500Weight, // استخدام ستايل يتناسب مع العناوين الفرعية
+              style: TextStyles.font14DarkGray400Weight, // استخدام ستايل يتناسب مع العناوين الفرعية
             ),
           ),
         ),

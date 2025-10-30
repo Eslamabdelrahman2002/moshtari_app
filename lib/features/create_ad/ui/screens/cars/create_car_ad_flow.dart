@@ -62,7 +62,7 @@ class _CreateCarAdFlowState extends State<CreateCarAdFlow> {
           automaticallyImplyLeading: false,
           leading: IconButton(
             onPressed: () => Navigator.maybePop(context),
-            icon: MySvg(image: 'arrow-right', color: ColorsManager.black),
+            icon: MySvg(image: 'arrow-right', color: ColorsManager.darkGray300),
             tooltip: 'رجوع',
           ),
         ),

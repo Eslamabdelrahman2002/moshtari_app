@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+
+import 'package:mushtary/core/router/app_router.dart' show navigatorKey;
 import 'package:mushtary/core/router/routes.dart';
 import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/utils/helpers/navigation.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
+
 import 'package:mushtary/features/home/ui/widgets/home_action_bar.dart';
 import 'package:mushtary/features/home/ui/widgets/home_banners.dart';
 import 'package:mushtary/features/home/ui/widgets/home_grid_view.dart';
@@ -12,13 +15,17 @@ import 'package:mushtary/features/home/ui/widgets/home_list_view.dart';
 import 'package:mushtary/features/home/ui/widgets/home_screen_app_bar.dart';
 import 'package:mushtary/features/home/ui/widgets/home_categories_list_view.dart';
 
+import 'package:mushtary/features/home/data/models/home_data_model.dart';
+import 'package:mushtary/features/home/data/models/ads_filter.dart';
+
+import 'package:mushtary/features/home/ui/widgets/home_filter/home_filter_sheet.dart';
+import 'package:skeletonizer/skeletonizer.dart';
+
 import '../../../../core/dependency_injection/injection_container.dart';
 import '../../../favorites/ui/logic/cubit/favorites_cubit.dart';
 import '../../../favorites/ui/logic/cubit/favorites_state.dart';
-import '../../data/models/home_data_model.dart';
 import '../../logic/cubit/home_cubit.dart';
 import '../../logic/cubit/home_state.dart';
-import 'package:skeletonizer/skeletonizer.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -32,16 +39,13 @@ class HomeScreen extends StatelessWidget {
       ],
       child: BlocListener<FavoritesCubit, FavoritesState>(
         listener: (context, state) {
-          // عرض رسالة الخطأ فقط
           if (state is AddFavoriteFailure) {
             ScaffoldMessenger.of(context)
               ..hideCurrentSnackBar()
-              ..showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: ColorsManager.redButton,
-                ),
-              );
+              ..showSnackBar(SnackBar(
+                content: Text(state.message),
+                backgroundColor: ColorsManager.redButton,
+              ));
           }
         },
         child: const HomeView(),
@@ -64,16 +68,11 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
 
   int? _selectedCategoryId() {
     switch (_selectedCategoryKey) {
-      case 'car_ads':
-        return 1;
-      case 'real_estate_ads':
-        return 2;
-      case 'car_parts_ads':
-        return 3;
-      case 'other_ads':
-        return 4;
-      default:
-        return null;
+      case 'car_ads': return 1;
+      case 'real_estate_ads': return 2;
+      case 'car_parts_ads': return 3;
+      case 'other_ads': return 4;
+      default: return null;
     }
   }
 
@@ -83,15 +82,34 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
     return db.compareTo(da);
   }
 
+  Future<void> _openSearch() async {
+    navigatorKey.currentState?.pushNamed(Routes.searchScreen);
+  }
+
+  Future<void> _openFilter() async {
+    final f = await showModalBottomSheet<AdsFilter>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => HomeFilterSheet(
+        initial: const AdsFilter(), // ممكن تمرر categoryId لو حابب
+      ),
+    );
+    if (f != null) {
+      navigatorKey.currentState?.pushNamed(
+        Routes.filterResultsScreen,
+        arguments: f,
+      );
+    }
+  }
   @override
   Widget build(BuildContext context) {
     super.build(context);
+
     return Scaffold(
       body: SafeArea(
         child: BlocBuilder<HomeCubit, HomeState>(
           builder: (context, state) {
             if (state is HomeLoading || state is HomeInitial) {
-              // استخدم Skeletonizer بدلاً من الـ CircularProgressIndicator
               return _buildLoadingSkeleton(context);
             }
             if (state is HomeFailure) {
@@ -121,7 +139,7 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
                 }
               }
 
-              return NestedScrollView(
+              final content = NestedScrollView(
                 headerSliverBuilder: (context, innerBoxIsScrolled) {
                   return [
                     SliverAppBar(
@@ -131,8 +149,8 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
                       elevation: 0,
                       toolbarHeight: 70.h,
                       flexibleSpace: HomeScreenAppBar(
-                        onMenuTap: () => context.pushNamed(Routes.menuScreen),
-                        onNotificationsTap: () => context.pushNamed(Routes.notificationsScreen),
+                        onMenuTap: () => NavX(context).pushNamed(Routes.menuScreen),
+                        onNotificationsTap: () => NavX(context).pushNamed(Routes.notificationsScreen),
                       ),
                     ),
                     SliverToBoxAdapter(child: verticalSpace(16.0)),
@@ -167,7 +185,7 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
                             ...homeData.carPartsAds,
                             ...homeData.otherAds,
                           ]..sort(_compareCreated);
-                          context.pushNamed(Routes.reelsScreen, arguments: all);
+                          NavX(context).pushNamed(Routes.reelsScreen, arguments: all);
                         },
                         isListView: isListView,
                         isAuctionsView: _showAuctions,
@@ -184,13 +202,34 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
                 body: CustomScrollView(
                   slivers: [
                     SliverPadding(
-                      padding: EdgeInsets.fromLTRB(0, 16.h, 0, 0),
+                      padding: EdgeInsets.fromLTRB(0, 16.h, 0, 100.h),
                       sliver: isListView
                           ? HomeListView(ads: displayedItems)
                           : HomeGridView(ads: displayedItems),
                     ),
                   ],
                 ),
+              );
+
+              return Stack(
+                children: [
+                  content,
+                  Positioned(
+                    bottom: 16.h,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _CircleAction(icon: Icons.tune_rounded, onTap: _openFilter),
+                          SizedBox(width: 12.w),
+                          _CircleAction(icon: Icons.search_rounded, onTap: _openSearch),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               );
             }
             return const SizedBox.shrink();
@@ -201,7 +240,6 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
   }
 
   Widget _buildLoadingSkeleton(BuildContext context) {
-    // صفحة Skeleton أثناء التحميل
     return Skeletonizer(
       enabled: true,
       child: NestedScrollView(
@@ -219,99 +257,23 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
               ),
             ),
             SliverToBoxAdapter(child: verticalSpace(16.0)),
-            // Banners skeleton
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.w),
-                child: Container(
-                  height: 140.h,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16.r),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.07),
-                        blurRadius: 16.r,
-                        offset: const Offset(0, 4),
-                      )
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 140)),
             SliverToBoxAdapter(child: verticalSpace(16.0)),
-            // Categories skeleton
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 40.h,
-                child: ListView.separated(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w),
-                  scrollDirection: Axis.horizontal,
-                  itemCount: 6,
-                  separatorBuilder: (_, __) => horizontalSpace(8),
-                  itemBuilder: (_, __) => Container(
-                    width: 80.w,
-                    height: 36.h,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 8.r,
-                          offset: const Offset(0, 2),
-                        )
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(child: verticalSpace(16.0)),
-            // Action bar skeleton
             SliverAppBar(
               pinned: true,
               backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               toolbarHeight: 60.h,
-              flexibleSpace: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12.r),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.06),
-                        blurRadius: 12.r,
-                        offset: const Offset(0, 3),
-                      )
-                    ],
-                  ),
-                ),
-              ),
+              flexibleSpace: const SizedBox(),
             ),
           ];
         },
         body: CustomScrollView(
           slivers: [
             SliverPadding(
-              padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 0),
-              sliver: isListView
-                  ? SliverList.builder(
+              padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 100.h),
+              sliver: SliverList.builder(
                 itemCount: 6,
-                itemBuilder: (_, __) => _ListItemSkeleton(),
-              )
-                  : SliverGrid(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 16.h,
-                  crossAxisSpacing: 16.w,
-                  childAspectRatio: 0.72,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                      (_, __) => _GridItemSkeleton(),
-                  childCount: 6,
-                ),
+                itemBuilder: (_, __) => const SizedBox(height: 120),
               ),
             ),
           ],
@@ -324,128 +286,24 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
   bool get wantKeepAlive => true;
 }
 
-class _GridItemSkeleton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(8.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.07),
-            blurRadius: 16.r,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // صورة
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8.r),
-              child: Container(color: ColorsManager.grey200),
-            ),
-          ),
-          verticalSpace(8),
-          // عنوان
-          Container(height: 12.h, width: double.infinity, color: ColorsManager.grey200),
-          verticalSpace(8),
-          // صفين من البيانات
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  children: [
-                    Container(height: 10.h, color: ColorsManager.grey200),
-                    verticalSpace(4),
-                    Container(height: 10.h, width: 80.w, color: ColorsManager.grey200),
-                  ],
-                ),
-              ),
-              horizontalSpace(8),
-              Expanded(
-                child: Column(
-                  children: [
-                    Container(height: 10.h, color: ColorsManager.grey200),
-                    verticalSpace(4),
-                    Container(height: 10.h, width: 60.w, color: ColorsManager.grey200),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
+class _CircleAction extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _CircleAction({required this.icon, required this.onTap});
 
-class _ListItemSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(8.r),
-      margin: EdgeInsets.only(bottom: 16.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.07),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
-      child: Row(
-        children: [
-          // النصوص
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(height: 12.h, width: 180.w, color: ColorsManager.grey200),
-                verticalSpace(16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        children: [
-                          Container(height: 10.h, color: ColorsManager.grey200),
-                          verticalSpace(8),
-                          Container(height: 10.h, width: 80.w, color: ColorsManager.grey200),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        children: [
-                          Container(height: 10.h, color: ColorsManager.grey200),
-                          verticalSpace(8),
-                          Container(height: 10.h, width: 60.w, color: ColorsManager.grey200),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          horizontalSpace(8),
-          // الصورة
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8.r),
-            child: Container(
-              width: 102.w,
-              height: 90.h,
-              color: ColorsManager.grey200,
-            ),
-          ),
-        ],
+    return Material(
+      color: Colors.white,
+      elevation: 4,
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Icon(icon, color: ColorsManager.primary400, size: 24),
+        ),
       ),
     );
   }

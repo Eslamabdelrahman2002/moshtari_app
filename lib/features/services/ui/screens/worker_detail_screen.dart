@@ -59,7 +59,7 @@ class WorkerDetailsScreen extends StatelessWidget {
           );
 
           final args = ChatScreenArgs(chatModel: chatModel, adInfo: null);
-          context.pushNamed(Routes.chatScreen, arguments: args);
+          NavX(context).pushNamed(Routes.chatScreen, arguments: args);
 
           await Future.delayed(const Duration(milliseconds: 400));
 

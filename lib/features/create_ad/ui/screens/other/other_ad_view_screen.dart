@@ -1,10 +1,10 @@
-// lib/features/create_ad/ui/screens/other/other_ad_view_screen.dart
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as p; // ✅ للتحقق من extension
 
 import 'package:mushtary/core/dependency_injection/injection_container.dart';
 import 'package:mushtary/core/theme/colors.dart';
@@ -32,7 +32,7 @@ class OtherAdViewScreen extends StatefulWidget {
 
 class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
   final ImagePicker _picker = ImagePicker();
-  final List<File> picked = [];
+  final List<File> picked = []; // ✅ قائمة للصور المتعددة
 
   bool chat = false;
   bool whatsapp = false;
@@ -59,18 +59,43 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
     {'id': 86, 'name': 'إلكترونيات'},
   ];
 
+  static const List<String> kAllowedMediaExt = ['.jpg', '.jpeg', '.png', '.mp4']; // ✅ صيغ مدعومة
+
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: Colors.red.shade600),
+    );
+  }
+
+  // ✅ اختيار صور متعددة (حد أقصى 10)
+  Future<void> pickImages() async {
+    final images = await _picker.pickMultiImage(
+      imageQuality: 85,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      limit: 10, // حد أقصى 10 صور
+    );
+    if (images.isNotEmpty) {
+      final cubit = context.read<OtherAdsCubit>();
+      for (final x in images) {
+        final file = File(x.path);
+        if (!kAllowedMediaExt.contains(p.extension(file.path).toLowerCase())) {
+          _showError('الملف ${p.basename(file.path)} ليس بصيغة مدعومة (png, jpg, mp4).');
+          continue;
+        }
+        picked.add(file);
+        cubit.addImage(file); // ✅ إضافة إلى Cubit (افتراض دالة addImage)
+      }
+      setState(() {}); // تحديث UI
+      print('>>> Added ${images.length} images'); // Debug
+    } else if (picked.length >= 10) {
+      _showError('تم الوصول للحد الأقصى (10 صور)');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<OtherAdsCubit>();
-
-    Future<void> pickImage() async {
-      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-      if (image == null) return;
-
-      final f = File(image.path);
-      setState(() => picked.add(f));
-      cubit.addImage(f);
-    }
 
     return MultiBlocProvider(
       providers: [
@@ -114,9 +139,10 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
             child: Column(
               children: [
+                // ✅ قسم الوسائط (دعم متعدد)
                 if (picked.isEmpty)
                   InkWell(
-                    onTap: pickImage,
+                    onTap: pickImages, // ✅ اختيار متعدد
                     child: Container(
                       width: MediaQuery.of(context).size.width * .89,
                       padding: EdgeInsets.all(12.w),
@@ -128,7 +154,7 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
                         children: [
                           const MySvg(image: 'add_photo_video'),
                           verticalSpace(8),
-                          Text('إضافة صوره او مقطع فيديو', style: TextStyles.font12Primary300400Weight),
+                          Text('إضافة صوره او مقطع فيديو (حتى 10)', style: TextStyles.font12Primary300400Weight),
                           Text(
                             'ندعم فقط الانواع التالية من الصور والفيديو: png, jpg, mp4 \n ويشترط على حجم الملف ان يكون اقل من 2:00 ميغا بايت',
                             style: TextStyles.font10DarkGray400Weight,
@@ -140,12 +166,12 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
                   )
                 else
                   CreateRealEstateAdAddPhotoVideo(
-                    pickImage: pickImage,
+                    pickImage: pickImages, // ✅ إضافة أكثر
                     remove: (i) {
                       setState(() => picked.removeAt(i));
-                      cubit.removeImageAt(i);
+                      cubit.removeImageAt(i); // ✅ حذف من Cubit
                     },
-                    pickedImages: picked,
+                    pickedImages: picked, // ✅ عرض المتعددة
                   ),
                 verticalSpace(16),
 

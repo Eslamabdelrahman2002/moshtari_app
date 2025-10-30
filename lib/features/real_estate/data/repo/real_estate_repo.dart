@@ -21,20 +21,6 @@ class RealEstateRepo {
     }
   }
 
-  /// Get Filtered Ads with Params
-  Future<List<RealEstateListModel>> getFilteredRealEstateAds(
-      RealEstateFilterParams params) async {
-    try {
-      final response = await _apiService.get(
-        ApiConstants.realEstateAds,
-        queryParameters: params.toJson(), // ✅ نحول البارامترز لـ Map
-      );
-      final List<dynamic> data = response['data'];
-      return data.map((json) => RealEstateListModel.fromJson(json)).toList();
-    } catch (e) {
-      throw AppException("Failed to load filtered ads: $e");
-    }
-  }
 
   /// Get Single Ad Details by ID
   Future<RealEstateDetailsModel> getRealEstateAdById(int id) async {
@@ -44,6 +30,19 @@ class RealEstateRepo {
       return RealEstateDetailsModel.fromJson(response['data']);
     } catch (e) {
       throw AppException("Failed to load ad details: $e");
+    }
+  }
+  Future<List<RealEstateListModel>> getFilteredRealEstateAds(
+      RealEstateFilterParams params) async {
+    try {
+      final response = await _apiService.get(
+        ApiConstants.realEstateAds,
+        queryParameters: params.toJson(),
+      );
+      final List<dynamic> data = response['data'];
+      return data.map((json) => RealEstateListModel.fromJson(json)).toList();
+    } catch (e) {
+      throw AppException("Failed to load filtered ads: $e");
     }
   }
 

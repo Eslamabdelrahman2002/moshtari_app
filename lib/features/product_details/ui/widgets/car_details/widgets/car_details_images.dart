@@ -1,38 +1,29 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-// تم حذف الاستيرادات الخاصة بـ share_plus و flutter_cache_manager
-// import 'package:flutter_cache_manager/flutter_cache_manager.dart';
-// import 'package:share_plus/share_plus.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
+import 'package:mushtary/core/utils/helpers/spacing.dart';
 import 'package:mushtary/core/widgets/primary/my_svg.dart';
+import 'package:mushtary/features/product_details/ui/widgets/share_dialog.dart';
+
+import '../../../../../favorites/ui/logic/cubit/favorites_cubit.dart';
+import '../../../../../favorites/ui/logic/cubit/favorites_state.dart';
 
 class CarDetailsImages extends StatefulWidget {
   final List<String> images;
-  final String? status; // مستخدمة / جديدة (اختياريّة لعرض التاج فقط)
 
-  // معلومات المشاركة (يمكن إبقاءها كـ Data Properties أو حذفها)
-  final String? adTitle;
-  final String? adPrice;
-  final String? shareUrl;
-  final String? shareLocation;
-  final String? createdAt;
-
-  // 💡 الإضافة: دالة استدعاء للنقر على زر المشاركة
-  final VoidCallback? onShareTap;
+  // جديد: نحتاج هوية الإعلان ونوعه (ad/auction)
+  final int adId;
+  final String favoriteType; // 'ad' أو 'auction' (هنا غالباً 'ad')
 
   const CarDetailsImages({
     super.key,
     required this.images,
-    this.status,
-    this.adTitle,
-    this.adPrice,
-    this.shareUrl,
-    this.shareLocation,
-    this.createdAt,
-    this.onShareTap, // 💡 تم إضافة الكولباك
+    required this.adId,
+    this.favoriteType = 'ad',
   });
 
   @override
@@ -40,97 +31,137 @@ class CarDetailsImages extends StatefulWidget {
 }
 
 class _CarDetailsImagesState extends State<CarDetailsImages> {
-  final PageController controller = PageController();
-  int index = 0;
+  final PageController pageController = PageController();
+  int currentIndex = 0;
 
-  bool get _hasImages => widget.images.isNotEmpty;
+  @override
+  void initState() {
+    super.initState();
+    // في حال ما تم تحميل المفضلة سابقاً، نطلبها مرة واحدة بعد بناء الودجت
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final cubit = context.read<FavoritesCubit>();
+      if (cubit.state is FavoritesInitial) {
+        cubit.fetchFavorites();
+      }
+    });
+  }
 
-  // ❌ تم حذف دالة _formatCreatedAt و _shareAd
+  @override
+  void dispose() {
+    pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final total = widget.images.isEmpty ? 1 : widget.images.length;
+
     return SizedBox(
-      height: 285.h,
+      height: 300.h,
+      width: double.infinity,
       child: Stack(
+        alignment: Alignment.bottomCenter,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12.r),
-            child: PageView.builder(
-              controller: controller,
-              itemCount: _hasImages ? widget.images.length : 1,
-              onPageChanged: (i) => setState(() => index = i),
-              itemBuilder: (_, i) {
-                if (!_hasImages) {
-                  return Container(
-                    color: Colors.grey.shade200,
-                    alignment: Alignment.center,
-                    child: const MySvg(image: 'image'),
-                  );
-                }
-                return CachedNetworkImage(
-                  imageUrl: widget.images[i],
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  errorWidget: (_, __, ___) => const Center(child: MySvg(image: 'image')),
-                );
-              },
-            ),
+          // ✅ PageView مع تأثير تمرير جميل
+          PageView.builder(
+            controller: pageController,
+            itemCount: total,
+            onPageChanged: (i) => setState(() => currentIndex = i),
+            itemBuilder: (context, i) {
+              if (widget.images.isEmpty) {
+                return const Center(child: MySvg(image: 'image'));
+              }
+              final url = widget.images[i];
+              // نعطي انميشن scale بسيط
+              final scale = (i == currentIndex) ? 1.0 : 0.9;
+              return AnimatedScale(
+                duration: const Duration(milliseconds: 300),
+                scale: scale,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16.r),
+                    child: CachedNetworkImage(
+                      imageUrl: url,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: 300.h,
+                      placeholder: (_, __) =>
+                          Container(color: Colors.grey.shade200),
+                      errorWidget: (_, __, ___) =>
+                      const Icon(Icons.broken_image, size: 80, color: Colors.grey),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
 
-          // أعلى-يسار: حالة الإعلان (اختياري)
-          if ((widget.status ?? '').isNotEmpty)
+          // ✅ عدّاد نقطي أنيق أسفل الصور
+          if (total > 1)
             Positioned(
-              top: 12.h,
-              right: 12.w,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                decoration: BoxDecoration(
-                  color: ColorsManager.primary100,
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Text(widget.status!, style: TextStyles.font12Primary400400Weight),
+              bottom: 10.h,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(widget.images.length, (i) {
+                  final isActive = i == currentIndex;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    margin: EdgeInsets.symmetric(horizontal: 3.w),
+                    height: 6.h,
+                    width: isActive ? 20.w : 8.w,
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? ColorsManager.primary400
+                          : Colors.white.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                  );
+                }),
               ),
             ),
 
-          // أعلى-يمين: زر مشاركة
+          // ✅ شريط علوي: مفضلة + مشاركة
           Positioned(
             top: 12.h,
             left: 12.w,
-            child: _circleIcon(
-              child: const MySvg(image: 'share', color: ColorsManager.white),
-              onTap: widget.onShareTap, // 💡 تم ربط النقر بالكولباك الممرر
+            child: Row(
+              children: [
+                // مشاركة
+                IconButton(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => const ShareDialog(),
+                    );
+                  },
+                  icon: const Icon(Icons.share, color: Colors.white),
+                ),
+                // مفضلة
+                BlocBuilder<FavoritesCubit, FavoritesState>(
+                  builder: (context, state) {
+                    bool isFav = false;
+                    if (state is FavoritesLoaded) {
+                      isFav = state.favoriteIds.contains(widget.adId);
+                    }
+                    return IconButton(
+                      onPressed: () {
+                        context.read<FavoritesCubit>().toggleFavorite(
+                          type: widget.favoriteType,
+                          id: widget.adId,
+                        );
+                      },
+                      icon: Icon(
+                        isFav ? Icons.favorite : Icons.favorite_border,
+                        color: isFav ? ColorsManager.redButton : Colors.white,
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
           ),
-
-
         ],
-      ),
-    );
-  }
-
-  Widget _circleIcon({required Widget child, VoidCallback? onTap}) {
-    return Material(
-      color: Colors.transparent,
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: Container(
-          width: 36.w,
-          height: 36.w,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          alignment: Alignment.center,
-          child: child,
-        ),
       ),
     );
   }

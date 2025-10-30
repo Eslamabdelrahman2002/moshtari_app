@@ -34,6 +34,7 @@ import 'package:mushtary/features/onboarding/ui/screens/onboarding_screen.dart';
 import 'package:mushtary/features/favorites/ui/screens/favorites_screen.dart';
 import 'package:mushtary/features/settings/ui/screens/languages_screen.dart';
 import 'package:mushtary/features/support/ui/screens/technical_support_screen.dart';
+import 'package:mushtary/features/user_profile_id/ui/screens/user_profile_screen.dart';
 import 'package:mushtary/features/wallet/ui/screens/wallet_screen.dart';
 import 'package:mushtary/features/earnings/ui/screens/earnings_screen.dart';
 import 'package:mushtary/features/notifications/ui/screens/notifications_screen.dart';
@@ -84,8 +85,18 @@ import 'package:mushtary/features/create_ad/ui/screens/car_parts/car_part_create
 
 // Chat
 import 'package:mushtary/features/messages/ui/screens/chat_screen.dart';
-import 'package:mushtary/features/messages/data/models/messages_model.dart';
-
+import '../../features/ real_estate_request_details/ui/cubit/real_estate_request_details_cubit.dart';
+import '../../features/ real_estate_request_details/ui/cubit/real_estate_requests_cubit.dart';
+import '../../features/ real_estate_request_details/ui/screens/real_estate_create_request_flow.dart';
+import '../../features/ real_estate_request_details/ui/screens/real_estate_request_details_screen.dart' as RequestView; // ✅ استيراد باسم مستعار لشاشة العرض
+import '../../features/ real_estate_request_details/ui/screens/real_estate_request_details_screen.dart' as CreateFlow;
+import '../../features/ real_estate_request_details/ui/screens/real_estate_request_view_screen.dart' as ViewScreen;
+import '../../features/favorites/ui/logic/cubit/favorites_cubit.dart';
+import '../../features/home/data/models/ads_filter.dart';
+import '../../features/home/logic/cubit/ads_query_cubit.dart';
+import '../../features/home/ui/screens/filter_results_screen.dart';
+import '../../features/home/ui/screens/filter_screen.dart';
+import '../../features/home/ui/screens/search_screen.dart';
 import '../../features/register_service/dyna/ui/screens/CompleteProfileScreenSteps.dart';
 import '../../features/register_service/flatbed/ui/screens/delivery_service_steps.dart';
 import '../../features/register_service/labour/ui/screens/complete_profile_screen_steps.dart';
@@ -123,12 +134,11 @@ class AppRouter {
   }
 
   Route generateRoute(RouteSettings settings) {
-    // ignore: avoid_print
+// ignore: avoid_print
     print(">>>> Route called: ${settings.name}, args: ${settings.arguments}");
     final arguments = settings.arguments;
-
     switch (settings.name) {
-    // Splash / Onboarding / Auth
+// Splash / Onboarding / Auth
       case Routes.splashScreen:
         return NoAnimationPageRoute(builder: (_) => const SplashScreen());
 
@@ -159,20 +169,20 @@ class AppRouter {
         );
       }
 
-    // BottomNav + Home
+// BottomNav + Home
       case Routes.bottomNavigationBar:
         return NoAnimationPageRoute(builder: (_) => const MushtaryBottomNavigationBar());
 
       case Routes.createAdScreen:
         return NoAnimationPageRoute(builder: (_) => const CreateAdScreen());
 
-    // Content
+// Content
       case Routes.reelsScreen:
         return NoAnimationPageRoute(
           builder: (_) => HomeReelsView(ads: arguments as List<HomeAdModel>),
         );
 
-    // User / Settings
+// User / Settings
       case Routes.userProfileScreen:
         return NoAnimationPageRoute(builder: (_) => const UserProfileScreen());
 
@@ -182,6 +192,14 @@ class AppRouter {
           builder: (_) => BlocProvider.value(value: cubit, child: UpdateProfileScreen()),
         );
       }
+      case Routes.userProfileScreenId:
+        final args = settings.arguments;         // ← التقط الـ arguments هنا
+        return MaterialPageRoute(
+          builder: (context) => UserProfileScreenId(),
+          settings: RouteSettings(
+            arguments: args,                     // ← مررها صراحةً
+          ),
+        );
 
       case Routes.languagesScreen:
         return NoAnimationPageRoute(builder: (_) => const LanguagesScreen());
@@ -218,7 +236,7 @@ class AppRouter {
       case Routes.commissionCalculatorScreen:
         return NoAnimationPageRoute(builder: (_) => const CommissionCalculatorScreen());
 
-    // Menu with safe args
+// Menu with safe args
       case Routes.menuScreen: {
         final args = settings.arguments;
         MenuScreenArgs menuArgs;
@@ -246,7 +264,7 @@ class AppRouter {
         );
       }
 
-    // Product details
+// Product details
       case Routes.carDetailsScreen: {
         final id = _asInt(arguments);
         return NoAnimationPageRoute(builder: (_) => CarDetailsScreen(id: id));
@@ -272,7 +290,7 @@ class AppRouter {
         return NoAnimationPageRoute(builder: (_) => RealEstateAuctionDetailsScreen(id: id));
       }
 
-    // Real estate
+// Real estate
       case Routes.realEstateScreen:
         return NoAnimationPageRoute(builder: (_) => const RealEstateScreen());
 
@@ -294,18 +312,42 @@ class AppRouter {
       }
 
 
-    // Real estate create ad flow
-      case Routes.createRealEstateAdFlow:
+// Real estate create ad flow
+      case Routes.createRealEstateRequestFlow:
         return NoAnimationPageRoute(
-          builder: (_) => MultiBlocProvider(
-            providers: [
-              BlocProvider<RealEstateAdsCubit>(create: (context) => getIt<RealEstateAdsCubit>()),
-            ],
-            child: const RealEstateCreateAdFlow(),
+          builder: (_) => BlocProvider(
+            create: (context) => getIt<RealEstateRequestsCubit>(),
+            child: const RealEstateCreateRequestFlow(),
           ),
         );
 
-    // Car parts create ad flow
+    // ✅ شاشة عرض تفاصيل طلب عقاري موجود
+      case Routes.realEstateRequestDetailsView: {
+        final id = _asInt(settings.arguments);
+        return NoAnimationPageRoute(
+          builder: (_) => MultiBlocProvider(
+            providers: [
+              BlocProvider<RealEstateRequestDetailsCubit>(
+                create: (_) => getIt<RealEstateRequestDetailsCubit>()..fetch(id),
+              ),
+              BlocProvider<ProfileCubit>(
+                create: (_) => getIt<ProfileCubit>(),
+              ),
+            ],
+            child: ViewScreen.RealEstateRequestViewScreen(id: id),
+          ),
+        );
+      }
+      case Routes.realEstateRequestDetailsCreate:
+        return NoAnimationPageRoute(
+          builder: (_) => BlocProvider<RealEstateRequestsCubit>(
+            create: (_) => getIt<RealEstateRequestsCubit>(),
+            child: CreateFlow.RealEstateRequestDetailsScreen(),
+          ),
+        );
+
+
+// Car parts create ad flow
       case Routes.createCarPartAdScreen:
         return NoAnimationPageRoute(
           builder: (_) => BlocProvider<CarPartAdsCubit>(
@@ -340,7 +382,7 @@ class AppRouter {
         );
       }
 
-    // Other create ad flow
+// Other create ad flow
       case Routes.createOtherAdStep1:
         return NoAnimationPageRoute(
           builder: (_) => BlocProvider<OtherAdsCubit>(
@@ -377,7 +419,7 @@ class AppRouter {
         );
       }
 
-    // Auctions (create)
+// Auctions (create)
       case Routes.createCarAuctionScreen:
         return NoAnimationPageRoute(builder: (_) => const CarAuctionStartScreen());
 
@@ -390,18 +432,18 @@ class AppRouter {
       case Routes.auctionCategoryPickerScreen:
         return NoAnimationPageRoute(builder: (_) => const AuctionCategoryPickerScreen());
 
-    // Chat
+// Chat
       case Routes.chatScreen:
         final arg = settings.arguments;
         return MaterialPageRoute(
           builder: (_) => ChatScreen(args: arg), // يقبل MessagesModel أو ChatScreenArgs
         );
 
-    // Notifications
+// Notifications
       case Routes.notificationsScreen:
         return NoAnimationPageRoute(builder: (_) => const NotificationsScreen());
 
-    // Workers
+// Workers
       case Routes.workerDetailsScreen:
       // افترض إن settings.arguments هو int (providerId) أو Map مع 'providerId'
         final int providerId = settings.arguments is int
@@ -425,14 +467,14 @@ class AppRouter {
       case Routes.tankerServiceSteps:
       // شاشة صهريج (Tanker)
         return NoAnimationPageRoute(builder: (_) => const TankerServiceSteps());
-    // Work with us
+// Work with us
       case Routes.workWithUsIntroScreen:
         return NoAnimationPageRoute(builder: (_) => const WorkWithUsIntroScreen());
 
       case Routes.workWithUsFormScreen:
         return NoAnimationPageRoute(builder: (_) => const WorkWithUsFormScreen());
 
-    //trips
+//trips
       case Routes.createDynaTripScreen: {
         final providerId = _asInt(settings.arguments);
         return NoAnimationPageRoute(
@@ -459,10 +501,48 @@ class AppRouter {
         return NoAnimationPageRoute(builder: (_) => const UsagePolicyScreen());
       case Routes.aboutAppScreen:
         return NoAnimationPageRoute(builder: (_) => const AboutAppScreen());
+      case Routes.searchScreen: {
+        final routeArgs = settings.arguments;                // <-- بدل args بـ routeArgs
+        final initial = routeArgs is AdsFilter ? routeArgs : null;
 
-    // Default
+        return NoAnimationPageRoute(
+          builder: (_) => MultiBlocProvider(
+            providers: [
+              BlocProvider<AdsQueryCubit>(
+                create: (_) => getIt<AdsQueryCubit>()..start(query: initial?.query),
+              ),
+              BlocProvider<FavoritesCubit>(
+                create: (_) => getIt<FavoritesCubit>()..fetchFavorites(),
+              ),
+            ],
+            child: SearchScreen(initial: initial),
+          ),
+          settings: settings,
+        );
+      }
+      case Routes.filterResultsScreen: {
+        final routeArgs = settings.arguments;
+        final initial = routeArgs is AdsFilter ? routeArgs : const AdsFilter();
+
+        return NoAnimationPageRoute(
+          builder: (_) => MultiBlocProvider(
+            providers: [
+              BlocProvider<AdsQueryCubit>(
+                // نبدأ بعرض النتائج مباشرة حسب الفلتر
+                create: (_) => getIt<AdsQueryCubit>()..applyFilter(initial),
+              ),
+              BlocProvider<FavoritesCubit>(
+                create: (_) => getIt<FavoritesCubit>()..fetchFavorites(),
+              ),
+            ],
+            child: FilterResultsScreen(initial: initial),
+          ),
+          settings: settings,
+        );
+      }
+// Default
       default:
-        return NoAnimationPageRoute(builder: (_) => const HomeScreen());
+        return NoAnimationPageRoute(builder: (_) => const MushtaryBottomNavigationBar());
     }
   }
 
@@ -472,7 +552,7 @@ class AppRouter {
       final v = int.tryParse(arg);
       if (v != null) return v;
     }
-    // ignore: avoid_print
+// ignore: avoid_print
     print('>>> [Router] Expected int id but got: $arg (${arg.runtimeType}) — defaulting to 0');
     return 0;
   }

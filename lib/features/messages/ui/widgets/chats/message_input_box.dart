@@ -1,97 +1,150 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
 import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
-import 'package:mushtary/core/widgets/primary/my_svg.dart';
 
 class MessageInputBox extends StatefulWidget {
   final int receiverId;
-  final void Function(String message)? onSend;
+  final void Function(String message, String messageType)? onSend;
 
-  const MessageInputBox({
-    super.key,
-    required this.receiverId,
-    this.onSend,
-  });
+  const MessageInputBox({super.key, required this.receiverId, this.onSend});
 
   @override
   State<MessageInputBox> createState() => _MessageInputBoxState();
 }
 
 class _MessageInputBoxState extends State<MessageInputBox> {
-  final TextEditingController _messageController = TextEditingController();
+  final TextEditingController _msgCtrl = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
+
+  // 🔹 الكلاس الجديد في record v6.x
+  final AudioRecorder _recorder = AudioRecorder();
+
+  bool _isRecording = false;
+  String? _currentFilePath;
 
   @override
   void dispose() {
-    _messageController.dispose();
+    _recorder.dispose();
+    _msgCtrl.dispose();
     super.dispose();
   }
 
-  void _handleSend() {
-    final text = _messageController.text.trim();
-    if (text.isNotEmpty) {
-      widget.onSend?.call(text);
-      _messageController.clear();
+  void _sendText() {
+    final text = _msgCtrl.text.trim();
+    if (text.isEmpty) return;
+    widget.onSend?.call(text, 'text');
+    _msgCtrl.clear();
+  }
+
+  Future<void> _pickImage() async {
+    final XFile? img = await _picker.pickImage(source: ImageSource.gallery);
+    if (img != null) widget.onSend?.call(img.path, 'image');
+  }
+
+  /// ✅ يبدأ التسجيل
+  Future<void> _startRecording() async {
+    final hasPerm = await _recorder.hasPermission();
+    if (!hasPerm) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('يرجى السماح بالوصول للمايكروفون')),
+      );
+      return;
+    }
+
+    final dir = await getApplicationDocumentsDirectory();
+    final filePath =
+        '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+    await _recorder.start(
+      RecordConfig(encoder: AudioEncoder.aacLc, bitRate: 128000, sampleRate: 44100),
+      path: filePath,
+    );
+
+    setState(() {
+      _isRecording = true;
+      _currentFilePath = filePath;
+    });
+
+    debugPrint('[MIC] Recording started >> $_currentFilePath');
+  }
+
+  /// ✅ يوقف التسجيل
+  Future<void> _stopRecording() async {
+    final filePath = await _recorder.stop();
+    setState(() => _isRecording = false);
+
+    if (filePath == null) {
+      debugPrint('[MIC] stopRecording returned null');
+      return;
+    }
+
+    final file = File(filePath);
+    if (await file.exists() && (await file.length()) > 0) {
+      widget.onSend?.call(filePath, 'voice');
+      debugPrint('[MIC] Saved voice file: $filePath');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('فشل تسجيل الصوت، حاول مرة أخرى')),
+      );
+      debugPrint('[MIC] empty file');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 16.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            offset: const Offset(0, 4),
-            blurRadius: 20.r,
-          ),
-        ],
-      ),
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+      color: Colors.white,
       child: Row(
         children: [
-          InkWell(onTap: () {}, child: const MySvg(image: 'mice')),
-          horizontalSpace(16),
+
+          GestureDetector(
+            onTap: () async {
+              if (_isRecording) {
+                await _stopRecording();
+              } else {
+                await _startRecording();
+              }
+            },
+            child: CircleAvatar(
+              radius: 22.r,
+              backgroundColor:
+              _isRecording ? Colors.redAccent : ColorsManager.primaryColor,
+              child: Icon(
+                _isRecording ? Icons.stop : Icons.mic_none,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          horizontalSpace(8),
           Expanded(
-            child: SizedBox(
-              height: 40.h,
-              child: TextFormField(
-                controller: _messageController,
-                keyboardType: TextInputType.text,
-                onTapOutside: (_) => FocusScope.of(context).unfocus(),
-                onFieldSubmitted: (_) => _handleSend(),
-                decoration: InputDecoration(
-                  hintText: 'أكتب رسالتك هنا...',
-                  hintStyle: TextStyles.font12Dark500400Weight,
-                  fillColor: const Color(0xffFAFAFA),
-                  filled: true,
-                  suffixIcon: InkWell(
-                    onTap: _handleSend,
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-                      child: const MySvg(image: 'send_message'),
-                    ),
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10.r),
-                    borderSide: BorderSide(color: Colors.black.withOpacity(0.05), width: 1.w),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10.r),
-                    borderSide: BorderSide(color: Colors.black.withOpacity(0.05), width: 1.w),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10.r),
-                    borderSide: BorderSide(color: Colors.black.withOpacity(0.05), width: 1.w),
-                  ),
+            child: TextFormField(
+              controller: _msgCtrl,
+              textInputAction: TextInputAction.send,
+              onFieldSubmitted: (_) => _sendText(),
+              decoration: InputDecoration(
+                hintText: 'أكتب رسالتك هنا...',
+                hintStyle: TextStyles.font12Dark500400Weight,
+                fillColor: const Color(0xffFAFAFA),
+                filled: true,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(25.r),
+                  borderSide: BorderSide(color: Colors.black12),
                 ),
               ),
             ),
           ),
-          horizontalSpace(16),
-          InkWell(onTap: () {}, child: Icon(Icons.add, size: 32.sp, color: ColorsManager.black)),
+          horizontalSpace(8),
+          InkWell(
+            onTap: _pickImage,
+            child: Icon(Icons.add, size: 28.sp, color: ColorsManager.darkGray300),
+          ),
         ],
       ),
     );

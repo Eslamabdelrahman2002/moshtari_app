@@ -27,7 +27,9 @@ class CarPrice extends StatelessWidget {
             price != null ? price!.toStringAsFixed(0) : "غير محدد",
             style: TextStyles.font24Primary500Weight,
           ),
-          MySvg(image: 'riyal_onblue', width: 24.w),
+          Align(
+              alignment: Alignment.bottomCenter,
+              child: MySvg(image: 'riyal_onblue', width: 24.w)),
         ],
       ),
     );

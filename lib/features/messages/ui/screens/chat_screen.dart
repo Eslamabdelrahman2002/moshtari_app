@@ -116,6 +116,7 @@ class ChatScreen extends StatelessWidget {
                             return MessageDataWidget(
                               message: m.messageContent ?? '',
                               isSended: m.senderId == meId,
+                              messageType: m.messageType ?? 'text',  // ← أضف النوع الذي يأتي من الخادم أو التحليل المحلي
                             );
                           },
                         );
@@ -128,9 +129,9 @@ class ChatScreen extends StatelessWidget {
                   padding: EdgeInsets.only(
                     bottom: MediaQuery.of(context).viewInsets.bottom,
                   ),
-                  child: MessageInputBox(
+                  child:MessageInputBox(
                     receiverId: chatModel.partnerUser?.id ?? 0,
-                    onSend: (msg) => _safeSend(msg),
+                    onSend: (msg, type) => _safeSend(msg),
                   ),
                 ),
               ],

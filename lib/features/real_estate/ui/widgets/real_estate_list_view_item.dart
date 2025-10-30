@@ -1,6 +1,9 @@
+// file: real_estate_list_view_item.dart
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mushtary/core/router/routes.dart';
 import 'package:mushtary/core/theme/colors.dart';
@@ -13,8 +16,10 @@ import 'package:mushtary/core/utils/json/cites_sa.dart';
 import 'package:mushtary/core/widgets/primary/my_svg.dart';
 import 'package:mushtary/features/home/ui/widgets/list_view_item_data_widget.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
-
+import '../../../favorites/ui/logic/cubit/favorites_cubit.dart';
+import '../../../favorites/ui/logic/cubit/favorites_state.dart';
 import '../../data/model/real_estate_ad_model.dart';
+import '../../logic/cubit/real_estate_listings_cubit.dart';
 
 class RealEstateListViewItem extends StatefulWidget {
   final RealEstateListModel property;
@@ -49,10 +54,19 @@ class _RealEstateListViewItemState extends State<RealEstateListViewItem> {
     return InkWell(
       splashColor: Colors.transparent,
       onTap: () {
-        context.pushNamed(
-          Routes.realEstateDetailsScreen,
-          arguments: widget.property.id,
-        );
+        String? type;
+        try {
+          // لو الكيوبت موجود في السياق
+          type = context.read<RealEstateListingsCubit>().filter.type;
+        } catch (_) {
+          // لو مش تحت RealEstateScreen (fallback إعلان)
+          type = 'ad';
+        }
+
+        final routeName = (type == 'request')
+            ? Routes.realEstateRequestDetailsView
+            : Routes.realEstateDetailsScreen;
+        NavX(context).pushNamed(routeName, arguments: widget.property.id);
       },
       child: Padding(
         padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 16.w),
@@ -88,7 +102,6 @@ class _RealEstateListViewItemState extends State<RealEstateListViewItem> {
                           controller: pageController,
                           itemCount: widget.property.imageUrls?.length ?? 0,
                           itemBuilder: (context, index) {
-                            // ✨ FIX: Validate the URL before using it
                             final imageUrl = widget.property.imageUrls![index];
                             final bool isValidUrl = Uri.tryParse(imageUrl)?.hasAbsolutePath ?? false;
 
@@ -99,7 +112,6 @@ class _RealEstateListViewItemState extends State<RealEstateListViewItem> {
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(8.r),
                                 ),
-                                // If the URL is valid, show the image. Otherwise, show a placeholder.
                                 child: isValidUrl
                                     ? CachedNetworkImage(
                                   imageUrl: imageUrl,
@@ -131,19 +143,35 @@ class _RealEstateListViewItemState extends State<RealEstateListViewItem> {
                             ),
                           ),
                         ),
+                      // ربط أيقونة المفضلة بـ FavoritesCubit
                       Positioned(
                         top: 8.h,
                         right: 16.w,
-                        child: InkWell(
-                          onTap: () {
+                        child: BlocBuilder<FavoritesCubit, FavoritesState>(
+                          builder: (context, state) {
+                            // ✅ المنطق: القلب يتلون إذا كان الـ ID موجوداً في قائمة المفضلة المحملة
+                            final isFav = state is FavoritesLoaded
+                                ? state.favoriteIds.contains(widget.property.id)
+                                : false;
 
+                            return InkWell(
+                              onTap: () {
+                                // ✅ المنطق: استدعاء toggleFavorite الذي يقوم بتغيير الحالة محلياً و APIs
+                                context.read<FavoritesCubit>().toggleFavorite(
+                                  type: 'ad',
+                                  id: widget.property.id!,
+                                );
+                              },
+                              child: MySvg(
+                                image: 'favorites',
+                                color: isFav ? ColorsManager.redButton : ColorsManager.white,
+                              ),
+                            );
                           },
-                          child: const MySvg(image: 'favorites'),
                         ),
                       ),
                     ]),
               ),
-              // ... (rest of your code remains the same)
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 8.w),
                 child: Column(
@@ -160,12 +188,11 @@ class _RealEstateListViewItemState extends State<RealEstateListViewItem> {
                           children: [
                             ListViewItemDataWidget(
                                 image: 'location-dark',
-                                // ✨ 2. Use the safer firstWhereOrNull method
                                 text: (widget.property.regionName!= null)
                                     ? (Cites.cites
                                     .firstWhereOrNull((city) => city.id == widget.property.cityName)
-                                    ?.cityNameAr ?? // Use the city name if found
-                                    'مدينة غير معروفة') // Provide a default if not found
+                                    ?.cityNameAr ??
+                                    'مدينة غير معروفة')
                                     : 'N/A',
                                 width: 12,
                                 height: 12),
@@ -189,7 +216,7 @@ class _RealEstateListViewItemState extends State<RealEstateListViewItem> {
                             verticalSpace(12),
                             ListViewItemDataWidget(
                                 image: 'clock',
-                                text: DateTime.parse(widget.property.createdAt! as String).timeSinceNow()
+                                text: widget.property.createdAt?.timeSinceNow() ?? 'N/A'
                             ),
                           ],
                         ),

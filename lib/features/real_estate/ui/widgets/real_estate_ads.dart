@@ -1,9 +1,10 @@
+// file: real_estate_ads.dart
+
 import 'package:flutter/material.dart';
 import 'package:mushtary/features/real_estate/data/model/real_estate_ad_model.dart';
 import 'package:mushtary/features/real_estate/ui/widgets/real_estate_grid_view.dart';
-
 import 'package:mushtary/features/real_estate/ui/widgets/real_estate_list_view.dart';
-import 'package:mushtary/features/real_estate_applications_deatils/widgets/real_estate_applications.dart';
+// import 'package:mushtary/features/real_estate_applications_deatils/widgets/real_estate_applications.dart'; // ❌ تم حذف هذا الاستيراد المفقود
 
 class RealEstateAds extends StatelessWidget {
   final bool isListView;
@@ -25,14 +26,21 @@ class RealEstateAds extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Visibility(
-          visible: (!isMapView && !isApplications),
-          child: setupListOrGridView(),
-        ),
-        Visibility(
-          visible: (isApplications),
-          child: const Expanded(child: RealEstateApplications()),
-        ),
+        // ⚠️ يجب التأكد من أن isApplications دائمًا false مؤقتاً إذا لم يكن لديك الـ Widget
+        // Visibility(
+        //   visible: (!isMapView && !isApplications),
+        //   child: setupListOrGridView(),
+        // ),
+        // Visibility(
+        //   visible: (isApplications),
+        //   child: const Expanded(child: RealEstateApplications()), // ❌ تم حذف هذا الكود
+        // ),
+        // ✅ استخدام منطق بسيط لتمكين عرض القائمة/الشبكة
+        if (!isMapView && !isApplications)
+          setupListOrGridView(),
+        // إذا كنت تريد التعامل مع isApplications
+        if (isApplications)
+          const Expanded(child: Center(child: Text('Applications Screen Not Implemented Yet'))),
       ],
     );
   }

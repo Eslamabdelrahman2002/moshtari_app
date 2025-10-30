@@ -65,7 +65,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       final cubit = context.read<ProfileCubit>();
                       switch (value) {
                         case 'تعديل الحساب':
-                          context.pushNamed(Routes.updateProfileScreen, arguments: cubit)
+                          NavX(context).pushNamed(Routes.updateProfileScreen, arguments: cubit)
                               .then((_) => cubit.loadProfile());
                           break;
                         case 'مشاركة الملف':

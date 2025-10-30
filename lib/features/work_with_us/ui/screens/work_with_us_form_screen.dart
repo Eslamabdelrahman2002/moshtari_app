@@ -100,6 +100,10 @@ class _WorkWithUsFormScreenState extends State<WorkWithUsFormScreen> {
         appBar: AppBar(
           centerTitle: true,
           title:  Text('قدم الآن',style: TextStyles.font20Black500Weight,),
+          leading: IconButton(onPressed: () {
+            Navigator.pop(context);
+            Navigator.pop(context);
+          }, icon: Icon(Icons.arrow_back_ios_new,color:ColorsManager.darkGray300)),
         ),
         body: _buildProfileChecker(),
       ),
@@ -120,7 +124,7 @@ class _WorkWithUsFormScreenState extends State<WorkWithUsFormScreen> {
           // التوجيه إلى شاشة البروفايل مباشرة
           WidgetsBinding.instance.addPostFrameCallback((_) {
             // ✅ FIX: استخدام pushReplacementNamed
-            context.pushReplacementNamed(Routes.workWithUsProfileScreen);
+            NavX(context).pushReplacementNamed(Routes.workWithUsProfileScreen);
           });
           return const Center(child: CircularProgressIndicator());
         }
@@ -140,7 +144,7 @@ class _WorkWithUsFormScreenState extends State<WorkWithUsFormScreen> {
           // 💡 التوجيه إلى شاشة البروفايل بعد النجاح
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تقديم الطلب بنجاح!')));
           // ✅ FIX: استخدام pushReplacementNamed
-          context.pushReplacementNamed(Routes.workWithUsProfileScreen);
+          NavX(context).pushReplacementNamed(Routes.workWithUsProfileScreen);
         } else if (state.error != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(state.error!)),

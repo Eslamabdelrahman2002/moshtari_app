@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:mushtary/core/utils/helpers/cache_helper.dart';
-
 import '../models/messages_model.dart';
 import 'chat_socket_service.dart';
 
@@ -59,7 +58,6 @@ class MessagesRepo {
         partnerImage = m['user_image']?.toString() ?? m['userImage']?.toString();
       }
 
-      // Fallback إضافي للاسم لو فاضي (بعض الردود ترجع last_message_sender)
       partnerName ??= m['last_message_sender']?.toString();
 
       return MessagesModel(
@@ -72,8 +70,8 @@ class MessagesRepo {
         lastMessage: m['last_message']?.toString() ??
             m['last_message_content']?.toString() ??
             m['content']?.toString(),
-        lastMessageTime: m['last_message_time']?.toString() ??
-            m['created_at']?.toString(),
+        lastMessageTime:
+        m['last_message_time']?.toString() ?? m['created_at']?.toString(),
         isRead: _asBool(m['is_read'] ?? m['isRead']),
       );
     }).toList();
@@ -99,6 +97,7 @@ class MessagesRepo {
     return list.map((e) => Message.fromJson(Map<String, dynamic>.from(e as Map))).toList();
   }
 
+  /// ✅ sendMessage الآن يدعم أنواع متعددة: text / image / file
   Future<void> sendMessage(SendMessageRequestBody body, int conversationId) async {
     final senderId = currentUserId();
     final result = await _chat.sendMessageSmart(
@@ -114,11 +113,11 @@ class MessagesRepo {
       final m = Map<String, dynamic>.from(result.ackData as Map);
       final ok = m['success'] == true || m['ok'] == true || m['status'] == 'ok';
       if (!ok) {
-        final msg = m['message']?.toString() ?? 'Failed to send message';
+        final msg = m['message']?.toString() ?? 'فشل إرسال الرسالة';
         throw Exception(msg);
       }
     }
-    debugPrint('sendMessage acked=${result.acked} ackData=${result.ackData}');
+    debugPrint('sendMessage acked=${result.acked}  data=${result.ackData}');
   }
 
   Stream<Message> incomingMessages() {
@@ -168,7 +167,7 @@ class MessagesRepo {
   }
 }
 
-// Helpers
+// Helpers ===================================================
 bool _asBool(dynamic v) {
   if (v is bool) return v;
   if (v is num) return v != 0;

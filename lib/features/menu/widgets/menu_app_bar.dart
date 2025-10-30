@@ -35,7 +35,7 @@ class MenuScreenAppBar extends StatelessWidget {
           InkWell(
             splashColor: Colors.transparent,
             onTap: () {
-              context.pushNamed(Routes.notificationsScreen);
+              NavX(context).pushNamed(Routes.notificationsScreen);
             },
             child: const MySvg(image: 'notification'),
           ),

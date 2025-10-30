@@ -1,3 +1,5 @@
+// lib/features/create_ad/ui/screens/create_ad_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mushtary/core/router/routes.dart';
@@ -11,7 +13,6 @@ import 'package:mushtary/features/create_ad/ui/screens/real_estate/logic/cubit/r
 import 'package:mushtary/features/create_ad/ui/screens/real_estate/real_estate_advanced_details_screen.dart';
 import 'package:mushtary/features/create_ad/ui/screens/real_estate/real_estate_select_category_details_screen.dart';
 import 'package:mushtary/features/create_ad/ui/screens/real_estate/real_estate_view_iformations_screen.dart';
-
 import 'package:mushtary/features/create_ad/ui/widgets/create_ad_app_bar.dart';
 import 'package:mushtary/features/create_ad/ui/widgets/create_ad_manual_category_step.dart';
 import 'package:mushtary/features/create_ad/ui/widgets/steps_header_rtl.dart';
@@ -21,6 +22,7 @@ import '../../../../core/enums/create_ad_category.dart';
 
 // إلكترونيات (Placeholder)
 import '../../../ad_action/ui/screens/car_auction_start_screen.dart' hide StepsHeaderRtl;
+import '../widgets/real_estate_action_picker.dart';
 import 'car_parts/electronics_advanced_details_screen.dart';
 import 'car_parts/electronics_select_category_details_screen.dart';
 import 'car_parts/electronics_view_iformations_screen.dart';
@@ -122,6 +124,22 @@ class _CreateAdScreenState extends State<CreateAdScreen> {
       _pushOnce(() => Navigator.of(context).pushNamed(Routes.createOtherAdStep2));
       return;
     }
+
+    // 💡 الحل: التعامل مع RealEstate بفتح ديالوج الاختيار
+    if (cat == CreateAdCategory.realEstate) {
+      showRealEstateActionPicker(context, (type) {
+        if (type == RealEstateActionType.ad) {
+          // الإعلان: ننتقل لتدفق الإعلان
+          setState(() => category = cat);
+          pageController.jumpToPage(1);
+        } else {
+          // الطلب: ننتقل لتدفق الطلب الجديد
+          _pushOnce(() => Navigator.of(context).pushNamed(Routes.createRealEstateRequestFlow));
+        }
+      });
+      return;
+    }
+
     setState(() => category = cat);
     pageController.jumpToPage(1);
   }
@@ -147,7 +165,7 @@ class _CreateAdScreenState extends State<CreateAdScreen> {
         onPressed: () => context.read<CarAdsCubit>().submit(),
       ),
     ],
-    // Real Estate
+    // Real Estate (الإعلان فقط)
     [
       CreateAdManualCategoryStep(onTap: _onCategorySelected),
       RealEstateSelectCategoryDetailsScreen(onNext: _goToNextPage),

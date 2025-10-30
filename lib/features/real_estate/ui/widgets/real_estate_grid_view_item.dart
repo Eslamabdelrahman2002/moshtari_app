@@ -1,6 +1,9 @@
+// file: real_estate_grid_view_item.dart
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mushtary/core/router/routes.dart';
 import 'package:mushtary/core/theme/colors.dart';
@@ -14,11 +17,12 @@ import 'package:mushtary/core/widgets/primary/my_svg.dart';
 import 'package:mushtary/features/home/ui/widgets/list_view_item_data_widget.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
-// ✨ 1. IMPORT the new API model
+import '../../../favorites/ui/logic/cubit/favorites_cubit.dart';
+import '../../../favorites/ui/logic/cubit/favorites_state.dart';
 import '../../data/model/real_estate_ad_model.dart';
+import '../../logic/cubit/real_estate_listings_cubit.dart';
 
 class RealEstateGridViewItem extends StatefulWidget {
-  // ✨ 2. CHANGE the data type of the property object
   final RealEstateListModel property;
 
   const RealEstateGridViewItem({
@@ -43,10 +47,20 @@ class _RealEstateGridViewItemState extends State<RealEstateGridViewItem> {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () {
-        context.pushNamed(
-          Routes.realEstateDetailsScreen,
-          arguments: widget.property.id,
-        );
+        String? type;
+        try {
+          // لو الكيوبت موجود في السياق
+          type = context.read<RealEstateListingsCubit>().filter.type;
+        } catch (_) {
+          // لو مش تحت RealEstateScreen (fallback إعلان)
+          type = 'ad';
+        }
+
+        final routeName = (type == 'request')
+            ? Routes.realEstateRequestDetailsView
+            : Routes.realEstateDetailsScreen;
+
+        NavX(context).pushNamed(routeName, arguments: widget.property.id);
       },
       child: Container(
         padding: EdgeInsets.all(8.r),
@@ -104,14 +118,31 @@ class _RealEstateGridViewItemState extends State<RealEstateGridViewItem> {
                         ),
                       ),
                     ),
+                  // ربط أيقونة المفضلة بـ FavoritesCubit
                   Positioned(
                     top: 8.h,
                     right: 8.w,
-                    child: InkWell(
-                      onTap: () {
+                    child: BlocBuilder<FavoritesCubit, FavoritesState>(
+                      builder: (context, state) {
+                        // ✅ المنطق: القلب يتلون إذا كان الـ ID موجوداً في قائمة المفضلة المحملة
+                        final isFav = state is FavoritesLoaded
+                            ? state.favoriteIds.contains(widget.property.id)
+                            : false;
 
+                        return InkWell(
+                          onTap: () {
+                            // ✅ المنطق: استدعاء toggleFavorite الذي يقوم بتغيير الحالة محلياً و APIs
+                            context.read<FavoritesCubit>().toggleFavorite(
+                              type: 'ad',
+                              id: widget.property.id!,
+                            );
+                          },
+                         child:  MySvg(
+                            image: 'favorites',
+                            color: isFav ? ColorsManager.redButton : ColorsManager.white,
+                          ),
+                        );
                       },
-                      child: const MySvg(image: 'favorites'),
                     ),
                   ),
                 ],
@@ -142,8 +173,8 @@ class _RealEstateGridViewItemState extends State<RealEstateGridViewItem> {
                               text: (widget.property.cityName != null)
                                   ? (Cites.cites
                                   .firstWhereOrNull((city) => city.id == widget.property.cityName)
-                                  ?.cityNameAr ?? // Use the city name if found
-                                  'مدينة غير معروفة') // Provide a default if not found
+                                  ?.cityNameAr ??
+                                  'مدينة غير معروفة')
                                   : 'N/A',
                             ),
                             verticalSpace(4),
@@ -165,7 +196,7 @@ class _RealEstateGridViewItemState extends State<RealEstateGridViewItem> {
                             ),
                             verticalSpace(4),
                             ListViewItemDataWidget(
-                              image: 'clock',
+                                image: 'clock',
                                 text: widget.property.createdAt?.timeSinceNow() ?? 'N/A'
                             ),
                           ],

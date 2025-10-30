@@ -61,13 +61,13 @@ class _FullViewProductDetailsScreenState
     final catId = widget.adModel.categoryId;
 
     if (catId == 1) {
-      context.pushNamed(Routes.carDetailsScreen, arguments: id);
+      NavX(context).pushNamed(Routes.carDetailsScreen, arguments: id);
     } else if (catId == 2) {
-      context.pushNamed(Routes.carPartDetailsScreen, arguments: id);
+      NavX(context).pushNamed(Routes.carPartDetailsScreen, arguments: id);
     } else if (catId == 3) {
-      context.pushNamed(Routes.realEstateDetailsScreen, arguments: id);
+      NavX(context).pushNamed(Routes.realEstateDetailsScreen, arguments: id);
     } else {
-      context.pushNamed(Routes.productDetails, arguments: widget.adModel);
+      NavX(context).pushNamed(Routes.productDetails, arguments: widget.adModel);
     }
   }
 

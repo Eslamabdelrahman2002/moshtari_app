@@ -140,25 +140,25 @@ class _CarPartCreateAdStep1ScreenState extends State<CarPartCreateAdStep1Screen>
       ],
       child: Scaffold(
         backgroundColor: Colors.white,
-        appBar: CustomAppBar(
-          title: "إنشاء إعلان قطع غيار",
-          onBackPressed: () async {
-            // إضافة dialog للتأكيد من الخروج
-            final shouldExit = await ConfirmationDialog.show(
-              context: context,
-              title: "تأكيد الخروج",
-              message: "هل أنت متأكد من الخروج؟ سيتم فقدان البيانات المدخلة.",
-              confirmText: "خروج",
-              cancelText: "البقاء",
-              confirmColor: Colors.red,
-              icon: Icons.warning_amber_rounded,
-            );
-
-            if (shouldExit == true && context.mounted) {
-              Navigator.pop(context);
-            }
-          },
-        ),
+        // appBar: CustomAppBar(
+        //   title: "إنشاء إعلان قطع غيار",
+        //   onBackPressed: () async {
+        //     // إضافة dialog للتأكيد من الخروج
+        //     final shouldExit = await ConfirmationDialog.show(
+        //       context: context,
+        //       title: "تأكيد الخروج",
+        //       message: "هل أنت متأكد من الخروج؟ سيتم فقدان البيانات المدخلة.",
+        //       confirmText: "خروج",
+        //       cancelText: "البقاء",
+        //       confirmColor: Colors.red,
+        //       icon: Icons.warning_amber_rounded,
+        //     );
+        //
+        //     if (shouldExit == true && context.mounted) {
+        //       Navigator.pop(context);
+        //     }
+        //   },
+        // ),
         body: SafeArea(
           child: Column(
             children: [

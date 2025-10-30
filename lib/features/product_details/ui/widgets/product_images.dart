@@ -143,7 +143,7 @@ class _ProductImagesState extends State<ProductImages> {
                 padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 16.h),
                 child: InkWell(
                     onTap: () {
-                      context.pushNamed(Routes.fullViewProductDetailsScreen,
+                      NavX(context).pushNamed(Routes.fullViewProductDetailsScreen,
                           arguments: widget.auctionsModel);
                     },
                     child: const MySvg(image: 'frame', isImage: false))),

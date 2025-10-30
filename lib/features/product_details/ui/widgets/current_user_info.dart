@@ -13,7 +13,7 @@ class CurrentUserInfo extends StatelessWidget {
   final double rating;     // تأكد أنه double
   final int reviewsCount;
   final VoidCallback? onFollow;
-
+  final VoidCallback? onTap;
   const CurrentUserInfo({
     super.key,
     required this.ownerName,
@@ -22,6 +22,7 @@ class CurrentUserInfo extends StatelessWidget {
     this.rating = 0,
     this.reviewsCount = 0,
     this.onFollow,
+    this.onTap,
   });
 
   @override
@@ -52,90 +53,93 @@ class CurrentUserInfo extends StatelessWidget {
       ),
     );
 
-    return Container(
-      width: 358.w,
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16.r),
-        color: ColorsManager.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.07),
-            spreadRadius: 0,
-            blurRadius: 16,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          img,
-          horizontalSpace(8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        ownerName.isEmpty ? '—' : ownerName,
-                        style: TextStyles.font14Black500Weight,
-                        overflow: TextOverflow.ellipsis,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 358.w,
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16.r),
+          color: ColorsManager.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.07),
+              spreadRadius: 0,
+              blurRadius: 16,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            img,
+            horizontalSpace(8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          ownerName.isEmpty ? '—' : ownerName,
+                          style: TextStyles.font14Black500Weight,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                    if (isVerified) ...[
+                      if (isVerified) ...[
+                        horizontalSpace(8),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+                          decoration: BoxDecoration(
+                            color: ColorsManager.lightTeal,
+                            borderRadius: BorderRadius.circular(80.r),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text('موثق', style: TextStyles.font12Green400Weight),
+                              horizontalSpace(2),
+                              Icon(Icons.verified, color: ColorsManager.teal, size: 12.w),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  verticalSpace(4),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      // تمرير double إلى StarsRate
+                      StarsRate(rate: rating),
                       horizontalSpace(8),
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
-                        decoration: BoxDecoration(
-                          color: ColorsManager.lightTeal,
-                          borderRadius: BorderRadius.circular(80.r),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Text('موثق', style: TextStyles.font12Green400Weight),
-                            horizontalSpace(2),
-                            Icon(Icons.verified, color: ColorsManager.teal, size: 12.w),
-                          ],
-                        ),
+                      Text(
+                        '( ${reviewsCount.toString()} اراء )',
+                        style: TextStyles.font10Dark400Grey400Weight,
                       ),
                     ],
-                  ],
-                ),
-                verticalSpace(4),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    // تمرير double إلى StarsRate
-                    StarsRate(rate: rating),
-                    horizontalSpace(8),
-                    Text(
-                      '( ${reviewsCount.toString()} اراء )',
-                      style: TextStyles.font10Dark400Grey400Weight,
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          MaterialButton(
-            onPressed: onFollow,
-            padding: EdgeInsets.zero,
-            minWidth: 32.w,
-            height: 32.h,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8.r),
+            MaterialButton(
+              onPressed: onFollow,
+              padding: EdgeInsets.zero,
+              minWidth: 32.w,
+              height: 32.h,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+              color: ColorsManager.primary50,
+              elevation: 0,
+              focusElevation: 0,
+              hoverElevation: 0,
+              highlightElevation: 0,
+              child: MySvg(image: 'user_add', width: 16.w, height: 16.h),
             ),
-            color: ColorsManager.primary50,
-            elevation: 0,
-            focusElevation: 0,
-            hoverElevation: 0,
-            highlightElevation: 0,
-            child: MySvg(image: 'user_add', width: 16.w, height: 16.h),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

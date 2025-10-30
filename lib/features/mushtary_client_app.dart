@@ -1,16 +1,13 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import 'package:mushtary/core/dependency_injection/injection_container.dart';
 import 'package:mushtary/core/router/app_router.dart';
 import 'package:mushtary/core/router/routes.dart';
 import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/theme/fonts.dart';
 
-// سلوك سحب بدون Glow
 class _NoGlowBehavior extends ScrollBehavior {
   const _NoGlowBehavior();
   @override
@@ -31,10 +28,8 @@ class _MushtaryClientAppState extends State<MushtaryClientApp> {
   @override
   void initState() {
     super.initState();
-    // إزالة Splash بعد أول فريم لضمان عدم التجمّد
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FlutterNativeSplash.remove();
-      debugPrint('>> Native splash removed');
     });
   }
 
@@ -52,12 +47,10 @@ class _MushtaryClientAppState extends State<MushtaryClientApp> {
           onGenerateRoute: widget.appRouter.generateRoute,
           initialRoute: Routes.splashScreen,
 
-          // Localization (من EasyLocalization في main)
           localizationsDelegates: context.localizationDelegates,
           supportedLocales: context.supportedLocales,
           locale: context.locale,
 
-          // Theme
           theme: ThemeData(
             useMaterial3: false,
             appBarTheme: const AppBarTheme(
@@ -73,7 +66,6 @@ class _MushtaryClientAppState extends State<MushtaryClientApp> {
             hoverColor: ColorsManager.transparent,
           ),
 
-          // إزالة Glow الافتراضي
           builder: (context, appChild) {
             return ScrollConfiguration(
               behavior: const _NoGlowBehavior(),
