@@ -9,10 +9,11 @@ class FavoritesRepo {
 
   Future<bool> addFavorite({required String type, required int id}) async {
     try {
-      final map = await _api.post(ApiConstants.favorites, {
+      final map = await _api.post(ApiConstants.favorites,requireAuth: true, {
         'favorite_type': type,
         'favorite_id': id,
       });
+
       final dynamic status = map['status'];
       final ok = map['success'] == true || status == true || status == 'success';
       return ok;
@@ -29,6 +30,7 @@ class FavoritesRepo {
     try {
       await _api.deleteWithBody(
         ApiConstants.favorites,
+        requireAuth: true,
         data: {
           'favorite_type': type,
           'favorite_id': id,
