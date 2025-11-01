@@ -1,0 +1,33 @@
+[33m82d55db[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m HEAD@{0}: pull: Fast-forward
+[33m19a87ba[m HEAD@{1}: pull: Fast-forward
+[33mf00011a[m HEAD@{2}: commit: update profile id
+[33mcdffb94[m HEAD@{3}: reset: moving to HEAD
+[33mcdffb94[m HEAD@{4}: commit (merge): Resolved merge conflicts
+[33mf4ddfe9[m HEAD@{5}: commit: Updatede
+[33madd00c6[m HEAD@{6}: commit: fix(android): resolve debug signingConfig conflict; set minSdk 26; tidy build.gradle.kts
+[33mc873e54[m HEAD@{7}: checkout: moving from main to main
+[33mc873e54[m HEAD@{8}: branch: Reset to HEAD
+[33mc873e54[m HEAD@{9}: rebase (finish): returning to refs/heads/main
+[33mc873e54[m HEAD@{10}: rebase (continue): update
+[33m2091a7c[m HEAD@{11}: pull --rebase origin main (start): checkout 2091a7c3ff639ca57e77e32cf3994934301984c9
+[33m95fc8bb[m HEAD@{12}: commit: update
+[33m028fc8e[m HEAD@{13}: Branch: renamed refs/heads/clean-main to refs/heads/main
+[33m028fc8e[m HEAD@{15}: commit (initial): initial clean history (no build artifacts)
+[33m7f3679a[m HEAD@{16}: commit: chore: drop generated folders from index
+[33m468974e[m[33m ([m[1;32mbackup-before-filter[m[33m)[m HEAD@{17}: commit: chore: remove generated folders from repo
+[33m294ae98[m HEAD@{18}: Branch: renamed refs/heads/main to refs/heads/main
+[33m294ae98[m HEAD@{20}: commit: first commit
+[33m3a8eb28[m HEAD@{21}: commit (amend): clean commit with Git LFS
+[33m8d9f728[m HEAD@{22}: commit (amend): clean commit with Git LFS
+[33m7953313[m HEAD@{23}: commit: clean commit with Git LFS
+[33md9f62b6[m HEAD@{24}: Branch: renamed refs/heads/main to refs/heads/main
+[33md9f62b6[m HEAD@{26}: commit: track large files with Git LFS
+[33maf7bf31[m HEAD@{27}: Branch: renamed refs/heads/main to refs/heads/main
+[33maf7bf31[m HEAD@{29}: commit: first commit
+[33mf81e326[m HEAD@{30}: commit: Add .gitignore
+[33m2ccb967[m HEAD@{31}: commit: Add .gitignore and clean unneeded files
+[33mcbbea9e[m HEAD@{32}: commit: Initial commit
+[33m06481ab[m HEAD@{33}: Branch: renamed refs/heads/main to refs/heads/main
+[33m06481ab[m HEAD@{35}: commit: Add Flutter app source
+[33m96ce2e6[m HEAD@{36}: Branch: renamed refs/heads/master to refs/heads/main
+[33m96ce2e6[m HEAD@{38}: commit (initial): first commit
