@@ -26,7 +26,7 @@ class UserTag extends StatelessWidget {
           ),
           horizontalSpace(4),
           MySvg(
-            image: 'riyal_blue',
+            image: 'riyal_new',
             width: 16.w,
             height: 16.w,
           ),

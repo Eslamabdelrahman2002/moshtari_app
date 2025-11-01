@@ -29,7 +29,7 @@ class CarPrice extends StatelessWidget {
           ),
           Align(
               alignment: Alignment.bottomCenter,
-              child: MySvg(image: 'riyal_onblue', width: 24.w)),
+              child: MySvg(image: 'riyal_new', width: 24.w)),
         ],
       ),
     );

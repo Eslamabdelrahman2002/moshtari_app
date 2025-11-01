@@ -96,7 +96,7 @@ class HomeListViewItem extends StatelessWidget {
                       ),
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          ListViewItemDataWidget(image: 'riyal_black', isColoredText: true, text: (adModel.price?.trim().isEmpty ?? true) ? 'N/A' : adModel.price!),
+                          ListViewItemDataWidget(image: 'riyal_new', isColoredText: true, text: (adModel.price?.trim().isEmpty ?? true) ? 'N/A' : adModel.price!),
                           verticalSpace(8),
                           ListViewItemDataWidget(image: 'clock', text: createdAgo),
                         ]),

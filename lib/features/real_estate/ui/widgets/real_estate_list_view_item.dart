@@ -209,7 +209,7 @@ class _RealEstateListViewItemState extends State<RealEstateListViewItem> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             ListViewItemDataWidget(
-                              image: 'riyal_black',
+                              image: 'riyal_new',
                               isColoredText: true,
                               text: widget.property.price??"" ,
                             ),

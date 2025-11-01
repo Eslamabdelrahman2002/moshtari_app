@@ -163,7 +163,7 @@ class GridViewItem extends StatelessWidget {
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     ListViewItemDataWidget(
-                      image: 'riyal_black',
+                      image: 'riyal_new',
                       isColoredText: true,
                       text: (adModel.price?.trim().isEmpty ?? true) ? 'N/A' : adModel.price!,
                     ),

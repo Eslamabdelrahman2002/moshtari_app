@@ -52,7 +52,7 @@ class DetailsPanel extends StatelessWidget {
                   children: [
                     ListViewItemDataWidget(
                       text: price,
-                      image: 'riyal_black',
+                      image: 'riyal_new',
                       width: 20.w,
                       height: 20.h,
                     ),

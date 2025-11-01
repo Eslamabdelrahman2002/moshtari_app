@@ -67,7 +67,7 @@ class RealEstateMapItemDetails extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         ListViewItemDataWidget(
-                          image: 'riyal_black',
+                          image: 'riyal_new',
                           isColoredText: true,
                           text: '889,115',
                           width: 12.w,

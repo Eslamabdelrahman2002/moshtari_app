@@ -173,10 +173,10 @@
 //   static const String iconsReply = 'assets/icons/reply.svg';
 //   static const String iconsRiyal 1 = 'assets/icons/riyal 1.svg';
 //   static const String iconsRiyal11 = 'assets/icons/riyal11.svg';
-//   static const String iconsRiyalBlack = 'assets/icons/riyal_black.svg';
-//   static const String iconsRiyalBlue = 'assets/icons/riyal_blue.svg';
-//   static const String iconsRiyalOnblue = 'assets/icons/riyal_onblue.svg';
-//   static const String iconsRiyalWhite = 'assets/icons/riyal_white.svg';
+//   static const String iconsRiyalBlack = 'assets/icons/riyal_new.svg';
+//   static const String iconsRiyalBlue = 'assets/icons/riyal_new.svg';
+//   static const String iconsRiyalOnblue = 'assets/icons/riyal_new.svg';
+//   static const String iconsRiyalWhite = 'assets/icons/riyal_new.svg';
 //   static const String iconsRiyalYellow = 'assets/icons/riyal_yellow.svg';
 //   static const String iconsRoadIconPrimary400 = 'assets/icons/road-icon-primary400.svg';
 //   static const String iconsRoundedBackArrow = 'assets/icons/rounded_back_arrow.svg';

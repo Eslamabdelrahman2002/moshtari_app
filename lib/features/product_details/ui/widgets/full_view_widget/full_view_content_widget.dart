@@ -84,7 +84,7 @@ class FullViewContentWidget extends StatelessWidget {
                               SizedBox(width: 8.w),
                               Text(adModel.price ?? '---', style: TextStyles.font16White500Weight),
                               SizedBox(width: 4.w),
-                              MySvg(image: 'riyal_onblue', width: 16.w, height: 16.h),
+                              MySvg(image: 'riyal_new', width: 16.w, height: 16.h),
                             ],
                           ),
                         ),
@@ -115,7 +115,7 @@ class FullViewContentWidget extends StatelessWidget {
                         SizedBox(width: 100.w),
                         ListViewItemDataWidget(
                           text: adModel.price ?? '---',
-                          image: 'riyal_white',
+                          image: 'riyal_new',
                           width: 20.w,
                           height: 20.h,
                         ),
