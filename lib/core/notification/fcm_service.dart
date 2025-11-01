@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -28,6 +30,9 @@ class FcmService {
 
     // لا تستدعي Firebase.initializeApp هنا
     try {
+      if(Platform.isIOS){
+        await FirebaseMessaging.instance.getAPNSToken();
+      }
       await FirebaseMessaging.instance.requestPermission();
     } catch (_) {}
 
@@ -62,6 +67,9 @@ class FcmService {
   }
 
   static Future<String?> currentToken() async {
+    if(Platform.isIOS){
+      return await FirebaseMessaging.instance.getAPNSToken();
+    }
     final cached = CacheHelper.getData(key: 'fcm_token') as String?;
     return cached ?? await FirebaseMessaging.instance.getToken();
   }

@@ -18,6 +18,7 @@ import 'features/register_service/logic/cubit/service_registration_cubit.dart';
 import 'firebase_options.dart';
 
 Future<void> ensureFirebaseInitialized() async {
+  
 // لو فيه Default app جاهز، هنستخدمه ونطلع
   try {
     Firebase.app();
@@ -27,24 +28,7 @@ Future<void> ensureFirebaseInitialized() async {
     if (e.code != 'no-app') rethrow;
   }
 
-// مفيش App: هيّئه مرة واحدة
-  try {
-    if (Platform.isAndroid) {
-// على أندرويد اعتمد على google-services.json (بدون options)
-      await Firebase.initializeApp();
-    } else {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-    }
-    debugPrint('Firebase: initialized now.');
-  } on FirebaseException catch (e) {
-    if (e.code == 'duplicate-app') {
-      debugPrint('Firebase: duplicate detected, using existing app.');
-    } else {
-      rethrow;
-    }
-  }
+
 }
 
 @pragma('vm:entry-point')
@@ -55,29 +39,16 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  debugPrint('Firebase apps BEFORE ensure: ${Firebase.apps.map((a)=>a.name).toList()}');
-  await ensureFirebaseInitialized();
-  debugPrint('Firebase apps AFTER ensure: ${Firebase.apps.map((a)=>a.name).toList()}');
-
-// سجّل الهاندلر قبل runApp
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-
-// اربط الـ navigator للإشعارات
-  FcmService.attachNavigator(
-    navigatorKey,
-    onOpenNotificationRoute: Routes.notificationsScreen,
+ try{ await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
   );
-
-  await CacheHelper.init();
-  await EasyLocalization.ensureInitialized();
-  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-
-  setupServiceLocator();
-  await setupChatOfflineLocator();
-
-// Init FCM (بدون initializeApp جواها)
-  await FcmService.init();
+  if(Platform.isIOS){
+    await FirebaseMessaging.instance.getAPNSToken();
+  }
+  debugPrint('Firebase apps BEFORE ensure: ${Firebase.apps.map((a)=>a.name).toList()}');
+}catch(e){
+  debugPrint('Firebase apps BEFORE ensure: ${Firebase.apps.map((a)=>a.name).toList()}');
+}
 
   runApp(
     EasyLocalization(
@@ -97,4 +68,24 @@ Future<void> main() async {
       ),
     ),
   );
+  Future.delayed(Duration.zero,()async{
+    // سجّل الهاندلر قبل runApp
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+// اربط الـ navigator للإشعارات
+  FcmService.attachNavigator(
+    navigatorKey,
+    onOpenNotificationRoute: Routes.notificationsScreen,
+  );
+
+  await CacheHelper.init();
+  await EasyLocalization.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
+  setupServiceLocator();
+  await setupChatOfflineLocator();
+
+  await FcmService.init();
+
+  });
 }

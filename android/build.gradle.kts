@@ -1,4 +1,4 @@
-﻿// build.gradle.kts
+// build.gradle.kts
 
 buildscript {
     // ❌ تم حذف val kotlinVersion by extra("1.7.10") لمنع تضارب إصدارات Kotlin
