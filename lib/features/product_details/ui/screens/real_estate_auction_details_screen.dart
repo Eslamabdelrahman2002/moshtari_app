@@ -336,7 +336,7 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
                               ),
                               child: isLoading
-                                  ? const Center(child: CircularProgressIndicator(color: Colors.white))
+                                  ? const Center(child: CircularProgressIndicator.adaptive(valueColor: AlwaysStoppedAnimation(Colors.white)))
                                   : const Text('تأكيد'),
                             ),
                           ),
@@ -380,7 +380,7 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
           child: BlocBuilder<RealEstateAuctionDetailsCubit, RealEstateAuctionDetailsState>(
             builder: (context, state) {
               if (state is RealEstateAuctionDetailsLoading) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: CircularProgressIndicator.adaptive());
               }
               if (state is RealEstateAuctionDetailsFailure) {
                 return Center(child: Text(state.message));

@@ -49,7 +49,7 @@ class _CommissionCalculatorScreenState extends State<CommissionCalculatorScreen>
               final cubit = context.read<CommissionCubit>();
 
               if (state.loading) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: CircularProgressIndicator.adaptive());
               }
               if (state.error != null) {
                 return Center(

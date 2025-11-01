@@ -417,7 +417,7 @@ class _CarPartCreateAdStep1ScreenState extends State<CarPartCreateAdStep1Screen>
                 return const Center(
                   child: Padding(
                     padding: EdgeInsets.all(40),
-                    child: CircularProgressIndicator(),
+                    child: CircularProgressIndicator.adaptive(),
                   ),
                 );
               }
@@ -604,7 +604,7 @@ class _CarPartCreateAdStep1ScreenState extends State<CarPartCreateAdStep1Screen>
           child: StatefulBuilder(builder: (ctx, setSheet) {
             final locState = locCubit.state;
             if (locState.regionsLoading) {
-              return const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator()));
+              return const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator.adaptive()));
             }
             final filtered = locState.regions.where((e) => e.nameAr.contains(query)).toList();
 
@@ -657,7 +657,7 @@ class _CarPartCreateAdStep1ScreenState extends State<CarPartCreateAdStep1Screen>
           child: StatefulBuilder(builder: (ctx, setSheet) {
             final locState = locCubit.state;
             if (locState.citiesLoading) {
-              return const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator()));
+              return const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator.adaptive()));
             }
             final filtered = locState.cities.where((e) => e.nameAr.contains(query)).toList();
 

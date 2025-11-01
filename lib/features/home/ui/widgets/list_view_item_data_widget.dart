@@ -24,7 +24,6 @@ class ListViewItemDataWidget extends StatelessWidget {
       children: [
         MySvg(image: image, width: width, height: height),
         horizontalSpace(2),
-        // ✨ FIX: Wrapped the Text widget with Flexible to prevent overflow
         Flexible(
           child: Text(
             text,

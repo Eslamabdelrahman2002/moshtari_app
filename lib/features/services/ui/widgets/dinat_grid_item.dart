@@ -161,7 +161,7 @@ class DinatGridItem extends StatelessWidget {
                                 );
                               },
                               icon: submitting
-                                  ? SizedBox(width: 16.w, height: 16.w, child: const CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                  ? SizedBox(width: 16.w, height: 16.w, child: const CircularProgressIndicator.adaptive(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))
                                   : const Icon(Icons.send_rounded),
                               label: Text(submitting ? 'جارٍ الإرسال...' : 'إرسال'),
                               style: ElevatedButton.styleFrom(

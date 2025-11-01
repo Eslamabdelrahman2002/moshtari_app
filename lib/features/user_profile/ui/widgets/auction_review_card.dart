@@ -135,7 +135,7 @@ class _AuctionReviewCardState extends State<AuctionReviewCard> {
                   width: 80.w,
                   height: 80.w,
                   fit: BoxFit.cover,
-                  placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+                  placeholder: (context, url) => const Center(child: CircularProgressIndicator.adaptive()),
                   errorWidget: (context, url, error) => Container(
                     color: Colors.grey.shade300,
                     child: const Icon(Icons.error, size: 40),
@@ -185,7 +185,7 @@ class _AuctionReviewCardState extends State<AuctionReviewCard> {
                     minimumSize: Size(double.infinity, 48.h),
                   ),
                   child: widget.isLoading
-                      ? const Center(child: CircularProgressIndicator(color: ColorsManager.redButton))
+                      ? const Center(child: CircularProgressIndicator.adaptive(valueColor: AlwaysStoppedAnimation(ColorsManager.redButton)))
                       : Text('رفض', style: TextStyles.font16Dark300Grey400Weight),
                 ),
               ),
@@ -200,7 +200,7 @@ class _AuctionReviewCardState extends State<AuctionReviewCard> {
                     minimumSize: Size(double.infinity, 48.h),
                   ),
                   child: widget.isLoading
-                      ? const Center(child: CircularProgressIndicator(color: ColorsManager.white))
+                      ? const Center(child: CircularProgressIndicator.adaptive(valueColor: AlwaysStoppedAnimation(ColorsManager.white)))
                       : Text('قبول', style: TextStyles.font16White500Weight),
                 ),
               ),

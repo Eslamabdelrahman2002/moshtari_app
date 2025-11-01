@@ -53,7 +53,7 @@
 //           child: BlocBuilder<HomeCubit, HomeState>(
 //             builder: (context, state) {
 //               if (state is HomeLoading || state is HomeInitial) {
-//                 return const Center(child: CircularProgressIndicator());
+//                 return const Center(child: CircularProgressIndicator.adaptive());
 //               }
 //               if (state is HomeFailure) {
 //                 return Center(child: Text(state.error));

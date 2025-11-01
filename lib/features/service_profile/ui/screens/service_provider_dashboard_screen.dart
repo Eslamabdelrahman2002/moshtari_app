@@ -71,7 +71,7 @@ class _ServiceProviderDashboardScreenState extends State<ServiceProviderDashboar
           child: BlocBuilder<ProviderCubit, ProviderState>(
             builder: (context, state) {
               if (state.loading && state.provider == null) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: CircularProgressIndicator.adaptive());
               }
               if (state.error != null) {
                 return Center(child: Text(state.error!, style: TextStyles.font14Black500Weight));
@@ -312,7 +312,7 @@ class _WorksTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (state.requestsLoading && state.requests.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator.adaptive());
     }
     if (state.requestsError != null) {
       return Center(child: Text(state.requestsError!));

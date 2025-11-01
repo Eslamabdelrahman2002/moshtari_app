@@ -41,7 +41,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 child: BlocBuilder<NotificationsCubit, NotificationsState>(
                   builder: (context, state) {
                     if (state is NotificationsLoading) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const Center(child: CircularProgressIndicator.adaptive());
                     }
                     // ✅ يتم عرض هذا الخطأ الآن حتى يتم حفظ userId في CacheHelper
                     else if (state is NotificationsError) {

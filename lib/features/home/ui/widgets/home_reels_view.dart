@@ -48,7 +48,7 @@ class _HomeReelsViewState extends State<HomeReelsView> {
 
   @override
   Widget build(BuildContext context) {
-    // وضع التحميل: استخدم Skeletonizer بدل CircularProgressIndicator
+    // وضع التحميل: استخدم Skeletonizer بدل CircularProgressIndicator.adaptive
     if (widget.isLoading) {
       return Scaffold(
         backgroundColor: ColorsManager.blackBackground,

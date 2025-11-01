@@ -227,7 +227,7 @@ class ReceivedOfferCard extends StatelessWidget {
                         padding: EdgeInsets.symmetric(horizontal: 16.w),
                       ),
                       icon: isAccepting
-                          ? SizedBox(width: 16, height: 16, child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator.adaptive(valueColor: AlwaysStoppedAnimation(Colors.white), strokeWidth: 2))
                           : const Icon(Icons.check_rounded, size: 18),
                       label: Text('قبول العرض', style: TextStyles.font14White500Weight),
                     ),

@@ -343,7 +343,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_ready) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (!_ready) return const Scaffold(body: Center(child: CircularProgressIndicator.adaptive()));
     final topPad = MediaQuery.of(context).padding.top + 12;
 
     return Scaffold(
@@ -422,7 +422,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                         ),
                       ),
                       if (_searching)
-                        const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        const SizedBox(width: 18, height: 18, child: CircularProgressIndicator.adaptive(strokeWidth: 2))
                       else if (_searchCtrl.text.isNotEmpty)
                         IconButton(
                           onPressed: () {

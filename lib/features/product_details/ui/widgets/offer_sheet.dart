@@ -122,7 +122,7 @@ class _OfferSheetState extends State<_OfferSheet> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
                     ),
                     child: loading
-                        ? const CircularProgressIndicator(color: Colors.white)
+                        ? const CircularProgressIndicator.adaptive(valueColor: AlwaysStoppedAnimation(Colors.white))
                         : const Text('إرسال السومة', style: TextStyle(color: Colors.white)),
                   ),
                 ),

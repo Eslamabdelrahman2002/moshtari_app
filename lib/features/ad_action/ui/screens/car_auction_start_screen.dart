@@ -570,7 +570,7 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
                       child: BlocBuilder<CarCatalogCubit, CarCatalogState>(
                         builder: (context, state) {
                           if (state.brandsLoading) {
-                            return const Center(child: CircularProgressIndicator());
+                            return const Center(child: CircularProgressIndicator.adaptive());
                           }
                           if (state.error != null) {
                             return Center(child: Text(state.error!, style: TextStyles.font14Dark500Weight));
@@ -652,7 +652,7 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
                       child: BlocBuilder<CarCatalogCubit, CarCatalogState>(
                         builder: (context, state) {
                           if (state.modelsLoading) {
-                            return const Center(child: CircularProgressIndicator());
+                            return const Center(child: CircularProgressIndicator.adaptive());
                           }
                           if (state.error != null) {
                             return Center(child: Text(state.error!, style: TextStyles.font14Dark500Weight));

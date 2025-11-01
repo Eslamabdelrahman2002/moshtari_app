@@ -165,8 +165,8 @@ class _CarPartSimilarStoryState extends State<CarPartSimilarStory>
                 errorBuilder: (_, __, ___) => _placeholder(),
                 loadingBuilder: (ctx, child, progress) {
                   if (progress == null) return child;
-                  return const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70),
+                  return Center(
+                    child: CircularProgressIndicator.adaptive(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white70)),
                   );
                 },
               )

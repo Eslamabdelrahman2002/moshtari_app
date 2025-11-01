@@ -16,7 +16,7 @@ class ReviewsTabView extends StatelessWidget {
     return BlocBuilder<UserReviewsCubit, UserReviewsState>(
       builder: (context, state) {
         if (state is UserReviewsLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator.adaptive());
         } else if (state is UserReviewsFailure) {
           return Center(
             child: Text(

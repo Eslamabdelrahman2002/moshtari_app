@@ -193,7 +193,7 @@ class _OtpScreenBodyState extends State<_OtpScreenBody> {
                     BlocBuilder<OtpCubit, OtpState>(
                       builder: (context, state) {
                         if (state is ResendOtpLoading) {
-                          return const CircularProgressIndicator();
+                          return const CircularProgressIndicator.adaptive();
                         }
                         return InkWell(
                           onTap: _resendOtp,

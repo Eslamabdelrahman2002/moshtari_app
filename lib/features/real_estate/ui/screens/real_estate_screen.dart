@@ -214,7 +214,7 @@ class _RealEstateViewState extends State<_RealEstateView> {
             child: BlocBuilder<RealEstateListingsCubit, RealEstateListingsState>(
               builder: (context, state) {
                 if (state is ListingsLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(child: CircularProgressIndicator.adaptive());
                 }
                 if (state is ListingsError) {
                   return Center(child: Text(state.message));
@@ -369,7 +369,7 @@ class _CityPickerSheetState extends State<_CityPickerSheet> {
                 if (state.regionsLoading) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Center(child: CircularProgressIndicator()),
+                    child: Center(child: CircularProgressIndicator.adaptive()),
                   );
                 }
                 if (state.regionsError != null) {
@@ -431,7 +431,7 @@ class _CityPickerSheetState extends State<_CityPickerSheet> {
                 if (state.citiesLoading) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Center(child: CircularProgressIndicator()),
+                    child: Center(child: CircularProgressIndicator.adaptive()),
                   );
                 }
 

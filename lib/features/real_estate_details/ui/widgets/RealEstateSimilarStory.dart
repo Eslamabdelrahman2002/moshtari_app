@@ -177,9 +177,9 @@ class _RealEstateSimilarStoryState extends State<RealEstateSimilarStory>
                       loadingBuilder: (ctx, child, progress) {
                         if (progress == null) return child;
                         return const Center(
-                          child: CircularProgressIndicator(
+                          child: CircularProgressIndicator.adaptive(
                             strokeWidth: 2,
-                            color: Colors.white70,
+                            valueColor: AlwaysStoppedAnimation(Colors.white70),
                           ),
                         );
                       },

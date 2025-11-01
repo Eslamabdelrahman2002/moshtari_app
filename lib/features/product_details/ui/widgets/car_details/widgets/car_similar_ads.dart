@@ -75,7 +75,7 @@ class _SimilarCarCard extends StatelessWidget {
                   errorBuilder: (_, __, ___) => const Center(child: MySvg(image: 'image')),
                   loadingBuilder: (ctx, child, progress) {
                     if (progress == null) return child;
-                    return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                    return const Center(child: CircularProgressIndicator.adaptive(strokeWidth: 2));
                   },
                 )
                     : const Center(child: MySvg(image: 'image')),

@@ -182,7 +182,7 @@ class PublisherProductItem extends StatelessWidget {
                       imageUrl: imageUrl,
                       fit: BoxFit.cover,
                       placeholder: (context, url) => const Center(
-                          child: CircularProgressIndicator()),
+                          child: CircularProgressIndicator.adaptive()),
                       errorWidget:
                           (context, url, error) => const Icon(Icons.error),
                     ),

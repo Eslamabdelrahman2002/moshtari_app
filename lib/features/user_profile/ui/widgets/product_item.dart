@@ -130,7 +130,7 @@ class ProductItem extends StatelessWidget {
             future: repo.fetchDetails(id: m.id, auctionType: m.typeAuctions),
             builder: (context, snap) {
               if (snap.connectionState == ConnectionState.waiting) {
-                return SizedBox(height: 220.h, child: const Center(child: CircularProgressIndicator()));
+                return SizedBox(height: 220.h, child: const Center(child: CircularProgressIndicator.adaptive()));
               }
               if (snap.hasError || !snap.hasData) {
                 return Padding(
@@ -376,7 +376,7 @@ class ProductItem extends StatelessWidget {
                         : CachedNetworkImage(
                       imageUrl: imageUrl,
                       fit: BoxFit.cover,
-                      placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+                      placeholder: (context, url) => const Center(child: CircularProgressIndicator.adaptive()),
                       errorWidget: (context, url, error) => const Icon(Icons.error),
                     ),
                   ),

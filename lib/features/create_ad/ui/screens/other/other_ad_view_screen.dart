@@ -415,7 +415,7 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
                 return const Center(
                   child: Padding(
                     padding: EdgeInsets.all(40),
-                    child: CircularProgressIndicator(),
+                    child: CircularProgressIndicator.adaptive(),
                   ),
                 );
               }
@@ -512,7 +512,7 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
                 return const Center(
                   child: Padding(
                     padding: EdgeInsets.all(40),
-                    child: CircularProgressIndicator(),
+                    child: CircularProgressIndicator.adaptive(),
                   ),
                 );
               }

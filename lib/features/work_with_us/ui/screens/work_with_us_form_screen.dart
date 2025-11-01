@@ -116,7 +116,7 @@ class _WorkWithUsFormScreenState extends State<WorkWithUsFormScreen> {
     return BlocBuilder<PromoterProfileCubit, PromoterProfileState>(
       builder: (context, pState) {
         if (pState.loading) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator.adaptive());
         }
 
         // 💡 الحالة 2: إذا كان لديه بيانات (أي تم التقديم والموافقة عليه)
@@ -126,7 +126,7 @@ class _WorkWithUsFormScreenState extends State<WorkWithUsFormScreen> {
             // ✅ FIX: استخدام pushReplacementNamed
             NavX(context).pushReplacementNamed(Routes.workWithUsProfileScreen);
           });
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator.adaptive());
         }
 
         // 💡 الحالة 1: إذا لم يجد ملف شخصي، اعرض النموذج

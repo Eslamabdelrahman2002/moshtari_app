@@ -145,7 +145,7 @@ class _DynaTripsScreenState extends State<DynaTripsScreen> {
                   child: RefreshIndicator(
                     onRefresh: () => context.read<DynaTripsListCubit>().initLoad(pageSize: state.pageSize),
                     child: state.loading && state.items.isEmpty
-                        ? const Center(child: CircularProgressIndicator())
+                        ? const Center(child: CircularProgressIndicator.adaptive())
                         : state.error != null
                         ? ListView(
                       controller: _scroll,
@@ -167,7 +167,7 @@ class _DynaTripsScreenState extends State<DynaTripsScreen> {
                         if (index >= state.items.length) {
                           return Padding(
                             padding: EdgeInsets.symmetric(vertical: 12.h),
-                            child: const Center(child: CircularProgressIndicator()),
+                            child: const Center(child: CircularProgressIndicator.adaptive()),
                           );
                         }
                         final item = state.items[index];

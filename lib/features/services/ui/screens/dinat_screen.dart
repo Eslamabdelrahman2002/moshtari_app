@@ -46,7 +46,7 @@ class _DinatScreenState extends State<DinatScreen> {
                 const SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.only(top: 40),
-                    child: Center(child: CircularProgressIndicator()),
+                    child: Center(child: CircularProgressIndicator.adaptive()),
                   ),
                 ),
 

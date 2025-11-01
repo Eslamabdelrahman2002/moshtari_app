@@ -19,7 +19,7 @@ class HomeGridView extends StatelessWidget {
       return const SliverToBoxAdapter(
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 24),
-          child: Center(child: CircularProgressIndicator()),
+          child: Center(child: CircularProgressIndicator.adaptive()),
         ),
       );
     }

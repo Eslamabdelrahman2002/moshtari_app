@@ -83,7 +83,7 @@ class _UserProfileScreenIdState extends State<UserProfileScreenId> {
               child: BlocBuilder<UserReviewsCubit, UserReviewsState>(
                 builder: (context, state) {
                   if (state is UserReviewsLoading) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const Center(child: CircularProgressIndicator.adaptive());
                   }
 
                   if (state is UserReviewsSuccess) {
@@ -147,7 +147,7 @@ class _UserProfileScreenIdState extends State<UserProfileScreenId> {
                                                   is UserAuctionsLoading) {
                                                 return const Center(
                                                     child:
-                                                    CircularProgressIndicator());
+                                                    CircularProgressIndicator.adaptive());
                                               }
 
                                               if (adsState is UserAdsFailure) {

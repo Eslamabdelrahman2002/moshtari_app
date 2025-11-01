@@ -113,7 +113,7 @@ class _CarsSelectCategoryDetailsScreenState extends State<CarsSelectCategoryDeta
                   builder: (context, catalogState) {
                     // 1. حالة التحميل
                     if (catalogState.brandsLoading && catalogState.brands.isEmpty) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const Center(child: CircularProgressIndicator.adaptive());
                     }
                     // 2. حالة الخطأ
                     if (catalogState.error != null && catalogState.brands.isEmpty) {

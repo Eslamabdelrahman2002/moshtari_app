@@ -71,7 +71,7 @@ class _RealEstateSimilarGalleryState extends State<RealEstateSimilarGallery> {
                     loadingBuilder: (ctx, child, progress) {
                       if (progress == null) return child;
                       return const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: CircularProgressIndicator.adaptive(strokeWidth: 2),
                       );
                     },
                   )

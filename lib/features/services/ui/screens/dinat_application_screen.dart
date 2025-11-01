@@ -203,7 +203,7 @@ class _DinatApplicationScreenState extends State<DinatApplicationScreen> {
                         DetailSelector(
                           title: 'المنطقة *',
                           widget: state.regionsLoading
-                              ? const Center(child: CircularProgressIndicator())
+                              ? const Center(child: CircularProgressIndicator.adaptive())
                               : DropdownButtonFormField<Region>(
                             value: selectedRegion,
                             items: state.regions
@@ -232,7 +232,7 @@ class _DinatApplicationScreenState extends State<DinatApplicationScreen> {
                         DetailSelector(
                           title: 'المدينة *',
                           widget: state.citiesLoading
-                              ? const Center(child: CircularProgressIndicator())
+                              ? const Center(child: CircularProgressIndicator.adaptive())
                               : DropdownButtonFormField<City>(
                             value: selectedCity,
                             items: state.cities

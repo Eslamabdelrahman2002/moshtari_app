@@ -58,7 +58,7 @@ class FilterResultsScreen extends StatelessWidget {
             BlocBuilder<AdsQueryCubit, AdsQueryState>(
               builder: (context, state) {
                 if (state is AdsQueryLoading) {
-                  return const SliverFillRemaining(child: Center(child: CircularProgressIndicator()));
+                  return const SliverFillRemaining(child: Center(child: CircularProgressIndicator.adaptive()));
                 }
                 if (state is AdsQueryFailure) {
                   return SliverFillRemaining(child: Center(child: Text(state.message)));

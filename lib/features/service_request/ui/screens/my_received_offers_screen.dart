@@ -38,7 +38,7 @@ class MyReceivedOffersScreen extends StatelessWidget {
           },
           builder: (context, state) {
             if (state.loading && state.offers.isEmpty) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: CircularProgressIndicator.adaptive());
             }
             if (state.error != null && state.offers.isEmpty) {
               return Center(

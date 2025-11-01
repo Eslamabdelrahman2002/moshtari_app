@@ -66,7 +66,7 @@ class RealEstateRequestViewScreen extends StatelessWidget {
         builder: (context, state) {
           // 🌀 حالة التحميل
           if (state is RequestDetailsInitial || state is RequestDetailsLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator.adaptive());
           }
 
           // ✅ حالة النجاح

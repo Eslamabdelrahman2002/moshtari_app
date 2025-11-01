@@ -51,7 +51,7 @@ class WorkWithUsProfileScreen extends StatelessWidget {
         ),
         body: BlocBuilder<PromoterProfileCubit, PromoterProfileState>(
           builder: (context, pState) {
-            if (pState.loading) return const Center(child: CircularProgressIndicator());
+            if (pState.loading) return const Center(child: CircularProgressIndicator.adaptive());
             if (pState.error != null) return Center(child: Text(pState.error!));
 
             // 💡 الآن data هو PromoterProfileResponse
@@ -100,7 +100,7 @@ class WorkWithUsProfileScreen extends StatelessWidget {
 
                   BlocBuilder<ExhibitionsCubit, ExhibitionsState>(
                     builder: (context, eState) {
-                      if (eState.loading) return const Center(child: CircularProgressIndicator());
+                      if (eState.loading) return const Center(child: CircularProgressIndicator.adaptive());
                       if (eState.error != null) return Center(child: Text(eState.error!));
                       if (eState.items.isEmpty) {
                         return Center(child: Text('لا توجد حسابات/معارض مضافة حالياً'));

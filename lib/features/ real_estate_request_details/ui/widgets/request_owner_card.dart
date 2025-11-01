@@ -52,7 +52,7 @@ class RequestOwnerCard extends StatelessWidget {
                 child: CachedNetworkImage(
                   imageUrl: user.profilePictureUrl ?? '',
                   fit: BoxFit.cover,
-                  placeholder: (context, url) => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  placeholder: (context, url) => const Center(child: CircularProgressIndicator.adaptive(strokeWidth: 2)),
                   errorWidget: (context, url, error) => const Icon(Icons.person, size: 28),
                 ),
               ),

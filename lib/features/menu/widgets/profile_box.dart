@@ -23,7 +23,7 @@ class ProfileBox extends StatelessWidget {
       bloc: profileCubit,
       builder: (context, state) {
         if (state is ProfileLoading || state is ProfileInitial) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator.adaptive());
         }
 
         if (state is ProfileFailure) {

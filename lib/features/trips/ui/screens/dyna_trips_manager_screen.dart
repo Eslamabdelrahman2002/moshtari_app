@@ -103,7 +103,7 @@ class _MyTripsTabPageState extends State<_MyTripsTabPage> {
                 child: RefreshIndicator(
                   onRefresh: () => cubit.initLoad(pageSize: state.pageSize),
                   child: state.loading && state.items.isEmpty
-                      ? const Center(child: CircularProgressIndicator())
+                      ? const Center(child: CircularProgressIndicator.adaptive())
                       : state.error != null
                       ? ListView(
                     controller: _scroll,
@@ -125,7 +125,7 @@ class _MyTripsTabPageState extends State<_MyTripsTabPage> {
                       if (i >= state.items.length) {
                         return Padding(
                           padding: EdgeInsets.symmetric(vertical: 12.h),
-                          child: const Center(child: CircularProgressIndicator()),
+                          child: const Center(child: CircularProgressIndicator.adaptive()),
                         );
                       }
                       final item = state.items[i];
@@ -192,7 +192,7 @@ class _TripsTabPageState extends State<_TripsTabPage> {
                 child: RefreshIndicator(
                   onRefresh: () => cubit.initLoad(pageSize: state.pageSize),
                   child: state.loading && state.items.isEmpty
-                      ? const Center(child: CircularProgressIndicator())
+                      ? const Center(child: CircularProgressIndicator.adaptive())
                       : state.error != null
                       ? ListView(
                     controller: _scroll,
@@ -214,7 +214,7 @@ class _TripsTabPageState extends State<_TripsTabPage> {
                       if (i >= state.items.length) {
                         return Padding(
                           padding: EdgeInsets.symmetric(vertical: 12.h),
-                          child: const Center(child: CircularProgressIndicator()),
+                          child: const Center(child: CircularProgressIndicator.adaptive()),
                         );
                       }
                       final item = state.items[i];

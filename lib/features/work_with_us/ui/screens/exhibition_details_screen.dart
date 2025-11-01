@@ -40,7 +40,7 @@ class ExhibitionDetailsScreen extends StatelessWidget {
         ),
         body: BlocBuilder<ExhibitionDetailsCubit, ExhibitionDetailsState>(
           builder: (context, state) {
-            if (state.loading) return const Center(child: CircularProgressIndicator());
+            if (state.loading) return const Center(child: CircularProgressIndicator.adaptive());
             if (state.error != null) return Center(child: Text(state.error!));
             final data = state.data;
             if (data == null) return const Center(child: Text('لا توجد بيانات'));

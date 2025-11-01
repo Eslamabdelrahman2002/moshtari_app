@@ -98,7 +98,7 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                 BlocBuilder<ProfileCubit, ProfileState>(
                   builder: (context, state) {
                     if (state is ProfileUpdateInProgress) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const Center(child: CircularProgressIndicator.adaptive());
                     }
                     return PrimaryButton(
                       text: 'حفظ التغييرات',

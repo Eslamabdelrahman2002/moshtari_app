@@ -182,7 +182,7 @@ class _SathaScreenState extends State<SathaScreen> {
                           DetailSelector(
                             title: 'المنطقة *',
                             widget: state.regionsLoading
-                                ? const Center(child: CircularProgressIndicator())
+                                ? const Center(child: CircularProgressIndicator.adaptive())
                                 : DropdownButtonFormField<Region>(
                               value: selectedRegion,
                               items: state.regions.map((r) => DropdownMenuItem(value: r, child: Text(r.nameAr, style: TextStyles.font16Black500Weight))).toList(),
@@ -207,7 +207,7 @@ class _SathaScreenState extends State<SathaScreen> {
                           DetailSelector(
                             title: 'المدينة *',
                             widget: state.citiesLoading
-                                ? const Center(child: CircularProgressIndicator())
+                                ? const Center(child: CircularProgressIndicator.adaptive())
                                 : DropdownButtonFormField<City>(
                               value: selectedCity,
                               items: state.cities.map((c) => DropdownMenuItem(value: c, child: Text(c.nameAr, style: TextStyles.font16Black500Weight))).toList(),
@@ -333,7 +333,7 @@ class _SathaScreenState extends State<SathaScreen> {
 
                           if (submitting) ...[
                             verticalSpace(12),
-                            const Center(child: CircularProgressIndicator()),
+                            const Center(child: CircularProgressIndicator.adaptive()),
                           ],
                         ],
                       );

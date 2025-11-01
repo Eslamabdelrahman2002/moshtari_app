@@ -96,7 +96,7 @@ class _CarAddCommentFieldState extends State<CarAddCommentField> {
                     ? SizedBox(
                   width: 22.w,
                   height: 22.w,
-                  child: const CircularProgressIndicator(strokeWidth: 2),
+                  child: const CircularProgressIndicator.adaptive(strokeWidth: 2),
                 )
                     : const Icon(Icons.send, color: Colors.blue),
               ),

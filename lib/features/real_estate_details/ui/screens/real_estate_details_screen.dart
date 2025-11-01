@@ -97,7 +97,7 @@ class RealEstateDetailsScreen extends StatelessWidget {
           child: BlocBuilder<RealEstateDetailsCubit, RealEstateDetailsState>(
             builder: (context, state) {
               if (state is RealEstateDetailsLoading) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: CircularProgressIndicator.adaptive());
               } else if (state is RealEstateDetailsFailure) {
                 return Center(child: Text(state.message));
               } else if (state is RealEstateDetailsSuccess) {

@@ -87,7 +87,7 @@ class GridViewItem extends StatelessWidget {
                           ? CachedNetworkImage(
                         imageUrl: imageUrl,
                         fit: BoxFit.cover,
-                        // Skeletonizer بدل الـ CircularProgressIndicator
+                        // Skeletonizer بدل الـ CircularProgressIndicator.adaptive
                         placeholder: (_, __) => Skeletonizer(
                           enabled: true,
                           child: Container(color: ColorsManager.grey200),

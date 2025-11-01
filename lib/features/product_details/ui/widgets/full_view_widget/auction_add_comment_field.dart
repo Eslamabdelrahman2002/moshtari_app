@@ -112,7 +112,7 @@ class _AuctionAddCommentFieldState extends State<AuctionAddCommentField> {
               GestureDetector(
                 onTap: canSend ? submit : null,
                 child: sending
-                    ? SizedBox(width: 22.w, height: 22.w, child: const CircularProgressIndicator(strokeWidth: 2))
+                    ? SizedBox(width: 22.w, height: 22.w, child: const CircularProgressIndicator.adaptive(strokeWidth: 2))
                     : const Icon(Icons.send, color: Colors.blue),
               ),
             ],

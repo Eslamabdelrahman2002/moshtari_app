@@ -92,7 +92,7 @@ class WorkerDetailsScreen extends StatelessWidget {
           child: BlocBuilder<ProviderCubit, ProviderState>(
             builder: (context, state) {
               if (state.loading) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: CircularProgressIndicator.adaptive());
               }
               if (state.error != null) {
                 return Center(child: Text('خطأ: ${state.error}', style: const TextStyle(color: Colors.red)));
