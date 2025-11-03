@@ -9,7 +9,6 @@ import 'package:mushtary/features/home/data/models/home_data_model.dart';
 import '../screens/car_part_details_screen.dart';
 
 
-
 class CarPartSimilarStory extends StatefulWidget {
   final List<HomeAdModel> items;
   final Duration segmentDuration;
@@ -41,6 +40,9 @@ class _CarPartSimilarStoryState extends State<CarPartSimilarStory>
   late int _index;
   bool _paused = false;
   double _dragDy = 0;
+
+  // ✅ متغير لتخزين موضع النقر لـ onTapUp
+  Offset? _tapDownPosition;
 
   @override
   void initState() {
@@ -136,144 +138,170 @@ class _CarPartSimilarStoryState extends State<CarPartSimilarStory>
     final frame = _frames[_index];
     final size = MediaQuery.of(context).size;
 
-    return GestureDetector(
-      onTapDown: (d) {
-        final dx = d.localPosition.dx;
-        if (dx < size.width * 0.33) _prev(); else _next();
-      },
-      onLongPressStart: (_) => _pause(),
-      onLongPressEnd: (_) => _resume(),
-      onVerticalDragUpdate: (d) {
-        _dragDy += d.delta.dy;
-        if (!_paused) _pause();
-      },
-      onVerticalDragEnd: (_) {
-        if (_dragDy > 80) Navigator.of(context).pop(); else { _dragDy = 0; _resume(); }
-      },
-      child: Scaffold(
-        backgroundColor: ColorsManager.blackBackground,
-        body: Stack(
-          children: [
-            // الصورة فول سكرين
-            Positioned.fill(
-              child: frame.url != null && frame.url!.isNotEmpty
-                  ? Image.network(
-                frame.url!,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-                errorBuilder: (_, __, ___) => _placeholder(),
-                loadingBuilder: (ctx, child, progress) {
-                  if (progress == null) return child;
-                  return Center(
-                    child: CircularProgressIndicator.adaptive(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white70)),
-                  );
-                },
-              )
-                  : _placeholder(),
-            ),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: GestureDetector(
+        // ✅ التعديل 1: الإيقاف الفوري عند النقر للأسفل
+        onTapDown: (d) {
+          _pause(); // إيقاف القصة فورًا بمجرد اللمس
+          _tapDownPosition = d.localPosition; // حفظ الموضع لتحديد التقليب لاحقاً
+        },
+        // ✅ التعديل 2: التقليب والاستئناف عند رفع الإصبع
+        onTapUp: (d) {
+          if (_tapDownPosition == null) {
+            _resume();
+            return;
+          }
+          final dx = _tapDownPosition!.dx;
 
-            // تدرجات علوي/سفلي
-            Positioned(
-              top: 0, left: 0, right: 0,
-              child: IgnorePointer(
-                child: Container(
-                  height: 180.h,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                      colors: [ColorsManager.black.withOpacity(0.75), ColorsManager.transparent],
+          // منطق التقليب (Next/Prev) يتحدد بناءً على موضع اللمس الأول (dx)
+          if (dx > size.width * 0.66) { // الثلث الأيمن (رجوع في RTL)
+            _prev();
+          } else { // الثلثين الأيسرين (تقدم في RTL)
+            _next();
+          }
+
+          _tapDownPosition = null; // تصفير الموضع
+          _resume(); // استئناف الحركة بعد التقليب
+        },
+
+        // **إزالة onLongPressStart و onLongPressEnd**
+
+        // ✅ السحب العمودي (يبقى كما هو، لكن نستخدم الإيقاف/الاستئناف المحدث)
+        onVerticalDragUpdate: (d) {
+          _dragDy += d.delta.dy;
+          if (!_paused) _pause();
+        },
+        onVerticalDragEnd: (_) {
+          if (_dragDy > 80) Navigator.of(context).pop(); else { _dragDy = 0; _resume(); }
+        },
+
+        child: Scaffold(
+          backgroundColor: ColorsManager.blackBackground,
+          body: Stack(
+            children: [
+              // الصورة فول سكرين
+              Positioned.fill(
+                child: frame.url != null && frame.url!.isNotEmpty
+                    ? Image.network(
+                  frame.url!,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                  errorBuilder: (_, __, ___) => _placeholder(),
+                  loadingBuilder: (ctx, child, progress) {
+                    if (progress == null) return child;
+                    return Center(
+                      child: CircularProgressIndicator.adaptive(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white70)),
+                    );
+                  },
+                )
+                    : _placeholder(),
+              ),
+
+              // تدرجات علوي/سفلي
+              Positioned(
+                top: 0, left: 0, right: 0,
+                child: IgnorePointer(
+                  child: Container(
+                    height: 180.h,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                        colors: [ColorsManager.black.withOpacity(0.75), ColorsManager.transparent],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            Positioned(
-              left: 0, right: 0, bottom: 0,
-              child: IgnorePointer(
-                child: Container(
-                  height: 220.h,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.bottomCenter, end: Alignment.topCenter,
-                      colors: [ColorsManager.black.withOpacity(0.75), ColorsManager.transparent],
+              Positioned(
+                left: 0, right: 0, bottom: 0,
+                child: IgnorePointer(
+                  child: Container(
+                    height: 220.h,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter, end: Alignment.topCenter,
+                        colors: [ColorsManager.black.withOpacity(0.75), ColorsManager.transparent],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
 
-            // أعلى: شريط التقدم + إغلاق + عنوان
-            SafeArea(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+              // أعلى: شريط التقدم + إغلاق + عنوان
+              SafeArea(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _progressBars(count: _frames.length, current: _index, animation: _controller),
+                      SizedBox(height: 10.h),
+                      Row(
+                        children: [
+                          _closeBtn(onTap: () => Navigator.of(context).pop()),
+                          SizedBox(width: 8.w),
+                          Expanded(
+                            child: Text(
+                              frame.ad.title ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyles.font12White500Weight,
+                              textAlign: TextAlign.right, // محاذاة النص لليمين
+                            ),
+                          ),
+                          if (_paused)
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                              decoration: BoxDecoration(
+                                color: ColorsManager.white.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8.r),
+                              ),
+                              child: Text('موقوف', style: TextStyles.font12White400Weight),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // أسفل: السعر + زر التفاصيل
+              Positioned(
+                left: 16.w, right: 16.w, bottom: 28.h,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _progressBars(count: _frames.length, current: _index, animation: _controller),
-                    SizedBox(height: 10.h),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _closeBtn(onTap: () => Navigator.of(context).pop()),
-                        SizedBox(width: 8.w),
-                        Expanded(
-                          child: Text(
-                            frame.ad.title ?? '',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyles.font12White500Weight,
-                          ),
-                        ),
-                        if (_paused)
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                            decoration: BoxDecoration(
-                              color: ColorsManager.white.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8.r),
-                            ),
-                            child: Text('موقوف', style: TextStyles.font12White400Weight),
-                          ),
+                        _chip(text: frame.ad.title ?? ''), // لو عندك اسم براند
+                        _chip(text: frame.ad.price?.toString() ?? '—'),
                       ],
+                    ),
+                    SizedBox(height: 12.h),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: ColorsManager.primaryColor,
+                        foregroundColor: ColorsManager.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                        padding: EdgeInsets.symmetric(vertical: 14.h),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => CarPartDetailsScreen(id: frame.ad.id ?? 0),
+                          ),
+                        );
+                      },
+                      child: const Text('عرض التفاصيل'),
                     ),
                   ],
                 ),
               ),
-            ),
-
-            // أسفل: السعر + زر التفاصيل
-            Positioned(
-              left: 16.w, right: 16.w, bottom: 28.h,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _chip(text: frame.ad.title ?? ''), // لو عندك اسم براند
-                      _chip(text: frame.ad.price?.toString() ?? '—'),
-                    ],
-                  ),
-                  SizedBox(height: 12.h),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: ColorsManager.primaryColor,
-                      foregroundColor: ColorsManager.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-                      padding: EdgeInsets.symmetric(vertical: 14.h),
-                    ),
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => CarPartDetailsScreen(id: frame.ad.id ?? 0),
-                        ),
-                      );
-                    },
-                    child: const Text('عرض التفاصيل'),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -296,16 +324,16 @@ class _CarPartSimilarStoryState extends State<CarPartSimilarStory>
                       double v;
                       if (i < current) v = 1; else if (i == current) v = animation.value; else v = 0;
                       return FractionallySizedBox(
-                        widthFactor: v,
-                        alignment: Alignment.centerLeft,
-                        child: Container(
-                          height: 4.h,
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [ColorsManager.primary500, ColorsManager.secondary500],
+                          widthFactor: v,
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            height: 4.h,
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [ColorsManager.primary500, ColorsManager.secondary500],
+                              ),
                             ),
-                          ),
-                        ),
+                          )
                       );
                     },
                   ),

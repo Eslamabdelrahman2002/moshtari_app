@@ -2,22 +2,26 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:path/path.dart' as p;
+import 'package:mushtary/core/api/api_constants.dart';
+import 'package:mushtary/core/api/api_service.dart';
+import 'package:mushtary/core/dependency_injection/injection_container.dart';
 
-import '../../../../../../core/api/api_constants.dart';
 import '../model/real_estate_ad_request.dart';
 import '../model/real_estate_ad_response.dart';
 
 class RealEstateAdsRepo {
-  final Dio _dio;
-  RealEstateAdsRepo(this._dio);
+  final ApiService _api = getIt<ApiService>();
 
-  Future<RealEstateAdResponse> createRealEstateAd(RealEstateAdRequest req) async {
+  Future<RealEstateAdResponse> createRealEstateAd(
+      RealEstateAdRequest req) async {
     final fields = req.toMap();
 
+    // تأكد إن السرويسز لو موجودة تتحوّل JSON
     if (fields['services'] != null) {
       fields['services'] = jsonEncode(fields['services']);
     }
 
+    // تجهيز الملفات
     final images = <MultipartFile>[];
     for (final f in req.images) {
       images.add(await MultipartFile.fromFile(
@@ -26,28 +30,26 @@ class RealEstateAdsRepo {
       ));
     }
 
+    // إعداد الـ FormData
     final form = FormData.fromMap({
       ...fields,
-      if (images.isNotEmpty) ApiConstants.realEstateImagesKey: images,
+      if (images.isNotEmpty)
+        ApiConstants.realEstateImagesKey: images,
     });
 
-    final res = await _dio.post(
-      '${ApiConstants.baseUrl}${ApiConstants.realEstateCreateAd}',
-      data: form,
-      options: Options(
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Accept': 'application/json',
-        },
-        receiveTimeout: const Duration(seconds: 120),
-      ),
+    // 🔹 استخدم ApiService.postForm بدلاً من Dio.post
+    final data = await _api.postForm(
+      ApiConstants.realEstateCreateAd,
+      form,
+      requireAuth: true, // ✅ التوكن مطلوب، هيطلع Bottom Sheet لو مش متاح
     );
 
-    if (res.data is Map) {
-      final Map<String, dynamic> data = Map<String, dynamic>.from(res.data as Map);
+    // تحليل الاستجابة
+    if (data is Map<String, dynamic>) {
       return RealEstateAdResponse.fromJson(data);
     }
 
-    return RealEstateAdResponse(success: true, message: 'تم الإرسال', id: null);
+    return RealEstateAdResponse(
+        success: true, message: 'تم الإرسال', id: null);
   }
 }

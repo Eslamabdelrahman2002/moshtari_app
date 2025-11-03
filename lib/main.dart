@@ -83,7 +83,7 @@ Future<void> main() async {
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   setupServiceLocator();
-  await setupChatOfflineLocator();
+  // await setupChatOfflineLocator();
 
   await FcmService.init();
 

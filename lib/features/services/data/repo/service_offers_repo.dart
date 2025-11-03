@@ -18,7 +18,7 @@ class ServiceOffersRepo {
     };
 
     // مهم: ApiService.post يستقبل البودي كـ positional parameter
-    final res = await _api.post(ApiConstants.serviceOffers, data);
+    final res = await _api.post(ApiConstants.serviceOffers, data,requireAuth: true);
     return res is Map<String, dynamic> ? res : {'success': true, 'data': res};
   }
 }

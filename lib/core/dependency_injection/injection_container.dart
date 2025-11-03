@@ -138,6 +138,7 @@ import '../../features/work_with_us/ui/logic/cubit/promoter_profile_cubit.dart';
 import '../../features/work_with_us/ui/logic/cubit/work_with_us_cubit.dart';
 import '../api/api_constants.dart';
 import '../api/api_service.dart' as api;
+import '../auth/auth_coordinator.dart';
 import '../car/data/repo/car_catalog_repo.dart';
 import '../car/logic/cubit/car_catalog_cubit.dart';
 import '../utils/helpers/cache_helper.dart';
@@ -180,7 +181,13 @@ void setupServiceLocator() {
   registerFactoryReplacing<ForgetPasswordCubit>(() => ForgetPasswordCubit(getIt<ForgetPasswordRepo>()));
   registerLazyIfNeeded<ResetPasswordRepo>(() => ResetPasswordRepo(getIt<api.ApiService>()));
   registerFactoryReplacing<ResetPasswordCubit>(() => ResetPasswordCubit(getIt<ResetPasswordRepo>()));
-
+  registerLazyIfNeeded<AuthCoordinator>(
+        () => AuthCoordinator(
+      loginRepo: getIt<LoginRepo>(),
+      registerRepo: getIt<RegisterRepo>(),
+      otpRepo: getIt<OtpRepo>(),
+    ),
+  );
   // Home + Search
   registerLazyIfNeeded<HomeRepo>(() => HomeRepo(getIt<api.ApiService>()));
   registerFactoryReplacing<HomeCubit>(() => HomeCubit(getIt<HomeRepo>()));
@@ -227,17 +234,17 @@ void setupServiceLocator() {
   registerFactoryReplacing<RealEstateRequestsCubit>(() => RealEstateRequestsCubit(getIt<RealEstateRequestsCreateRepo>()));
 
   // Create ads
-  registerLazyIfNeeded<CarPartAdsCreateRepo>(() => CarPartAdsCreateRepo(getIt<Dio>()));
+  registerLazyIfNeeded<api.ApiService>(() => api.ApiService(getIt<Dio>()));
   registerFactoryReplacing<CarPartAdsCubit>(() => CarPartAdsCubit(getIt<CarPartAdsCreateRepo>()));
 
   registerLazyIfNeeded<CarAdsRepository>(() => CarAdsRepository(getIt<api.ApiService>()));
   registerFactoryReplacing<CarAdsCubit>(() => CarAdsCubit(getIt<CarAdsRepository>()));
 
-  registerLazyIfNeeded<RealEstateAdsRepo>(() => RealEstateAdsRepo(getIt<Dio>()));
+  registerLazyIfNeeded<RealEstateAdsRepo>(() => RealEstateAdsRepo());
   registerFactoryReplacing<RealEstateAdsCubit>(() => RealEstateAdsCubit(getIt<RealEstateAdsRepo>()));
 
   // OtherAds Create
-  registerLazyIfNeeded<OtherAdsCreateRepo>(() => OtherAdsCreateRepo(getIt<Dio>()));
+  registerLazyIfNeeded<OtherAdsCreateRepo>(() => OtherAdsCreateRepo());
   registerFactoryReplacing<OtherAdsCubit>(() => OtherAdsCubit(getIt<OtherAdsCreateRepo>()));
 
   // Profile
@@ -257,7 +264,6 @@ void setupServiceLocator() {
   registerLazyIfNeeded<RealEstateAuctionStartRepo>(() => RealEstateAuctionStartRepo(getIt<api.ApiService>()));
   registerFactoryReplacing<RealEstateAuctionStartCubit>(() => RealEstateAuctionStartCubit(getIt<RealEstateAuctionStartRepo>()));
 
-  // Chat WebSocket
   registerLazyIfNeeded<ChatSocketService>(() => ChatSocketService(
     tokenProvider: () => CacheHelper.getData(key: 'token') as String?,
     host: ApiConstants.wsHost,
@@ -283,7 +289,7 @@ void setupServiceLocator() {
   // Messages (online)
   registerLazyIfNeeded<MessagesRepo>(() => MessagesRepo(getIt<ChatSocketService>()));
   registerFactoryReplacing<MessagesCubit>(() => MessagesCubit(getIt<MessagesRepo>()));
-
+  getIt.registerFactory<ChatCubit>(() => ChatCubit(getIt<MessagesRepo>()));
   // Offers
   registerLazyIfNeeded<OffersRepo>(() => OffersRepo(getIt<api.ApiService>()));
   registerFactoryReplacing<OfferCubit>(() => OfferCubit(getIt<OffersRepo>()));
@@ -322,7 +328,8 @@ void setupServiceLocator() {
   registerFactoryReplacing<DynaMyTripsCubit>(() => DynaMyTripsCubit(getIt<DynaTripsRepo>()));
   registerFactoryReplacing<DynaTripCreateCubit>(() => DynaTripCreateCubit(getIt<DynaTripsRepo>()));
   getIt.registerFactory<DynaTripsCubit>(() => DynaTripsCubit(getIt<DynaTripsRepo>()));
-
+  registerLazyIfNeeded<CarPartAdsCreateRepo>(() => CarPartAdsCreateRepo());
+  registerFactoryReplacing<CarPartAdsCubit>(() => CarPartAdsCubit(getIt<CarPartAdsCreateRepo>()));
   // ServiceProfile
   registerLazyIfNeeded<ServiceProviderRepo>(() => ServiceProviderRepo(getIt<api.ApiService>()));
   registerFactoryReplacing<ProviderCubit>(() => ProviderCubit(getIt<ServiceProviderRepo>()));
@@ -356,30 +363,14 @@ void setupServiceLocator() {
   registerLazyIfNeeded<AdsRepo>(() => AdsRepo(getIt<api.ApiService>()));
   registerLazyIfNeeded<UserReviewsRepo>(() => UserReviewsRepo(getIt<api.ApiService>()));
   registerFactoryReplacing<UserReviewsCubit>(() => UserReviewsCubit(getIt<UserReviewsRepo>()));
+
+  //offer
+  registerLazyIfNeeded<ServiceOffersRepo>(
+        () => ServiceOffersRepo(getIt<api.ApiService>()),
+  );
+
+  registerFactoryReplacing<ServiceOfferCubit>(
+        () => ServiceOfferCubit(getIt<ServiceOffersRepo>()),
+  );
 }
 
-
-// Call this from main.dart after setupServiceLocator()
-Future<void> setupChatOfflineLocator() async {
-  final db = await ChatDB.instance.db;
-
-  if (!getIt.isRegistered<ChatLocalDataSource>()) {
-    getIt.registerLazySingleton<ChatLocalDataSource>(() => ChatLocalDataSource(db));
-  }
-  if (!getIt.isRegistered<Connectivity>()) {
-    getIt.registerLazySingleton<Connectivity>(() => Connectivity());
-  }
-  if (!getIt.isRegistered<ChatOfflineRepository>()) {
-    getIt.registerLazySingleton<ChatOfflineRepository>(() => ChatOfflineRepository(
-      local: getIt<ChatLocalDataSource>(),
-      remote: getIt<MessagesRepo>(),
-      connectivity: getIt<Connectivity>(),
-    ));
-  }
-
-  // ChatCubit يعتمد على الـ OfflineRepo (نُحدّث التسجيل لو موجود)
-  if (getIt.isRegistered<ChatCubit>()) {
-    getIt.unregister<ChatCubit>();
-  }
-  getIt.registerFactory<ChatCubit>(() => ChatCubit(getIt<ChatOfflineRepository>()));
-}

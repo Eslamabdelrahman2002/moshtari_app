@@ -61,7 +61,7 @@ class ApiConstants {
   // Car parts
   static const String carPartAds = 'car-part-ads';
   static String carPartAdDetails(int id) => '$carPartAds/$carPartAds/$id';
-  static const String carPartAdsCreate = 'car-part-ads'; // تم تصحيح المسار
+  static const String carPartAdsCreate = 'car-part-ads/car-part-ads'; // تم تصحيح المسار
   static const String carPartImagesKey = 'image_urls';
 
 
@@ -155,6 +155,9 @@ class ApiConstants {
         throw ArgumentError('Unsupported adType: $adType');
     }
   }
+  static String getPublisherProfile(int userId) => 'users/$userId';
+  static String getPublisherAds(int userId) => '$carAds/my-ads/$userId';
+  static String getPublisherAuctions(int userId) => '$carAuctions/my-auctions/$userId';
   static const String dynaTripsAvailable = 'dyna-trips/available';
   static const String serviceOffers = 'service-offers/offers';
   static const String resendOtp = 'auth/resend-otp';

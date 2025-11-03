@@ -10,7 +10,8 @@ import 'logic/cubit/car_ads_cubit.dart';
 import 'logic/cubit/car_ads_state.dart';
 
 class CreateCarAdFlow extends StatefulWidget {
-  const CreateCarAdFlow({super.key});
+  final int? exhibitionId; // ✅ NEW: أضف parameter لاستقبال exhibitionId من الـ router
+  const CreateCarAdFlow({super.key, this.exhibitionId}); // ✅ NEW: اجعله optional
 
   @override
   State<CreateCarAdFlow> createState() => _CreateCarAdFlowState();
@@ -25,7 +26,13 @@ class _CreateCarAdFlowState extends State<CreateCarAdFlow> {
     super.initState();
     // صَفّر حالة الإنشاء عند الدخول
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<CarAdsCubit>().reset(); // أضف reset في CarAdsCubit
+      if (mounted) {
+        context.read<CarAdsCubit>().reset(); // أضف reset في CarAdsCubit
+        // ✅ NEW: مرر exhibitionId للـ Cubit لو موجود (من الـ router)
+        if (widget.exhibitionId != null) {
+          context.read<CarAdsCubit>().setExhibitionId(widget.exhibitionId);
+        }
+      }
     });
   }
 

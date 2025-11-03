@@ -49,12 +49,12 @@ class DynaTripsRepo {
       if (fromCityId != null) 'from_city_id': fromCityId,
       if (toCityId != null) 'to_city_id': toCityId,
     };
-    final res = await _api.get(ApiConstants.dynaMyTrips, queryParameters: qp);
+    final res = await _api.get(ApiConstants.dynaMyTrips, queryParameters: qp,requireAuth: true);
     return DynaTripsListResponse.fromJson(res as Map<String, dynamic>);
   }
 
   Future<DynaTripCreateResponse> addTrip(DynaTripCreateRequest req) async {
-    final res = await _api.post(ApiConstants.dynaTripsAdd, req.toJson());
+    final res = await _api.post(ApiConstants.dynaTripsAdd, req.toJson(),requireAuth: true);
     return DynaTripCreateResponse.fromJson(res as Map<String, dynamic>);
   }
 }

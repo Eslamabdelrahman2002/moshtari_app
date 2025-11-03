@@ -61,7 +61,7 @@ class _CreateExhibitionFormState extends State<_CreateExhibitionForm> {
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
-  final _promoterIdCtrl = TextEditingController(); // اختياري
+  // تم حذف: final _promoterIdCtrl = TextEditingController();
 
   String? _activityType; // 'car_ad' | 'real_estate_ad' | 'car_part_ad'
   Region? _selectedRegion;
@@ -87,7 +87,7 @@ class _CreateExhibitionFormState extends State<_CreateExhibitionForm> {
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
     _addressCtrl.dispose();
-    _promoterIdCtrl.dispose();
+    // تم حذف: _promoterIdCtrl.dispose();
     super.dispose();
   }
 
@@ -238,15 +238,7 @@ class _CreateExhibitionFormState extends State<_CreateExhibitionForm> {
                 ),
                 verticalSpace(12),
 
-                SecondaryTextFormField(
-                  controller: _promoterIdCtrl,
-                  label: 'معرّف المروج (اختياري)',
-                  hint: 'مثال: 6',
-                  isNumber: true,
-                  minHeight: 56,
-                  maxheight: 56,
-                ),
-                verticalSpace(12),
+                // حقل معرّف المروج (تم حذفه)
 
                 GestureDetector(
                   onTap: _pickImage,
@@ -314,7 +306,20 @@ class _CreateExhibitionFormState extends State<_CreateExhibitionForm> {
       return;
     }
 
-    final promoterId = int.tryParse(_promoterIdCtrl.text.trim());
+    // 💡 نقطة تحقق: اطبع الأسماء والأرقام المرسلة للتأكد من صحتها
+    // 📝 Print كامل لكل الداتا قبل الإرسال (أضف ده)
+    print('==================================================');
+    print('Sending Exhibition Create Request - FULL DATA:');
+    print('Name: ${_nameCtrl.text.trim()}');
+    print('Email: ${_emailCtrl.text.trim()}');
+    print('Activity Type: $_activityType');
+    print('Phone: ${_phoneCtrl.text.trim()}');
+    print('Address: ${_addressCtrl.text.trim()}');
+    print('Region Name/ID: ${_selectedRegion!.nameAr} / ${_selectedRegion!.id}');
+    print('City Name/ID: ${_selectedCity!.nameAr} / ${_selectedCity!.id}');
+    print('Image Path: ${_imageFile!.path}');
+    print('==================================================');
+    // ----------------------------------------------------
 
     context.read<ExhibitionCreateCubit>().submit(
       name: _nameCtrl.text.trim(),
@@ -324,7 +329,6 @@ class _CreateExhibitionFormState extends State<_CreateExhibitionForm> {
       address: _addressCtrl.text.trim(),
       cityId: _selectedCity!.id,
       regionId: _selectedRegion!.id,
-      promoterId: promoterId,
       image: _imageFile!,
     );
   }

@@ -95,7 +95,7 @@ class CarAuctionStartRepo {
     }
 
     // الطلب
-    final resp = await _api.postForm(ApiConstants.carAuctionsStart, form);
+    final resp = await _api.postForm(ApiConstants.carAuctionsStart, form,requireAuth: true);
     return resp;
   }
 

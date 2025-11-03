@@ -17,6 +17,7 @@ import '../../../../core/utils/helpers/launcher.dart';
 import '../../../../core/utils/helpers/navigation.dart';
 
 import '../../../favorites/ui/logic/cubit/favorites_cubit.dart';
+import '../../../messages/data/models/chat_model.dart';
 import '../logic/cubit/car_auction_details_cubit.dart';
 import '../logic/cubit/car_auction_details_state.dart';
 
@@ -32,7 +33,7 @@ import '../widgets/car_details/widgets/car_info_description.dart';
 import '../widgets/car_details/widgets/car_story_and_title.dart';
 
 // Chat
-import 'package:mushtary/features/messages/data/models/messages_model.dart';
+
 import 'package:mushtary/features/messages/data/repo/messages_repo.dart';
 import 'package:mushtary/features/messages/ui/widgets/chats/chat_initiation_sheet.dart';
 import 'package:mushtary/features/messages/ui/screens/chat_screen.dart';
@@ -679,7 +680,7 @@ class _CarAuctionDetailsScreenState extends State<CarAuctionDetailsScreen> {
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF14457F),
+                          backgroundColor:ColorsManager.primaryColor,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
                         ),
                         child: const Text('قم بالمزايدة', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -688,7 +689,7 @@ class _CarAuctionDetailsScreenState extends State<CarAuctionDetailsScreen> {
                   ),
                   horizontalSpace(12),
                   _squareIconBtn(
-                    icon: const MySvg(image: 'message', color: ColorsManager.primaryColor),
+                    icon: const MySvg(image: 'message_icon', color: ColorsManager.primaryColor),
                     bg: ColorsManager.primary50,
                     borderColor: const Color(0xFFEAEAEA),
                     onTap: ended
@@ -718,7 +719,7 @@ class _CarAuctionDetailsScreenState extends State<CarAuctionDetailsScreen> {
                   ),
                   horizontalSpace(8),
                   _squareIconBtn(
-                    icon: const MySvg(image: 'phone', color: ColorsManager.primaryColor),
+                    icon: const MySvg(image: 'callCalling', color: ColorsManager.primaryColor),
                     bg: ColorsManager.primary50,
                     borderColor: const Color(0xFFEAEAEA),
                     onTap: ended ? null : (phone?.isNotEmpty ?? false) ? () => launchCaller(context, phone!) : null,

@@ -12,8 +12,8 @@ class AdsRepo {
   }
 
   // بدائل محددة النوع (اختياري)
-  Future<void> deleteCarAd(int id) => _api.deleteWithBody(ApiConstants.deleteCarAd(id));
-  Future<void> deleteRealEstateAd(int id) => _api.deleteWithBody(ApiConstants.deleteRealEstateAd(id));
-  Future<void> deleteCarPartAd(int id) => _api.deleteWithBody(ApiConstants.deleteCarPartAd(id));
-  Future<void> deleteOtherAd(int id) => _api.deleteWithBody(ApiConstants.deleteOtherAd(id));
+  Future<void> deleteCarAd(int id) => _api.deleteWithBody(ApiConstants.deleteCarAd(id),requireAuth: true);
+  Future<void> deleteRealEstateAd(int id) => _api.deleteWithBody(ApiConstants.deleteRealEstateAd(id),requireAuth: true);
+  Future<void> deleteCarPartAd(int id) => _api.deleteWithBody(ApiConstants.deleteCarPartAd(id),requireAuth: true);
+  Future<void> deleteOtherAd(int id) => _api.deleteWithBody(ApiConstants.deleteOtherAd(id),requireAuth: true);
 }

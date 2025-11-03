@@ -958,10 +958,6 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
               context,
               title: 'تم إنشاء المزاد بنجاح!',
               message: 'سيبدأ المزاد تلقائيًا في الوقت المحدد. يمكنك متابعة حالة المزاد من لوحة التحكم.',
-              onViewAuction: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-              },
               onBackHome: () {
                 Navigator.pop(context);
                 Navigator.pop(context);

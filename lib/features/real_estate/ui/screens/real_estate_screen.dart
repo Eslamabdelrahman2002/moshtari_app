@@ -256,7 +256,7 @@ class _RealEstateViewState extends State<_RealEstateView> {
           height: 44.h,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: active ? ColorsManager.primary400 : ColorsManager.dark50,
+            color: active ? ColorsManager.primaryColor : ColorsManager.dark50,
             borderRadius: BorderRadius.circular(12.r),
             boxShadow: active
                 ? [

@@ -11,6 +11,9 @@ class CarAdsCubit extends Cubit<CarAdsState> {
   final CarAdsRepository _repo;
   CarAdsCubit(this._repo) : super(CarAdsState());
 
+  // ✅ NEW: Variable داخلي لتخزين exhibitionId (من الـ router)
+  int? _exhibitionId;
+
   void reset() => emit(CarAdsState(
     success: false,
     submitting: false,
@@ -30,6 +33,12 @@ class CarAdsCubit extends Cubit<CarAdsState> {
     contactWhatsapp: true,
     contactCall: true,
   ));
+
+  // ✅ NEW: Method لتعيين exhibitionId (يستدعى من initState في الـ widget)
+  void setExhibitionId(int? id) {
+    _exhibitionId = id;
+    debugPrint('>>> CarAdsCubit: Exhibition ID set to $_exhibitionId'); // ✅ NEW: debug print (اختياري)
+  }
 
   void setPhone(String v) => emit(state.copyWith(phone: v.trim().isEmpty ? null : v.trim()));
   void setAddressAr(String? v) => emit(state.copyWith(addressAr: v));
@@ -135,6 +144,7 @@ class CarAdsCubit extends Cubit<CarAdsState> {
         allowMarketing: state.allowMarketing,
         images: state.images,
         technicalReport: state.technicalReport,
+        exhibitionId: _exhibitionId, // ✅ NEW: مرر exhibitionId للـ request (لو موجود)
       );
 
       final response = await _repo.createCarAd(req);

@@ -190,7 +190,8 @@ class _RealEstateGridViewItemState extends State<RealEstateGridViewItem> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             ListViewItemDataWidget(
-                              image: 'riyal_new',
+                              image: 'saudi_riyal',
+
                               isColoredText: true,
                               text: widget.property.price??"",
                             ),

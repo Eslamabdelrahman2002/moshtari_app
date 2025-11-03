@@ -23,7 +23,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:mushtary/core/widgets/primary/my_svg.dart';
 import 'package:mushtary/core/router/routes.dart';
 import 'package:mushtary/core/utils/helpers/navigation.dart';
-import 'package:mushtary/features/messages/data/models/messages_model.dart';
+import 'package:mushtary/features/messages/data/models/chat_model.dart';
 import 'package:mushtary/features/messages/data/repo/messages_repo.dart';
 import 'package:mushtary/features/messages/ui/screens/chat_screen.dart';
 import 'package:mushtary/features/messages/ui/widgets/chats/chat_initiation_sheet.dart';

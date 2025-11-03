@@ -15,6 +15,7 @@ import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../../favorites/ui/logic/cubit/favorites_cubit.dart';
 import '../../../user_profile/logic/cubit/profile_cubit.dart';
+import '../../../product_details/ui/widgets/share_dialog.dart';
 import '../../data/models/home_data_model.dart';
 
 class HomeReelsView extends StatefulWidget {
@@ -46,9 +47,57 @@ class _HomeReelsViewState extends State<HomeReelsView> {
     }
   }
 
+  // ✅ دالة لعمل رابط المشاركة بناءً على نوع الإعلان
+  String _buildShareLink(HomeAdModel ad) {
+    final isAuction = ad.auctionDisplayType != null;
+    final id = isAuction ? (ad.auctionId ?? ad.id) : ad.id;
+    final type = isAuction ? 'auction' : 'ad';
+    return 'https://moshtary.com/$type/$id';
+  }
+
+  // ✅ دالة التنقل للتفاصيل
+  void _navigateToAdDetails(BuildContext context, HomeAdModel ad) {
+    final isAuction = ad.auctionDisplayType != null;
+    final auctionId = ad.auctionId ?? ad.id;
+
+    if (isAuction) {
+      if (ad.categoryId == 1) {
+        Navigator.of(context).pushNamed(
+          Routes.carAuctionDetailsScreen,
+          arguments: auctionId,
+        );
+      } else if (ad.categoryId == 2) {
+        Navigator.of(context).pushNamed(
+          Routes.realEstateAuctionDetailsScreen,
+          arguments: auctionId,
+        );
+      }
+      return;
+    }
+
+    switch (ad.sourceType) {
+      case 'car_ads':
+        Navigator.of(context)
+            .pushNamed(Routes.carDetailsScreen, arguments: ad.id);
+        break;
+      case 'real_estate_ads':
+        Navigator.of(context)
+            .pushNamed(Routes.realEstateDetailsScreen, arguments: ad.id);
+        break;
+      case 'car_parts_ads':
+      case 'car_part_ads':
+        Navigator.of(context)
+            .pushNamed(Routes.carPartDetailsScreen, arguments: ad.id);
+        break;
+      case 'other_ads':
+      default:
+        Navigator.of(context)
+            .pushNamed(Routes.otherAdDetailsScreen, arguments: ad.id);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // وضع التحميل: استخدم Skeletonizer بدل CircularProgressIndicator.adaptive
     if (widget.isLoading) {
       return Scaffold(
         backgroundColor: ColorsManager.blackBackground,
@@ -56,7 +105,7 @@ class _HomeReelsViewState extends State<HomeReelsView> {
           child: Skeletonizer(
             enabled: true,
             child: PageView.builder(
-              itemCount: 3, // عدد سلايدات السكيليتون
+              itemCount: 3,
               scrollDirection: Axis.vertical,
               itemBuilder: (context, i) => const _ReelSkeletonSlide(),
             ),
@@ -88,7 +137,6 @@ class _HomeReelsViewState extends State<HomeReelsView> {
       );
     }
 
-    // أثناء العرض الحقيقي: نوفر Cubits لتفادي ProviderNotFoundException
     return MultiBlocProvider(
       providers: [
         BlocProvider<FavoritesCubit>(
@@ -99,12 +147,11 @@ class _HomeReelsViewState extends State<HomeReelsView> {
         ),
       ],
       child: NotificationListener<ScrollNotification>(
-        onNotification: (ScrollNotification notification) {
-          if (notification is ScrollUpdateNotification) {
-            if (notification.scrollDelta != null &&
-                notification.metrics.axis == Axis.vertical) {
-              _onScrollStarted();
-            }
+        onNotification: (notification) {
+          if (notification is ScrollUpdateNotification &&
+              notification.scrollDelta != null &&
+              notification.metrics.axis == Axis.vertical) {
+            _onScrollStarted();
           } else if (notification is ScrollEndNotification) {
             _onScrollStopped();
           }
@@ -115,6 +162,8 @@ class _HomeReelsViewState extends State<HomeReelsView> {
           scrollDirection: Axis.vertical,
           itemBuilder: (context, i) {
             final ad = widget.ads[i];
+            final shareLink = _buildShareLink(ad);
+
             return Scaffold(
               backgroundColor: ColorsManager.blackBackground,
               body: SafeArea(
@@ -153,7 +202,8 @@ class _HomeReelsViewState extends State<HomeReelsView> {
                           Padding(
                             padding: EdgeInsets.symmetric(horizontal: 15.w),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment:
+                              MainAxisAlignment.spaceBetween,
                               children: [
                                 InkWell(
                                   onTap: () => context.pop(),
@@ -161,14 +211,17 @@ class _HomeReelsViewState extends State<HomeReelsView> {
                                     width: 32.w,
                                     height: 32.h,
                                     decoration: BoxDecoration(
-                                      color: ColorsManager.white.withOpacity(0.5),
-                                      borderRadius: BorderRadius.circular(8.r),
+                                      color:
+                                      ColorsManager.white.withOpacity(0.5),
+                                      borderRadius:
+                                      BorderRadius.circular(8.r),
                                     ),
                                     child: const PrimaryBackIcon(
                                       color: ColorsManager.white,
                                     ),
                                   ),
                                 ),
+                                // ✅ شعار التطبيق، ممكن نضيف زر المشاركة هنا مستقبلاً
                                 const MySvg(image: 'logo'),
                                 const SizedBox.shrink(),
                               ],
@@ -196,17 +249,19 @@ class _HomeReelsViewState extends State<HomeReelsView> {
                       ),
                     ],
                   ),
-                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-                  child: PrimaryButton(
-                    text: 'عرض الاعلان',
-                    isPrefixIconInCenter: true,
-                    prefixIcon: const MySvg(image: 'eye_white'),
-                    onPressed: () {
-                      NavX(context).pushNamed(
-                        Routes.productDetails,
-                        arguments: ad,
-                      );
-                    },
+                  padding:
+                  EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: PrimaryButton(
+                          text: 'عرض الإعلان',
+                          isPrefixIconInCenter: true,
+                          prefixIcon: const MySvg(image: 'eye_white'),
+                          onPressed: () => _navigateToAdDetails(context, ad),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -228,14 +283,9 @@ class _ReelSkeletonSlide extends StatelessWidget {
       body: SafeArea(
         child: Stack(
           children: [
-            // الخلفية (مكان الصورة/الفيديو)
             Positioned.fill(
-              child: Container(
-                color: Colors.white, // سيُظلل بواسطة Skeletonizer
-              ),
+              child: Container(color: Colors.white),
             ),
-
-            // ترويسة أعلى الشاشة
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 15.w, vertical: 8.h),
               child: Row(
@@ -249,17 +299,11 @@ class _ReelSkeletonSlide extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8.r),
                     ),
                   ),
-                  Container(
-                    width: 140.w,
-                    height: 24.h,
-                    color: Colors.white,
-                  ),
+                  Container(width: 140.w, height: 24.h, color: Colors.white),
                   SizedBox(width: 32.w, height: 32.h),
                 ],
               ),
             ),
-
-            // أزرار الجانب الأيمن (مفضلة/تعليقات/مشاركة)
             Positioned(
               right: 12.w,
               bottom: 120.h,
@@ -273,12 +317,11 @@ class _ReelSkeletonSlide extends StatelessWidget {
                 ],
               ),
             ),
-
-            // المحتوى السفلي (عنوان/سعر/موقع/مستخدم...)
             Align(
               alignment: Alignment.bottomCenter,
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+                padding:
+                EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -290,73 +333,6 @@ class _ReelSkeletonSlide extends StatelessWidget {
                     end: Alignment.topCenter,
                   ),
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    // النصوص
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // شارة السعر
-                          Container(
-                            height: 36.h,
-                            width: 160.w,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16.r),
-                            ),
-                          ),
-                          SizedBox(height: 16.h),
-                          // العنوان سطرين
-                          Container(height: 16.h, width: 260.w, color: Colors.white),
-                          SizedBox(height: 8.h),
-                          Container(height: 16.h, width: 200.w, color: Colors.white),
-                          SizedBox(height: 16.h),
-                          // منذ وقت
-                          Container(height: 12.h, width: 100.w, color: Colors.white),
-                          SizedBox(height: 16.h),
-                          // معلومات المستخدم
-                          Row(
-                            children: [
-                              Container(
-                                width: 36.w,
-                                height: 36.h,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              SizedBox(width: 12.w),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Container(height: 12.h, width: 140.w, color: Colors.white),
-                                    SizedBox(height: 6.h),
-                                    Container(height: 12.h, width: 100.w, color: Colors.white),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 16.h),
-                          // الموقع + السعر
-                          Row(
-                            children: [
-                              Container(height: 16.h, width: 120.w, color: Colors.white),
-                              SizedBox(width: 16.w),
-                              Container(height: 16.h, width: 100.w, color: Colors.white),
-                            ],
-                          ),
-                          SizedBox(height: 12.h),
-                        ],
-                      ),
-                    ),
-                    SizedBox(width: 60.w), // مساحة للأزرار الجانبية
-                  ],
-                ),
               ),
             ),
           ],
@@ -364,7 +340,6 @@ class _ReelSkeletonSlide extends StatelessWidget {
       ),
     );
   }
-
 
   Widget _circleSkeleton(double size) => Container(
     width: size,

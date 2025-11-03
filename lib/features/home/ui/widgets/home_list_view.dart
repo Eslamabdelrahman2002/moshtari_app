@@ -21,7 +21,7 @@ class HomeListView extends StatelessWidget {
     if (isLoading) {
       return const SliverToBoxAdapter(
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 24),
+          padding: EdgeInsets.symmetric(vertical: 24,horizontal: 15),
           child: Center(child: CircularProgressIndicator.adaptive()),
         ),
       );

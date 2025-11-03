@@ -62,7 +62,7 @@ class RealEstatePrice extends StatelessWidget {
             horizontalSpace(4),
             Align(
               alignment: Alignment.bottomCenter,
-              child: MySvg(image: 'riyal_new', width: 24.w, height: 24.h),
+              child: MySvg(image: 'saudi_riyal', width: 24.w, height: 24.h),
             ),
           ],
         ),

@@ -6,7 +6,7 @@ import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/utils/helpers/navigation.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
 import 'package:mushtary/core/widgets/safe_cached_image.dart';
-import 'package:mushtary/features/messages/data/models/messages_model.dart';
+import 'package:mushtary/features/messages/data/models/chat_model.dart';
 import 'package:mushtary/features/messages/ui/screens/chat_screen.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
@@ -14,6 +14,7 @@ class MessageItem extends StatelessWidget {
   final int index;
   final bool isLast;
   final MessagesModel message;
+
   const MessageItem({
     super.key,
     required this.index,
@@ -46,8 +47,11 @@ class MessageItem extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border(
-            bottom: !isLast ? const BorderSide(color: ColorsManager.grey100) : BorderSide.none,
-            top: index == 0 ? const BorderSide(color: ColorsManager.grey100) : BorderSide.none,
+            bottom:
+            !isLast ? const BorderSide(color: ColorsManager.grey100) : BorderSide.none,
+            top: index == 0
+                ? const BorderSide(color: ColorsManager.grey100)
+                : BorderSide.none,
           ),
         ),
         child: Row(
@@ -71,11 +75,13 @@ class MessageItem extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      const Icon(Icons.check, color: ColorsManager.black, size: 12),
+                      const Icon(Icons.check,
+                          color: ColorsManager.black, size: 12),
                       SizedBox(width: 4.w),
                       Expanded(
                         child: Text(
-                          message.lastMessage ?? '',
+                          _buildPreviewText(
+                              message.lastMessage ?? '', message),
                           style: TextStyles.font12Black400Weight,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -95,5 +101,76 @@ class MessageItem extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// ✅ دالة عرض معاينة الرسالة حسب النوع
+  String _buildPreviewText(String raw, MessagesModel msg) {
+    final lower = raw.toLowerCase();
+    final type = (msg.lastMessageType ?? '').toLowerCase();
+
+    // فارغة
+    if (raw.trim().isEmpty) return 'رسالة فارغة';
+
+    // ✅ أولاً: نوع الرسالة الرسمي من السيرفر
+    switch (type) {
+      case 'image':
+        return '📷 صورة';
+      case 'audio':
+      case 'voice':
+        return '🎤 تسجيل صوتي';
+      case 'video':
+        return '🎬 فيديو';
+      case 'file':
+      case 'document':
+        return '📁 ملف مرفق';
+      case 'text':
+        break;
+      default:
+        break;
+    }
+
+    // ✅ ثانيًا: التعرف من الامتداد
+    if (lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.png') ||
+        lower.endsWith('.webp') ||
+        lower.endsWith('.gif')) {
+      return '📷 صورة';
+    }
+
+    if (lower.endsWith('.mp4') ||
+        lower.endsWith('.mov') ||
+        lower.endsWith('.avi') ||
+        lower.endsWith('.mkv')) {
+      return '🎬 فيديو';
+    }
+
+    if (lower.endsWith('.m4a') ||
+        lower.endsWith('.aac') ||
+        lower.endsWith('.mp3') ||
+        lower.endsWith('.wav')) {
+      return '🎤 تسجيل صوتي';
+    }
+
+    if (lower.startsWith('http')) return '🔗 رابط';
+
+    // ✅ ثالثًا: التعرف من Base64 (رؤوس الصور أو الصوت)
+    if (raw.startsWith('/9j/') || // JPEG
+        raw.startsWith('iVBOR') || // PNG
+        raw.startsWith('R0lGOD')) {
+      return '📷 صورة';
+    }
+
+    if (raw.startsWith('UklGR') || raw.startsWith('SUQz')) {
+      return '🎤 تسجيل صوتي';
+    }
+
+    // Base64 عام وغير معروف
+    if (RegExp(r'^[A-Za-z0-9+/=]+$').hasMatch(raw) && raw.length > 100) {
+      return '📎 مرفق';
+    }
+
+    // الافتراضي → نص
+    return raw;
   }
 }

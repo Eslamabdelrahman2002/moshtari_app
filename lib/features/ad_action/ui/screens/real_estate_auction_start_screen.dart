@@ -891,7 +891,6 @@ class _RealEstateAuctionStartScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('المدينة / الحي', style: TextStyles.font14Dark500Weight),
         SizedBox(height: 6.h),
         PrimaryTextFormField(
           validationError: '',
@@ -975,9 +974,9 @@ class _RealEstateAuctionStartScreenState
         SizedBox(height: 8.h),
         Row(
           children: [
-            Expanded(child: PrimaryButton(text: 'لا', onPressed: () => setState(() => _isFurnished = false), backgroundColor: !_isFurnished ? ColorsManager.primary400 : Colors.white, textColor: !_isFurnished ? Colors.white : Colors.black)),
+            Expanded(child: PrimaryButton(text: 'لا', onPressed: () => setState(() => _isFurnished = false), backgroundColor: !_isFurnished ? ColorsManager.primaryColor : Colors.white, textColor: !_isFurnished ? Colors.white : Colors.black)),
             SizedBox(width: 8.w),
-            Expanded(child: PrimaryButton(text: 'نعم', onPressed: () => setState(() => _isFurnished = true), backgroundColor: _isFurnished ? ColorsManager.primary400 : Colors.white, textColor: _isFurnished ? Colors.white : Colors.black)),
+            Expanded(child: PrimaryButton(text: 'نعم', onPressed: () => setState(() => _isFurnished = true), backgroundColor: _isFurnished ? ColorsManager.primaryColor: Colors.white, textColor: _isFurnished ? Colors.white : Colors.black)),
           ],
         ),
         SizedBox(height: 12.h),
@@ -1004,7 +1003,6 @@ class _RealEstateAuctionStartScreenState
               context,
               title: 'تم إنشاء المزاد بنجاح!',
               message: 'سيبدأ المزاد تلقائيًا أو وفقًا للوقت المحدد. يمكنك متابعة حالة المزاد من لوحة التحكم الخاصة بك.',
-              onViewAuction: () { Navigator.pop(context); Navigator.pop(context); },
               onBackHome: () { Navigator.pop(context); Navigator.pop(context); },
             );
           } else if (state.error != null) {

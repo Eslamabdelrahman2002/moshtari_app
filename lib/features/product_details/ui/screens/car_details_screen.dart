@@ -12,7 +12,7 @@ import 'package:mushtary/features/user_profile/logic/cubit/profile_cubit.dart';
 import 'package:mushtary/core/utils/helpers/launcher.dart';
 import 'package:mushtary/core/router/routes.dart';
 import 'package:mushtary/core/utils/helpers/navigation.dart';
-import 'package:mushtary/features/messages/data/models/messages_model.dart';
+import 'package:mushtary/features/messages/data/models/chat_model.dart';
 import 'package:mushtary/features/messages/data/repo/messages_repo.dart';
 import 'package:mushtary/features/messages/ui/widgets/chats/chat_initiation_sheet.dart';
 import '../../../favorites/ui/logic/cubit/favorites_cubit.dart';
@@ -104,6 +104,7 @@ class CarDetailsScreen extends StatelessWidget {
                   physics: const BouncingScrollPhysics(),
                   padding: EdgeInsets.only(bottom: 72.h),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const CarDetailsAppBar(),
                       CarDetailsImages( images: car.imageUrls,
@@ -128,16 +129,18 @@ class CarDetailsScreen extends StatelessWidget {
                         createdAt: DateTime.tryParse(car.createdAt) ?? DateTime.now(),
                       ),
                       verticalSpace(16),
-                      CarPrice(price: double.tryParse(car.price ?? '0')),
+                      Center(child: CarPrice(price: double.tryParse(car.price ?? '0'))),
                       const MyDivider(),
-                      CarInfoGridView(
-                        transmission: car.transmissionType,
-                        mileage: car.mileage,
-                        cylinder: car.cylinderCount,
-                        driveType: car.driveType,
-                        horsepower: car.horsepower,
-                        fuelType: car.fuelType,
-                        vehicleType: car.vehicleType,
+                      Center(
+                        child: CarInfoGridView(
+                          transmission: car.transmissionType,
+                          mileage: car.mileage,
+                          cylinder: car.cylinderCount,
+                          driveType: car.driveType,
+                          horsepower: car.horsepower,
+                          fuelType: car.fuelType,
+                          vehicleType: car.vehicleType,
+                        ),
                       ),
                       CarInfoDescription(
                         description: car.description.isEmpty ? 'لا يوجد' : car.description,
@@ -171,18 +174,20 @@ class CarDetailsScreen extends StatelessWidget {
                       const MyDivider(),
 
                       // سوق للإعلان (Marketing)
-                      PromoButton(
-                        onPressed: () async {
-                          final myId = context.read<ProfileCubit>().user?.userId;
-                          final isOwner = (myId != null && car.userId != null && myId == car.userId);
-                          if (isOwner) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('لا يمكنك طلب تسويق لإعلانك.')),
-                            );
-                            return;
-                          }
-                          await showMarketingRequestSheet(context, adId: id);
-                        },
+                      Center(
+                        child: PromoButton(
+                          onPressed: () async {
+                            final myId = context.read<ProfileCubit>().user?.userId;
+                            final isOwner = (myId != null && car.userId != null && myId == car.userId);
+                            if (isOwner) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('لا يمكنك طلب تسويق لإعلانك.')),
+                              );
+                              return;
+                            }
+                            await showMarketingRequestSheet(context, adId: id);
+                          },
+                        ),
                       ),
 
                       // إعلانات مشابهة (مثل العقار)

@@ -85,7 +85,7 @@ Future<void> showAuctionSuccessDialog(
     BuildContext context, {
       required String title,
       required String message,
-      required VoidCallback onViewAuction,
+
       VoidCallback? onBackHome,
     }) async {
   await showDialog(
@@ -125,17 +125,7 @@ Future<void> showAuctionSuccessDialog(
                       child: const Text('العودة للرئيسية'),
                     ),
                   ),
-                  SizedBox(width: 8.w),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: onViewAuction,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: ColorsManager.primaryColor,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-                      ),
-                      child: const Text('عرض المزاد'),
-                    ),
-                  ),
+
                 ],
               ),
             ],

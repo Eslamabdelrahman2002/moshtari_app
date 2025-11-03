@@ -37,6 +37,8 @@ class CarAdRequest {
   final List<File> images;
   final File? technicalReport;
 
+  final int? exhibitionId; // ✅ NEW: أضف field لـ exhibitionId (اختياري)
+
   CarAdRequest({
     required this.title,
     required this.description,
@@ -70,6 +72,7 @@ class CarAdRequest {
     required this.allowMarketing,
     required this.images,
     this.technicalReport,
+    this.exhibitionId, // ✅ NEW: اجعله optional
   });
 
   Map<String, dynamic> toMap() {
@@ -105,6 +108,7 @@ class CarAdRequest {
       'year': year,
       'allow_comments': allowComments,
       'allow_marketing': allowMarketing,
+      'exhibition_id': exhibitionId, // ✅ NEW: أضف exhibition_id في الـ map (لو موجود)
     };
   }
 }

@@ -7,7 +7,7 @@ class ExhibitionsRepo {
   ExhibitionsRepo(this._api);
 
   Future<List<ExhibitionItem>> fetchAll() async {
-    final res = await _api.get(ApiConstants.exhibitions);
+    final res = await _api.get(ApiConstants.exhibitions,requireAuth: true);
     final parsed = ExhibitionsListResponse.fromJson(res as Map<String, dynamic>);
     return parsed.data;
   }

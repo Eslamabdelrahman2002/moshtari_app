@@ -9,7 +9,7 @@ class PromoterProfileRepo {
   PromoterProfileRepo(this._api);
 
   Future<PromoterProfileData> fetchProfile() async {
-    final res = await _api.get(ApiConstants.promoterApplicationsProfile);
+    final res = await _api.get(ApiConstants.promoterApplicationsProfile,requireAuth: true);
     final parsed = PromoterProfileResponse.fromJson(res as Map<String, dynamic>);
     return parsed.data;
   }

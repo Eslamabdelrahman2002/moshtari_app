@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:mushtary/features/messages/data/models/messages_model.dart';
+import 'package:mushtary/features/messages/data/models/chat_model.dart'; // FIX: استخدم chat_model.dart
 
 abstract class MessagesState extends Equatable {
   @override

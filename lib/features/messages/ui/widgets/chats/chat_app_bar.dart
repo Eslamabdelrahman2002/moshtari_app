@@ -6,7 +6,7 @@ import 'package:mushtary/core/theme/text_styles.dart';
 
 import 'package:mushtary/core/widgets/safe_cached_image.dart'; // افتراضًا أن SafeCircleAvatar موجود هنا
 
-import 'package:mushtary/features/messages/data/models/messages_model.dart';
+import 'package:mushtary/features/messages/data/models/chat_model.dart';
 
 import '../../../../../core/router/routes.dart'; // غير المسار حسب مشروعك
 

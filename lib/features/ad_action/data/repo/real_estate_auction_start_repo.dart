@@ -96,7 +96,7 @@ class RealEstateAuctionStartRepo {
       print('FILE ${e.key} -> ${e.value.filename}');
     }
 
-    final resp = await _api.postForm(ApiConstants.realEstateAuctionsStart, form);
+    final resp = await _api.postForm(ApiConstants.realEstateAuctionsStart, form,requireAuth: true);
     return resp;
   }
 

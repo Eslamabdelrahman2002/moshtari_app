@@ -9,12 +9,19 @@ bool _asBool(dynamic v) {
   return false;
 }
 
+// ✅ FIX: ضمن أن _asInt يُرجع int? صراحةً
 int? _asInt(dynamic v) {
   if (v == null) return null;
   if (v is int) return v;
   if (v is num) return v.toInt();
   if (v is String) return int.tryParse(v);
   return null;
+}
+
+// ✅ FIX: Helper جديد للتحويل الآمن إلى int (مع fallback)
+int toIntSafe(dynamic v, {int fallback = 0}) {
+  final int? result = _asInt(v);
+  return result ?? fallback;
 }
 
 String? _asString(dynamic v) => v?.toString();
@@ -74,13 +81,13 @@ class MessagesModel {
 }
 
 class Message {
-  final int? id;
+  final int? id;  // ✅ يبقى int?
   final int? senderId;
   final int? receiverId;
   final int? conversationId;
   final String? messageContent;
   final String? createdAt;
-  final String? messageType; // ✅ جديد
+  final String? messageType; // ✅ تم إضافة messageType
 
   Message({
     this.id,
@@ -93,6 +100,7 @@ class Message {
   });
 
   factory Message.fromJson(Map<String, dynamic> json) => Message(
+    // ✅ FIX: استخدم _asInt صراحةً لضمان int?
     id: _asInt(json['id']),
     senderId: _asInt(json['sender_id'] ?? json['senderId']),
     receiverId: _asInt(json['receiver_id'] ?? json['receiverId']),
@@ -100,15 +108,26 @@ class Message {
     messageContent:
     _asString(json['message_content'] ?? json['content'] ?? json['message']),
     createdAt: _asString(json['created_at'] ?? json['createdAt']),
-    messageType: _asString(json['message_type'] ?? json['type'] ?? 'text'),
+    // ✅ FIX: fallback إلى 'unknown' لتجنب عرض base64 كنص
+    messageType: _asString(json['message_type'] ?? json['type'] ?? json['messageType']) ?? 'unknown',
   );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'sender_id': senderId,
+    'receiver_id': receiverId,
+    'conversation_id': conversationId,
+    'message_content': messageContent,
+    'created_at': createdAt,
+    'message_type': messageType,
+  };
 }
 
 class SendMessageRequestBody {
   final int receiverId;
   final String messageContent;
   final int? listingId;
-  final String messageType; // text, image, file, voice
+  final String messageType; // text, image, file, voice // ✅ تم تحديثه
   final int? repliedToId;
 
   SendMessageRequestBody({
@@ -122,7 +141,7 @@ class SendMessageRequestBody {
   Map<String, dynamic> toMap() => {
     'receiver_id': receiverId,
     'message_content': messageContent,
-    'message_type': messageType,
+    'message_type': messageType, // ✅ تم إضافته لـ toMap
     if (listingId != null) 'listing_id': listingId,
     if (repliedToId != null) 'replied_to_id': repliedToId,
   };
@@ -143,7 +162,7 @@ class AdInfo {
   });
 
   factory AdInfo.fromJson(Map<String, dynamic> json) => AdInfo(
-    id: _asInt(json['id']) ?? 0,
+    id: toIntSafe(json['id'], fallback: 0),  // ✅ استخدم الـ helper الجديد
     title: _asString(json['title']) ?? '',
     price: _asString(json['price']) ?? '',
     imageUrl: _asString(json['imageUrl'] ?? json['image_url'] ?? json['image']) ?? '',

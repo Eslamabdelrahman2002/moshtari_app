@@ -23,7 +23,7 @@ import 'package:mushtary/features/user_profile/logic/cubit/profile_cubit.dart';
 import '../../../../core/router/routes.dart';
 
 // الشات
-import 'package:mushtary/features/messages/data/models/messages_model.dart';
+import 'package:mushtary/features/messages/data/models/chat_model.dart';
 import 'package:mushtary/features/messages/data/repo/messages_repo.dart';
 import 'package:mushtary/features/messages/ui/widgets/chats/chat_initiation_sheet.dart';
 import 'package:mushtary/features/messages/ui/screens/chat_screen.dart';

@@ -8,7 +8,8 @@ import 'logic/cubit/real_estate_ads_cubit.dart';
 import 'logic/cubit/real_estate_ads_state.dart';
 
 class RealEstateCreateAdFlow extends StatefulWidget {
-  const RealEstateCreateAdFlow({super.key});
+  final int? exhibitionId; // ✅ إضافة حقل اختياري لاستقبال ID المعرض
+  const RealEstateCreateAdFlow({super.key, this.exhibitionId});
 
   @override
   State<RealEstateCreateAdFlow> createState() => _RealEstateCreateAdFlowState();
@@ -16,6 +17,17 @@ class RealEstateCreateAdFlow extends StatefulWidget {
 
 class _RealEstateCreateAdFlowState extends State<RealEstateCreateAdFlow> {
   final _controller = PageController();
+
+  @override
+  void initState() {
+    super.initState();
+    // 💡 عند التهيئة، نمرر ID المعرض إلى Cubit
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && widget.exhibitionId != null) {
+        context.read<RealEstateAdsCubit>().setExhibitionId(widget.exhibitionId);
+      }
+    });
+  }
 
   void _next() => _controller.nextPage(duration: const Duration(milliseconds: 250), curve: Curves.easeInOut);
 

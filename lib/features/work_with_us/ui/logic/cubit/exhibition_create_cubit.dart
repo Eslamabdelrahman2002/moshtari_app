@@ -17,9 +17,10 @@ class ExhibitionCreateCubit extends Cubit<ExhibitionCreateState> {
     required int cityId,
     required int regionId,
     required File image,
-    int? promoterId,
+    // تم حذف: int? promoterId,
   }) async {
-    emit(state.copyWith(submitting: true, success: false, clearError: true, clearId: true));
+    emit(state.copyWith(
+        submitting: true, success: false, clearError: true, clearId: true));
 
     try {
       final req = ExhibitionCreateRequest(
@@ -31,13 +32,14 @@ class ExhibitionCreateCubit extends Cubit<ExhibitionCreateState> {
         cityId: cityId,
         regionId: regionId,
         image: image,
-        promoterId: promoterId,
+        // تم حذف: promoterId: promoterId,
       );
 
       final res = await _repo.createExhibition(req);
 
       if (!res.success) {
-        throw Exception(res.message.isNotEmpty ? res.message : 'تعذر إنشاء الحساب');
+        throw Exception(
+            res.message.isNotEmpty ? res.message : 'تعذر إنشاء الحساب');
       }
 
       emit(state.copyWith(

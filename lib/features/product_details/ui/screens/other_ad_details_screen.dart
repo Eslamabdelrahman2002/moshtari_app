@@ -23,8 +23,7 @@ import 'package:mushtary/features/user_profile/logic/cubit/profile_cubit.dart';
 
 import '../../../../core/router/routes.dart';
 
-// الشات
-import 'package:mushtary/features/messages/data/models/messages_model.dart';
+
 import 'package:mushtary/features/messages/data/repo/messages_repo.dart';
 import 'package:mushtary/features/messages/ui/widgets/chats/chat_initiation_sheet.dart';
 
@@ -35,6 +34,7 @@ import '../../../favorites/ui/logic/cubit/favorites_cubit.dart';
 import '../../../home/data/models/home_data_model.dart';
 
 // برومو
+import '../../../messages/data/models/chat_model.dart';
 import '../../../real_estate_details/ui/widgets/real_estate_promo_button.dart';
 
 // Cubit/details

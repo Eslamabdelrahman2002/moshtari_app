@@ -129,9 +129,10 @@ class _RealEstateDetailsProductImagesState
                 // مشاركة
                 IconButton(
                   onPressed: () {
+                    final link = 'https://moshtary.com/ad/${widget.adId}';
                     showDialog(
                       context: context,
-                      builder: (_) => const ShareDialog(),
+                      builder: (_) => ShareDialog(shareLink: link),
                     );
                   },
                   icon: const Icon(Icons.share, color: Colors.white),

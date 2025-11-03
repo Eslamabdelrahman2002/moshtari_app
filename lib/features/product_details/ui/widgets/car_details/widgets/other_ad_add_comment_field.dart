@@ -3,6 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
+// افتراض استيراد MySvg
+import 'package:mushtary/core/widgets/primary/my_svg.dart';
+// افتراض استيراد PrimaryTextFormField
+import 'package:mushtary/core/widgets/primary/primary_text_form_field.dart';
 import 'package:mushtary/features/product_details/ui/logic/cubit/comment_send_cubit.dart';
 import 'package:mushtary/features/product_details/ui/logic/cubit/comment_send_state.dart';
 
@@ -63,40 +67,42 @@ class _OtherAdAddCommentFieldState extends State<OtherAdAddCommentField> {
         }
 
         return Container(
-          height: 65.h,
+          // ✅ تعديل الأبعاد لتطابق تصميم CommentTextField
+          height: 56.h,
           width: double.infinity,
-          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 12.h),
+          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
           decoration: BoxDecoration(
             color: ColorsManager.dark50,
             borderRadius: BorderRadius.circular(16.r),
           ),
           child: Row(
             children: [
-              Expanded(
-                child: TextField(
+              // ✅ استخدام PrimaryTextFormField لتعديل الـ UI
+              SizedBox(
+                width: 302.w,
+                height: 40.h,
+                child: PrimaryTextFormField(
                   controller: _ctrl,
-                  minLines: 1,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    hintText: 'اكتب تعليقك هنا ...........',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.r)),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-                  ),
-                  onSubmitted: (_) => submit(),
+                  validationError: '',
+                  hint: 'اكتب تعليقك هنا ...........',
+                  fillColor: ColorsManager.white,
+                  onFieldSubmitted: (_) => submit(),
                 ),
               ),
               horizontalSpace(8),
+              // ✅ استخدام MySvg لزر الإرسال مع حالة Loading
               GestureDetector(
                 onTap: canSend ? submit : null,
                 child: sending
                     ? SizedBox(
-                  width: 22.w,
-                  height: 22.w,
+                  width: 24.w,
+                  height: 24.w,
                   child: const CircularProgressIndicator.adaptive(strokeWidth: 2),
                 )
-                    : const Icon(Icons.send, color: Colors.blue),
+                    : Opacity(
+                  opacity: canSend ? 1.0 : 0.4,
+                  child: const MySvg(image: 'send-2'), // ✅ استخدام MySvg
+                ),
               ),
             ],
           ),

@@ -5,11 +5,11 @@ import 'package:mushtary/core/dependency_injection/injection_container.dart';
 import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/utils/helpers/cache_helper.dart';
 
-import 'package:mushtary/features/messages/data/models/messages_model.dart';
-import 'package:mushtary/features/messages/logic/cubit/chat_cubit.dart';
+import 'package:mushtary/features/messages/data/models/chat_model.dart'; // نموذج موحّد
 import 'package:mushtary/features/messages/logic/cubit/chat_state.dart';
 
 import '../../../../core/widgets/safe_cached_image.dart';
+import '../../logic/cubit/chat_cubit.dart';
 import '../widgets/chats/chat_selled_item.dart';
 import '../widgets/chats/message_data_widget.dart';
 import '../widgets/chats/message_input_box.dart';
@@ -58,9 +58,21 @@ class ChatScreen extends StatelessWidget {
         ),
       child: Builder(
         builder: (chatContext) {
-          Future<void> _safeSend(String messageContent) async {
-            await chatContext.read<ChatCubit>().sendMessage(
-              text: messageContent,
+          final cubit = chatContext.read<ChatCubit>();
+          final scrollController = ScrollController();
+
+          // كشف الاسكرول لأعلى (مع reverse: true، الأعلى = maxScrollExtent)
+          scrollController.addListener(() {
+            if (scrollController.position.pixels >=
+                scrollController.position.maxScrollExtent - 200) {  // threshold 200px
+              cubit.loadOlderMessages();
+            }
+          });
+
+          void _safeSend(String messageContent, String messageType) async {
+            await cubit.sendMessage(
+              content: messageContent,
+              messageType: messageType,
               adId: adInfo?.id,
             );
           }
@@ -82,10 +94,7 @@ class ChatScreen extends StatelessWidget {
                   SafeCircleAvatar(url: avatarUrl, radius: 12),
                   const SizedBox(width: 8),
                   Flexible(
-                    child: Text(
-                      name,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    child: Text(name, overflow: TextOverflow.ellipsis),
                   ),
                 ],
               ),
@@ -107,18 +116,36 @@ class ChatScreen extends StatelessWidget {
                         if (state.messages.isEmpty) {
                           return const Center(child: Text('لا توجد رسائل بعد'));
                         }
-                        return ListView.builder(
-                          reverse: true,
-                          padding: const EdgeInsets.symmetric(vertical: 16.0),
-                          itemCount: state.messages.length,
-                          itemBuilder: (_, index) {
-                            final m = state.messages[index];
-                            return MessageDataWidget(
-                              message: m.messageContent ?? '',
-                              isSended: m.senderId == meId,
-                              messageType: m.messageType ?? 'text',  // ← أضف النوع الذي يأتي من الخادم أو التحليل المحلي
-                            );
-                          },
+                        return Stack(
+                          children: [
+                            ListView.builder(
+                              controller: scrollController,  // ScrollController للكشف عن الاسكرول
+                              reverse: true,
+                              padding: const EdgeInsets.symmetric(vertical: 16.0),
+                              itemCount: state.messages.length + (cubit.isLoadingOlder ? 1 : 0),  // +1 للـ loader
+                              itemBuilder: (_, index) {
+                                // إذا كان loading older، أضف loader في الأعلى (index = length)
+                                if (cubit.isLoadingOlder && index == state.messages.length) {
+                                  return const Padding(
+                                    padding: EdgeInsets.all(16.0),
+                                    child: Center(child: CircularProgressIndicator()),
+                                  );
+                                }
+
+                                final msgIndex = state.messages.length - 1 - index;  // عكس لـ reverse
+                                final m = state.messages[msgIndex];
+
+                                final key = ValueKey(m.id);
+
+                                return MessageDataWidget(
+                                  key: key,
+                                  message: m.messageContent ?? '',
+                                  isSended: m.senderId == meId,
+                                  messageType: m.messageType ?? 'text',
+                                );
+                              },
+                            ),
+                          ],
                         );
                       }
                       return const SizedBox.shrink();
@@ -126,12 +153,10 @@ class ChatScreen extends StatelessWidget {
                   ),
                 ),
                 Padding(
-                  padding: EdgeInsets.only(
-                    bottom: MediaQuery.of(context).viewInsets.bottom,
-                  ),
-                  child:MessageInputBox(
+                  padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+                  child: MessageInputBox(
                     receiverId: chatModel.partnerUser?.id ?? 0,
-                    onSend: (msg, type) => _safeSend(msg),
+                    onSend: (msg, type) => _safeSend(msg, type),
                   ),
                 ),
               ],

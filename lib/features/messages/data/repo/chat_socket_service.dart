@@ -1,6 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
+
+import '../../../../core/auth/auth_coordinator.dart';
+import '../../../../core/dependency_injection/injection_container.dart';
 
 class SendMessageResult {
   final bool acked;
@@ -10,15 +14,9 @@ class SendMessageResult {
 
 class ChatSocketService {
   final String? Function()? tokenProvider;
-  // مثال: '87.237.225.78:8888'
-  final String host;
-
-  /// '/' للسيرفر عندك
-  final String path;
-
-  /// true => https/wss (لو معاك دومين + SSL)، false => http/ws
-  final bool secure;
-
+  final String host; // مثال: 87.237.225.78:8888
+  final String path; // مثال: '/socket.io'
+  final bool secure; // true => https
   final Duration connectTimeout;
 
   IO.Socket? _socket;
@@ -48,9 +46,19 @@ class ChatSocketService {
   Future<void> ensureConnected() async {
     if (_connected) return;
 
-    final token = tokenProvider?.call();
+    String? token = tokenProvider?.call();
     if (token == null || token.isEmpty) {
-      throw Exception('No token found for WebSocket');
+      try {
+        final auth = getIt<AuthCoordinator>();
+        final newToken = await auth.ensureTokenInteractive();
+        if (newToken == null || newToken.isEmpty) {
+          throw Exception('Authentication cancelled or failed');
+        }
+        token = newToken;
+      } catch (e) {
+        debugPrint('🔴 ChatSocketService auth failed: $e');
+        rethrow;
+      }
     }
 
     final pathToUse = _normalizePath(path);
@@ -63,9 +71,9 @@ class ChatSocketService {
     _connected = false;
 
     final opts = IO.OptionBuilder()
-        .setTransports(['websocket'])            // مهم: WebSocket فقط
-        .setPath(pathToUse)                      // '/'
-        .setQuery({'token': token})              // فقط token (لا تضيف EIO)
+        .setTransports(['websocket'])
+        .setPath(pathToUse)
+        .setQuery({'token': token})
         .disableAutoConnect()
         .enableReconnection()
         .setReconnectionAttempts(5)
@@ -80,35 +88,59 @@ class ChatSocketService {
 
     s.onConnect((_) {
       _connected = true;
+      debugPrint('🟢 ChatSocketService: Connected');
       if (!completer.isCompleted) completer.complete();
     });
-
     s.onConnectError((err) {
-      if (!completer.isCompleted) {
-        completer.completeError(Exception('connect_error: $err'));
-      }
+      final e = 'connect_error: $err';
+      debugPrint('🔴 $e');
+      if (!completer.isCompleted) completer.completeError(Exception(e));
     });
-
     s.onDisconnect((_) => _connected = false);
-    s.onError((_) {});
+    s.onError((e) => debugPrint('🔴 socket error: $e'));
 
-    // استقبال
-    s.on('newMessage', (data) => _incomingController.add(_toMap(data)));
-    s.on('messageCreated', (data) => _incomingController.add(_toMap(data)));
+    for (final ev in [
+      'newMessage','messageCreated','message','chatMessage',
+      'new_message','message:created','chat:new_message',
+    ]) {
+      s.on(ev, (data) {
+        debugPrint('📡 socket event: $ev');
+        _incomingController.add(_toMap(data));
+      });
+    }
 
     s.connect();
 
     await completer.future.timeout(
       connectTimeout,
-      onTimeout: () => throw TimeoutException('Socket.IO connect timeout (path: $pathToUse)'),
+      onTimeout: () => throw TimeoutException('Socket connect timeout'),
     );
   }
 
-  // Ack كـ Object (مش Array)
+  Future<void> joinChat(int chatId) async {
+    await ensureConnected();
+    final p = {'chat_id': chatId.toString(), 'chatId': chatId, 'room': 'chat:$chatId'};
+    _socket!.emit('joinChat', p);
+    _socket!.emit('subscribeChat', p);
+    _socket!.emit('join_room', p);
+    _socket!.emit('join', p);
+    debugPrint('🔗 socket join chat $chatId');
+  }
+
+  Future<void> leaveChat(int chatId) async {
+    if (!_connected) return;
+    final p = {'chat_id': chatId.toString(), 'chatId': chatId, 'room': 'chat:$chatId'};
+    _socket!.emit('leaveChat', p);
+    _socket!.emit('unsubscribeChat', p);
+    _socket!.emit('leave_room', p);
+    _socket!.emit('leave', p);
+    debugPrint('🔌 socket leave chat $chatId');
+  }
+
   Future<dynamic> emitWithAck(
       String event,
       Map<String, dynamic> payload, {
-        Duration timeout = const Duration(seconds: 20),
+        Duration timeout = const Duration(seconds: 25),
       }) async {
     await ensureConnected();
     final c = Completer<dynamic>();
@@ -125,52 +157,55 @@ class ChatSocketService {
     _socket!.emit(event, payload);
   }
 
-  // ============ Events ============
+  Future<dynamic> getUserChatRooms(int userId) =>
+      emitWithAck('getUserChatRooms', {'user_id': userId.toString()});
 
-  Future<dynamic> getUserChatRooms(int userId) {
-    return emitWithAck('getUserChatRooms', {
-      'user_id': userId,
-      'userId': userId,
-    });
+  // تعديل: دعم pagination مع beforeId, afterId, limit
+  Future<dynamic> getConversationMessages(
+      int conversationId, {
+        int? beforeId,  // لجلب الرسائل قبل هذا ID (pagination للقديمة)
+        int? afterId,   // لجلب الرسائل بعد هذا ID (للجديدة في polling)
+        int limit = 20, // حد افتراضي للعدد
+      }) async {
+    final payload = <String, dynamic>{
+      'chat_id': conversationId.toString(),
+      'chatId': conversationId,
+      if (beforeId != null) 'before_id': beforeId,
+      if (afterId != null) 'after_id': afterId,
+      'limit': limit,
+    };
+    debugPrint('📡 getConversationMessages: chatId=$conversationId, beforeId=$beforeId, afterId=$afterId, limit=$limit');
+    return emitWithAck('getMessages', payload);  // أو 'getConversationMessages' إذا كان الـ event مختلف
   }
 
-  Future<dynamic> getMessages(int chatId) {
-    return emitWithAck('getMessages', {
-      'chat_id': chatId.toString(), // Postman
-    });
-  }
+  Future<dynamic> getMessages(int chatId) =>
+      emitWithAck('getMessages', {'chat_id': chatId.toString()});
 
-  Future<dynamic> getConversationMessages(int conversationId) {
-    return getMessages(conversationId);
-  }
+  Future<dynamic> initiateChat(int senderId, int receiverId) =>
+      emitWithAck('initiateChat', {'senderId': senderId, 'receiverId': receiverId});
 
-  Future<dynamic> initiateChat(int senderId, int receiverId) {
-    return emitWithAck('initiateChat', {
-      'sender_id': senderId,
-      'receiver_id': receiverId,
-      'senderId': senderId,
-      'receiverId': receiverId,
-    });
-  }
-
-  // مطابق لـ Postman
   Future<SendMessageResult> sendMessageSmart({
     required int chatId,
     required int senderId,
     required int receiverId,
     required String content,
-    String messageType = 'text',
+    required String messageType, // text/image/audio/file/voice
     int? repliedToId,
-    Duration ackTimeout = const Duration(seconds: 5),
+    int? listingId,
+    Duration ackTimeout = const Duration(seconds: 30),
   }) async {
-    final payload = {
+    final normalizedType = (messageType.toLowerCase() == 'voice') ? 'audio' : messageType;
+    final payload = <String, dynamic>{
       'chatId': chatId,
       'senderId': senderId,
       'receiverId': receiverId,
-      'message_type': messageType,
+      'message_type': normalizedType,
       'content': content,
-      'replied_to_id': repliedToId, // null is fine
+      'replied_to_id': repliedToId,
+      if (listingId != null) 'listing_id': listingId,
     };
+    final pv = content.substring(0, content.length.clamp(0, 50));
+    debugPrint('📤 Socket send: type=$normalizedType, chatId=$chatId, preview=$pv');
 
     try {
       final ack = await emitWithAck('sendMessage', payload, timeout: ackTimeout);
@@ -184,23 +219,14 @@ class ChatSocketService {
   Future<dynamic> markMessageAsRead({
     required int chatId,
     required int userId,
-  }) {
-    return emitWithAck('markMessageAsRead', {
-      'chat_id': chatId.toString(),
-      'user_id': userId.toString(),
-    });
-  }
+    Duration timeout = const Duration(seconds: 25),
+  }) =>
+      emitWithAck('markMessageAsRead', {
+        'chat_id': chatId.toString(),
+        'user_id': userId.toString(),
+      }, timeout: timeout);
 
-  // بناء على لقطة الشاشة
-  Future<void> joinAuction({required int auctionId, required String auctionType}) async {
-    await emitNoAck('joinAuction', {
-      'auctionId': auctionId,
-      'auction_type': auctionType,
-    });
-  }
-
-  Stream<Map<String, dynamic>> get incomingMessagesStream =>
-      _incomingController.stream;
+  Stream<Map<String, dynamic>> get incomingMessagesStream => _incomingController.stream;
 
   Future<void> disconnect() async {
     try {

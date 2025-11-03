@@ -39,6 +39,7 @@ class _RealEstateSimilarStoryState extends State<RealEstateSimilarStory>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late List<_Frame> _frames;
+  Offset? _tapDownPosition;
   late int _index;
   bool _paused = false;
   double _dragDy = 0;
@@ -133,29 +134,51 @@ class _RealEstateSimilarStoryState extends State<RealEstateSimilarStory>
     final frame = _frames[_index];
     final size = MediaQuery.of(context).size;
 
-    return GestureDetector(
-      onTapDown: (d) {
-        final dx = d.localPosition.dx;
-        if (dx < size.width * 0.33) {
-          _prev();
-        } else {
-          _next();
-        }
-      },
-      onLongPressStart: (_) => _pause(),
-      onLongPressEnd: (_) => _resume(),
-      onVerticalDragUpdate: (d) {
-        _dragDy += d.delta.dy;
-        if (!_paused) _pause();
-      },
-      onVerticalDragEnd: (_) {
-        if (_dragDy > 80) {
-          Navigator.of(context).pop();
-        } else {
-          _dragDy = 0;
-          _resume();
-        }
-      },
+    return Directionality(
+        textDirection: TextDirection.rtl, // إضافة Directionality لدعم RTL
+        child: GestureDetector(
+          onTapDown: (d) {
+            _pause(); // ✅ الإيقاف الفوري
+            _tapDownPosition = d.localPosition; // حفظ الموضع للنقر
+          },
+
+          // ✅ إضافة onTapUp للتقليب والاستئناف
+          onTapUp: (d) {
+            final size = MediaQuery.of(context).size;
+
+            // التأكد من أن هناك موضع نقر تم حفظه
+            if (_tapDownPosition != null) {
+              final dx = _tapDownPosition!.dx;
+
+              // منطق التقليب (RTL: اليمين رجوع، اليسار تقدم)
+              if (dx > size.width * 0.66) { // الثلث الأيمن (رجوع)
+                _prev();
+              } else { // الثلثين الأيسرين (تقدم)
+                _next();
+              }
+            }
+
+            _tapDownPosition = null; // تصفير الموضع
+            _resume(); // ✅ الاستئناف بعد رفع الإصبع
+          },
+
+          // onLongPressEnd يستخدم لـ Vertical Drag End فقط، لكن كان يجب إزالته تماماً إذا لم يكن مستخدماً للإيقاف
+          // سنعيد فقط onVerticalDragEnd للـ resume
+
+          // **تم حذف onLongPressStart و onLongPressEnd المخصصين سابقاً**
+
+          onVerticalDragUpdate: (d) {
+            _dragDy += d.delta.dy;
+            if (!_paused) _pause();
+          },
+          onVerticalDragEnd: (_) {
+            if (_dragDy > 80) {
+              Navigator.of(context).pop();
+            } else {
+              _dragDy = 0;
+              _resume();
+            }
+          },
       child: Scaffold(
         backgroundColor: ColorsManager.blackBackground,
         body: Stack(
@@ -312,7 +335,7 @@ class _RealEstateSimilarStoryState extends State<RealEstateSimilarStory>
             ),
           ],
         ),
-      ),
+      ),)
     );
   }
 

@@ -28,72 +28,63 @@ class AuthCoordinator {
         _registerRepo = registerRepo,
         _otpRepo = otpRepo;
 
+  /// ✅ التأكد من وجود التوكن، وفتح Bottom Sheet لو مفقود
   Future<String?> ensureToken({bool force = false}) async {
-    print('🟢 AuthCoordinator: ensureToken called (force: $force)'); // 🟢 Log للـ debug
+    print('🟢 AuthCoordinator: ensureToken (force=$force)');
 
     final existing = CacheHelper.getData(key: 'token') as String?;
-    // لو عندنا توكن صالح، نرجعه ونكمل
     if (!force && (existing?.isNotEmpty ?? false)) {
-      print('🟢 AuthCoordinator: Existing token found (${existing?.length ?? 0} chars)'); // 🟢 Log
+      print('🟢 AuthCoordinator: Existing token found (${existing?.length ?? 0} chars)');
       return existing;
     }
 
-    print('🟢 AuthCoordinator: No valid token, starting flow'); // 🟢 Log
+    print('🟢 AuthCoordinator: No valid token, launching auth flow...');
 
     if (_completer != null) {
-      print('🟢 AuthCoordinator: Using existing completer'); // 🟢 Log
+      print('🟢 AuthCoordinator: Using existing completer');
       return _completer!.future;
     }
     _completer = Completer<String?>();
 
     try {
-      final ctx = navigatorKey.currentContext;
-      print('🟢 AuthCoordinator: Context available: ${ctx != null}'); // 🟢 Log
+      BuildContext? ctx;
+      // 🔹 انتظر لحد ما الـ navigatorKey يبقى جاهز
+      for (int i = 0; i < 25; i++) {
+        ctx = navigatorKey.currentContext;
+        if (ctx != null) break;
+        print('🟢 AuthCoordinator: Waiting for valid context...');
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      }
 
       if (ctx == null) {
-        print('🟢 AuthCoordinator: Context null, retrying in 100ms'); // 🟢 Log
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-        return ensureToken(force: force);
+        print('🔴 AuthCoordinator: Could not obtain context, aborting flow');
+        _completer!.complete(null);
+        return null;
       }
 
-      print('🟢 AuthCoordinator: Scheduling showAuthFlow...'); // 🟢 Log
+      print('🟢 AuthCoordinator: Context ready, opening bottom sheet...');
 
-      // نفتح Auth Flow بالكامل عبر Bottom Sheets
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        try {
-          print('🟢 AuthCoordinator: Calling showAuthFlow'); // 🟢 Log
-          // يتم فتح التدفق بالكامل هنا (Login -> OTP -> Register)
-          final flowFinished = await showAuthFlow(ctx);
+      // فتح الـ Bottom Sheet داخل الإطار القادم
+      await Future<void>.delayed(Duration.zero);
+      final flowFinished = await showAuthFlow(ctx);
+      print('🟢 AuthCoordinator: showAuthFlow finished: $flowFinished');
 
-          print('🟢 AuthCoordinator: showAuthFlow finished: $flowFinished'); // 🟢 Log
-
-          // 🟢 تصحيح Null Safety: check لو _completer موجود قبل استخدام !
-          if (_completer != null && !_completer!.isCompleted) {
-            // إذا نجح التدفق، يعني أن التوكن تم حفظه
-            if (flowFinished == true) {
-              final token = CacheHelper.getData(key: 'token') as String?;
-              print('🟢 AuthCoordinator: Flow success, token: ${token?.length ?? 0} chars'); // 🟢 Log
-              _completer!.complete(token);
-            } else {
-              print('🟢 AuthCoordinator: Flow failed/cancelled (${flowFinished})'); // 🟢 Log
-              _completer!.complete(null);
-            }
-          } else {
-            print('🟢 AuthCoordinator: Completer already completed or null'); // 🟢 Log
-          }
-        } catch (e) {
-          print('🟢 AuthCoordinator: Error in showAuthFlow: $e'); // 🟢 Log
-          if (_completer != null && !_completer!.isCompleted) {
-            _completer!.completeError(e);
-          }
+      if (!_completer!.isCompleted) {
+        if (flowFinished == true) {
+          final token = CacheHelper.getData(key: 'token') as String?;
+          print('🟢 AuthCoordinator: Flow success, token length ${token?.length ?? 0}');
+          _completer!.complete(token);
+          return token;
+        } else {
+          print('🟡 AuthCoordinator: Flow cancelled or failed');
+          _completer!.complete(null);
+          return null;
         }
-      });
-      return _completer!.future;
-    } catch (e) {
-      print('🟢 AuthCoordinator: Outer error: $e'); // 🟢 Log
-      if (_completer != null && !_completer!.isCompleted) {
-        _completer!.completeError(e);
       }
+      return _completer!.future;
+    } catch (e, st) {
+      print('🔴 AuthCoordinator: Exception $e\n$st');
+      if (!_completer!.isCompleted) _completer!.completeError(e);
       rethrow;
     } finally {
       _completer = null;
@@ -133,16 +124,14 @@ class AuthCoordinator {
         otpCase: OtpCase.verification,
       );
 
-// افتح شاشة الـ OTP الكاملة وانتظر النتيجة
-      final ok =
-      await Navigator.pushNamed(ctx, Routes.otpScreen, arguments: args) as bool?;
-
+      // افتح شاشة OTP وانتظر النتيجة
+      final ok = await Navigator.pushNamed(ctx, Routes.otpScreen, arguments: args) as bool?;
       if (ok == true) {
         token = CacheHelper.getData(key: 'token') as String?;
       }
     }
 
-    // حفظ التوكن بعد نجاح أي طريقة
+    // حفظ التوكن بعد النجاح
     if (token != null && token.isNotEmpty) {
       await CacheHelper.saveData(key: 'token', value: token);
       return token;
@@ -154,6 +143,6 @@ class AuthCoordinator {
     await CacheHelper.saveData(key: 'token', value: '');
   }
 
-  // 🟢 دالة متوافقة مع EnsureTokenInteractive (إضافة جديدة)
+  /// دالة مختصرة متوافقة مع ApiService
   Future<String?> ensureTokenInteractive() => ensureToken();
 }

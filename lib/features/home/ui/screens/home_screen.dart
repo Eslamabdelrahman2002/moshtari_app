@@ -7,6 +7,7 @@ import 'package:mushtary/core/router/routes.dart';
 import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/utils/helpers/navigation.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
+import 'package:mushtary/core/widgets/primary/my_svg.dart';
 
 import 'package:mushtary/features/home/ui/widgets/home_action_bar.dart';
 import 'package:mushtary/features/home/ui/widgets/home_banners.dart';
@@ -202,7 +203,7 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
                 body: CustomScrollView(
                   slivers: [
                     SliverPadding(
-                      padding: EdgeInsets.fromLTRB(0, 16.h, 0, 100.h),
+                      padding: EdgeInsets.fromLTRB(8.w, 8.h, 8.w, 100.h),
                       sliver: isListView
                           ? HomeListView(ads: displayedItems)
                           : HomeGridView(ads: displayedItems),
@@ -219,13 +220,15 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
                     left: 0,
                     right: 0,
                     child: Center(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _CircleAction(icon: Icons.tune_rounded, onTap: _openFilter),
-                          SizedBox(width: 12.w),
-                          _CircleAction(icon: Icons.search_rounded, onTap: _openSearch),
-                        ],
+                      child: Container(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _CircleAction( onTap: _openFilter, icon: 'filter_icon',),
+                            SizedBox(width: 12.w),
+                            _CircleAction(icon: 'search-normal', onTap: _openSearch),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -287,14 +290,14 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
 }
 
 class _CircleAction extends StatelessWidget {
-  final IconData icon;
+  final String icon;
   final VoidCallback onTap;
   const _CircleAction({required this.icon, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: ColorsManager.secondary500.withOpacity(.8),
       elevation: 4,
       shape: const CircleBorder(),
       child: InkWell(
@@ -302,7 +305,7 @@ class _CircleAction extends StatelessWidget {
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(12.0),
-          child: Icon(icon, color: ColorsManager.primary400, size: 24),
+          child: MySvg(image: icon,height: 18,width: 18,color: ColorsManager.primaryColor,)
         ),
       ),
     );

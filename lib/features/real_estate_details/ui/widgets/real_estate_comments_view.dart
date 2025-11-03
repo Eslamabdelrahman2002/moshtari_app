@@ -11,6 +11,8 @@ class RealEstateCommentsView extends StatelessWidget {
 
   const RealEstateCommentsView({super.key, required this.comments});
 
+  String? _safeString(dynamic v) => v?.toString().trim().isEmpty ?? true ? null : v.toString();
+
   @override
   Widget build(BuildContext context) {
     final currentUsername =
@@ -33,26 +35,39 @@ class RealEstateCommentsView extends StatelessWidget {
           ...comments.map((c) {
             final map = c as Map<String, dynamic>;
 
-            // استخرج الاسم من التعليق
+            // استخراج الاسم
             String? nameFromComment;
-            final raw = map['user_name'] ??
+            final rawName = map['user_name'] ??
                 map['username'] ??
                 (map['user'] is Map ? map['user']['username'] : null);
-            if (raw != null) nameFromComment = raw.toString().trim();
+            nameFromComment = _safeString(rawName);
 
-            // fallback للبروفايل أو "مستخدم"
-            final userName = (nameFromComment != null && nameFromComment.isNotEmpty)
+            // ✅ الجزء الهام: استخراج رابط الصورة
+            String? imageUrl;
+            // 1. التحقق من المفاتيح المباشرة
+            final rawImage = map['user_profile_image'] ??
+                map['user_image'] ??
+                map['user_avatar'];
+
+            // 2. التحقق من مفاتيح داخل كائن "user"
+            final userMap = map['user'] as Map<String, dynamic>?;
+            final userRawImage = userMap?['profile_image'] ??
+                userMap?['image'] ??
+                userMap?['avatar']; // مفاتيح محتملة أخرى
+
+            imageUrl = _safeString(rawImage ?? userRawImage);
+
+            // ... (بقية منطق الاستخراج)
+            final userName = (nameFromComment != null)
                 ? nameFromComment
                 : ((currentUsername?.trim().isNotEmpty ?? false)
                 ? currentUsername!.trim()
                 : 'مستخدم');
 
-            final text = (map['comment_text'] ?? map['text'] ?? '').toString();
-
-            // created_at -> DateTime?
-            final createdAtStr = (map['created_at'] ?? '').toString();
+            final text = _safeString(map['comment_text'] ?? map['text'] ?? '') ?? '...';
+            final createdAtStr = _safeString(map['created_at']);
             DateTime? createdAt;
-            if (createdAtStr.isNotEmpty) {
+            if (createdAtStr != null) {
               createdAt = DateTime.tryParse(createdAtStr);
             }
 
@@ -60,8 +75,9 @@ class RealEstateCommentsView extends StatelessWidget {
               padding: EdgeInsets.only(bottom: 8.h),
               child: CommentItem(
                 userName: userName,
-                comment: text.isEmpty ? '...' : text,
+                comment: text,
                 createdAt: createdAt,
+                userImageUrl: imageUrl, // ✅ تمرير رابط الصورة
               ),
             );
           }).toList(),

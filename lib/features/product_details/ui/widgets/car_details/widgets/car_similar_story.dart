@@ -39,6 +39,7 @@ class _CarSimilarStoryState extends State<CarSimilarStory> with SingleTickerProv
   late int _index;
   bool _paused = false;
   double _dragDy = 0;
+  Offset? _tapDownPosition;
 
   @override
   void initState() {
@@ -125,18 +126,30 @@ class _CarSimilarStoryState extends State<CarSimilarStory> with SingleTickerProv
 
     return GestureDetector(
       onTapDown: (d) {
-        final dx = d.localPosition.dx;
-        if (dx < size.width * 0.33) {
-          _prev();
-        } else {
-          _next();
-        }
+        _pause(); // إيقاف القصة فورًا بمجرد اللمس
+        _tapDownPosition = d.localPosition; // حفظ الموضع لتحديد التقليب
       },
-      onLongPressStart: (_) => _pause(),
       onLongPressEnd: (_) => _resume(),
       onVerticalDragUpdate: (d) {
         _dragDy += d.delta.dy;
         if (!_paused) _pause();
+      },
+      onTapUp: (d) {
+        if (_tapDownPosition == null) {
+          _resume();
+          return;
+        }
+        final dx = _tapDownPosition!.dx;
+
+        // تحديد منطق التقليب (RTL: اليمين رجوع، اليسار تقدم)
+        if (dx > size.width * 0.66) { // الثلث الأيمن (للسحب للوراء)
+          _prev();
+        } else { // الثلثين الأيسرين (للسحب للأمام)
+          _next();
+        }
+
+        _tapDownPosition = null;
+        _resume(); // استئناف الحركة بعد التقليب
       },
       onVerticalDragEnd: (_) {
         if (_dragDy > 80) {
@@ -338,7 +351,7 @@ class _CarSimilarStoryState extends State<CarSimilarStory> with SingleTickerProv
     return InkResponse(
       onTap: onTap,
       radius: 28.r,
-      child: SizedBox(width: 40.w, height: 40.w, child: const MySvg(image: 'close_circle')),
+      child: SizedBox(width: 20.w, height: 20.w, child: const MySvg(image: 'close_circle')),
     );
   }
 }

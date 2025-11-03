@@ -18,7 +18,7 @@ class AdReviewsRepo {
       if (extraRatings != null) ...extraRatings,
     };
 
-    final res = await api.post(ApiConstants.adReviewForAd(adId), body);
+    final res = await api.post(ApiConstants.adReviewForAd(adId), body,requireAuth: true);
     return AdReviewResponse.fromJson(res as Map<String, dynamic>);
   }
 }

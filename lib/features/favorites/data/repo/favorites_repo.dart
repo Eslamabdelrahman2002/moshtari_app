@@ -36,6 +36,7 @@ class FavoritesRepo {
           'favorite_id': id,
         },
       );
+
     } catch (e) {
       throw AppException('Failed to remove favorite: $e');
     }

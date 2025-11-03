@@ -9,9 +9,9 @@ class ServiceRequestRepo {
   Future<Map<String, dynamic>> create(CreateServiceRequest req) async {
     // جرّب create أولاً ثم بديل /service-requests عند الحاجة
     try {
-      return await _api.post(ApiConstants.serviceRequestsCreate, req.toJson());
+      return await _api.post(ApiConstants.serviceRequestsCreate, req.toJson(),requireAuth: true);
     } catch (_) {
-      return await _api.post(ApiConstants.serviceRequests, req.toJson());
+      return await _api.post(ApiConstants.serviceRequests, req.toJson(),requireAuth: true);
     }
   }
 }

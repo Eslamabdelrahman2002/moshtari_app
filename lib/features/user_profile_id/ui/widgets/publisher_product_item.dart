@@ -7,8 +7,8 @@ import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
 import 'package:mushtary/core/widgets/primary/my_svg.dart';
 
-import '../../../user_profile/data/model/my_ads_model.dart';
-import '../../../user_profile/data/model/my_auctions_model.dart';
+import '../../../user_profile_id/data/model/my_ads_model.dart';
+import '../../../user_profile_id/data/model/my_auctions_model.dart';
 
 class PublisherProductItem extends StatelessWidget {
   final Object model; // MyAdsModel أو MyAuctionModel

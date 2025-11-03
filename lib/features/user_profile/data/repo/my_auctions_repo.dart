@@ -15,6 +15,7 @@ class MyAuctionsRepo {
   }) async {
     final response = await _apiService.get(
       ApiConstants.myAuctions,
+      requireAuth: true,
       queryParameters: {'page': page, 'limit': limit},
     );
     return MyAuctionsResponseModel.fromJson(response);
@@ -25,7 +26,7 @@ class MyAuctionsRepo {
     required String auctionType, // 'real_estate' | 'car'
   }) async {
     final res = await _apiService.get(
-      ApiConstants.auctionDetails(id),
+      ApiConstants.auctionDetails(id),requireAuth: true,
       queryParameters: {'auction_type': auctionType},
     );
     return AuctionDetailsModel.fromJson(res['data'] as Map<String, dynamic>);
@@ -42,6 +43,7 @@ class MyAuctionsRepo {
     // PUT /api/car-auctions/approve/{auctionId}?auction_type=car
     final map = await _apiService.put(
       ApiConstants.auctionAccept(auctionId, auctionType),
+      requireAuth: true,
       data: {
         'auction_type': auctionType,
         'item_id': itemId,

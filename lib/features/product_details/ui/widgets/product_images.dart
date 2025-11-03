@@ -70,11 +70,10 @@ class _ProductImagesState extends State<ProductImages> {
                   icon: const Icon(Icons.share),
                   color: ColorsManager.white,
                   onPressed: () {
+                    final link = 'https://moshtary.com/auction/${widget.auctionsModel.id}';
                     showDialog(
                       context: context,
-                      builder: (BuildContext context) {
-                        return const ShareDialog();
-                      },
+                      builder: (_) => ShareDialog(shareLink: link),
                     );
                   },
                 ),

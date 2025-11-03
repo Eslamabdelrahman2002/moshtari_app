@@ -78,6 +78,7 @@
 //   static const String iconsFavorites = 'assets/icons/favorites.svg';
 //   static const String iconsFavoritesGray = 'assets/icons/favorites_gray.svg';
 //   static const String iconsFavourite = 'assets/icons/favourite.svg';
+//   static const String iconsFilterIcon = 'assets/icons/filter_icon.svg';
 //   static const String iconsFlatbed = 'assets/icons/flatbed.svg';
 //   static const String iconsFour wheel = 'assets/icons/four wheel.svg';
 //   static const String iconsFrame = 'assets/icons/frame.svg';
@@ -173,10 +174,10 @@
 //   static const String iconsReply = 'assets/icons/reply.svg';
 //   static const String iconsRiyal 1 = 'assets/icons/riyal 1.svg';
 //   static const String iconsRiyal11 = 'assets/icons/riyal11.svg';
-//   static const String iconsRiyalBlack = 'assets/icons/riyal_new.svg';
-//   static const String iconsRiyalBlue = 'assets/icons/riyal_new.svg';
-//   static const String iconsRiyalOnblue = 'assets/icons/riyal_new.svg';
-//   static const String iconsRiyalWhite = 'assets/icons/riyal_new.svg';
+//   static const String iconsRiyalBlue = 'assets/icons/riyal_blue.svg';
+//   static const String iconsRiyalNew = 'assets/icons/riyal_new.svg';
+//   static const String iconsRiyalOnblue = 'assets/icons/riyal_onblue.svg';
+//   static const String iconsRiyalWhite = 'assets/icons/riyal_white.svg';
 //   static const String iconsRiyalYellow = 'assets/icons/riyal_yellow.svg';
 //   static const String iconsRoadIconPrimary400 = 'assets/icons/road-icon-primary400.svg';
 //   static const String iconsRoundedBackArrow = 'assets/icons/rounded_back_arrow.svg';
@@ -184,6 +185,7 @@
 //   static const String iconsRulerPrimary = 'assets/icons/ruler-primary.svg';
 //   static const String iconsRulerPrimary400 = 'assets/icons/ruler-primary400.svg';
 //   static const String iconsSatha = 'assets/icons/satha.svg';
+//   static const String iconsSaudiRiyal = 'assets/icons/saudi_riyal.svg';
 //   static const String iconsSearchNormal = 'assets/icons/search-normal.svg';
 //   static const String iconsSearchStatus = 'assets/icons/search-status.svg';
 //   static const String iconsSend = 'assets/icons/send.svg';

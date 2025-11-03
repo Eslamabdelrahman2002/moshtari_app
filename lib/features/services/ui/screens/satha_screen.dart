@@ -20,6 +20,7 @@ import 'package:mushtary/features/services/data/model/service_request_payload.da
 import 'package:mushtary/features/services/logic/cubit/service_request_cubit.dart';
 import 'package:mushtary/features/services/logic/cubit/service_request_state.dart';
 
+import '../../../../core/router/routes.dart';
 import '../widgets/map_picker_screen.dart'; // PickedLocation
 
 class SathaScreen extends StatefulWidget {
@@ -106,7 +107,6 @@ class _SathaScreenState extends State<SathaScreen> {
       ],
       child: Scaffold(
         appBar: AppBar(
-          leading: Icon(Icons.arrow_forward_ios, color: ColorsManager.darkGray300),
           title: Text('طلب سطحة', style: TextStyles.font20Black500Weight),
           backgroundColor: ColorsManager.white,
           elevation: 4,

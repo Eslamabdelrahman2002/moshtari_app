@@ -5,11 +5,13 @@ import 'package:flutter/services.dart';
 import 'package:mushtary/core/api/api_constants.dart';
 import 'package:mushtary/core/api/app_exception.dart';
 import 'package:mushtary/core/utils/helpers/cache_helper.dart';
+import 'package:mushtary/core/dependency_injection/injection_container.dart';
+
+import '../auth/auth_coordinator.dart';
 
 class ApiService {
   final Dio _dio;
 
-  // رسائل ودّية للمستخدم
   static const String _noInternetMsg =
       'لا يوجد اتصال بالإنترنت، يرجى التحقق من الشبكة ثم إعادة المحاولة.';
   static const String _noTokenMsg =
@@ -27,7 +29,6 @@ class ApiService {
       InterceptorsWrapper(
         onRequest: (options, handler) {
           final token = _getToken();
-          // نضيف التوكن إن وجد (لا يفرض المصادقة)
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
@@ -43,33 +44,24 @@ class ApiService {
       LogInterceptor(
         requestHeader: true,
         requestBody: true,
-        responseHeader: true,
-        responseBody: true,
+        responseHeader: false,
+        responseBody: false,
         error: true,
         logPrint: (object) => print(object.toString()),
       ),
     );
   }
 
-  // ============== Helpers ==============
+  // ================= Helpers =================
 
   String? _getToken() => CacheHelper.getData(key: 'token') as String?;
 
-  Future<void> _ensureAuth(bool requireAuth) async {
-    if (!requireAuth) return;
-    final token = _getToken();
-    if (token == null || token.isEmpty) {
-      throw AppException(_noTokenMsg);
-    }
-  }
-
-  bool _isNetworkTimeoutOrError(DioException e) {
-    return e.type == DioExceptionType.connectionTimeout ||
-        e.type == DioExceptionType.sendTimeout ||
-        e.type == DioExceptionType.receiveTimeout ||
-        e.type == DioExceptionType.connectionError ||
-        e.error is SocketException;
-  }
+  bool _isNetworkTimeoutOrError(DioException e) =>
+      e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.sendTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.connectionError ||
+          e.error is SocketException;
 
   Future<bool> _isOfflineNow() async {
     try {
@@ -98,29 +90,77 @@ class ApiService {
     throw AppException.create(error);
   }
 
-  // ============== Requests ==============
+  /// ✅ تأكيد وجود التوكن، وإظهار الـBottomSheet لو مش موجود
+  Future<void> _ensureAuth(bool requireAuth) async {
+    if (!requireAuth) return;
+
+    final token = _getToken();
+    if (token != null && token.isNotEmpty) return;
+
+    print('🟢 ApiService: No token, opening auth bottom sheet...');
+    final auth = getIt<AuthCoordinator>();
+    final newToken = await auth.ensureTokenInteractive();
+
+    if (newToken == null || newToken.isEmpty) {
+      throw AppException(_noTokenMsg);
+    }
+  }
+
+  /// ✅ إعادة المحاولة بعد تحديث التوكن
+  Future<Response> _retry(RequestOptions req) async {
+    final freshToken = _getToken();
+    final headers = Map<String, dynamic>.from(req.headers);
+    if (freshToken != null && freshToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $freshToken';
+    }
+
+    final opts = Options(
+      method: req.method,
+      headers: headers,
+      responseType: req.responseType,
+      contentType: req.contentType,
+    );
+
+    return _dio.request(
+      req.path,
+      data: req.data,
+      queryParameters: req.queryParameters,
+      options: opts,
+      cancelToken: req.cancelToken,
+    );
+  }
+
+  // ================= Requests =================
 
   Future<dynamic> get(
       String endpoint, {
         Map<String, dynamic>? queryParameters,
-        bool requireAuth = false, // الافتراضي الآن بدون مصادقة
+        bool requireAuth = false,
       }) async {
     await _ensureAuth(requireAuth);
     try {
-      final response = await _dio.get(endpoint, queryParameters: queryParameters);
+      final response =
+      await _dio.get(endpoint, queryParameters: queryParameters);
       return response.data;
     } on DioException catch (error) {
+      final status = error.response?.statusCode ?? 0;
+      if (status == 401 && requireAuth) {
+        final auth = getIt<AuthCoordinator>();
+        final t = await auth.ensureTokenInteractive();
+        if (t != null && t.isNotEmpty) {
+          final retried = await _retry(error.requestOptions);
+          return retried.data;
+        }
+      }
       await _handleDioError(error);
-    } catch (e) {
-      throw AppException(e.toString());
     }
   }
 
   Future<Response> getResponse(
       String endpoint, {
         Map<String, dynamic>? queryParameters,
+        bool requireAuth = false,
         bool relaxStatus = false,
-        bool requireAuth = false, // الافتراضي الآن بدون مصادقة
       }) async {
     await _ensureAuth(requireAuth);
     try {
@@ -133,12 +173,13 @@ class ApiService {
       );
       return response;
     } on DioException catch (error) {
-      if (error.response != null) {
-        final status = error.response?.statusCode ?? 0;
-        if (status == 401 || status == 403) {
-          throw AppException(_noTokenMsg);
+      final status = error.response?.statusCode ?? 0;
+      if (status == 401 && requireAuth) {
+        final auth = getIt<AuthCoordinator>();
+        final t = await auth.ensureTokenInteractive();
+        if (t != null && t.isNotEmpty) {
+          return await _retry(error.requestOptions);
         }
-        return error.response!;
       }
       await _handleDioError(error);
     }
@@ -147,22 +188,29 @@ class ApiService {
   Future<Map<String, dynamic>> post(
       String endpoint,
       Map<String, dynamic> data, {
-        bool requireAuth = false, // الافتراضي الآن بدون مصادقة
+        bool requireAuth = false,
       }) async {
     await _ensureAuth(requireAuth);
     try {
       final response = await _dio.post(endpoint, data: data);
       return response.data;
     } on DioException catch (error) {
+      final status = error.response?.statusCode ?? 0;
+      if (status == 401 && requireAuth) {
+        final auth = getIt<AuthCoordinator>();
+        final t = await auth.ensureTokenInteractive();
+        if (t != null && t.isNotEmpty) {
+          final retried = await _retry(error.requestOptions);
+          return retried.data;
+        }
+      }
       await _handleDioError(error);
-    } catch (e) {
-      throw AppException(e.toString());
     }
   }
 
   Future<Map<String, dynamic>> postNoData(
       String endpoint, {
-        bool requireAuth = false, // الافتراضي الآن بدون مصادقة
+        bool requireAuth = false,
       }) async {
     await _ensureAuth(requireAuth);
     try {
@@ -172,16 +220,26 @@ class ApiService {
       if (d is Map<String, dynamic>) return d;
       return {'success': true, 'data': d};
     } on DioException catch (error) {
+      final status = error.response?.statusCode ?? 0;
+      if (status == 401 && requireAuth) {
+        final auth = getIt<AuthCoordinator>();
+        final t = await auth.ensureTokenInteractive();
+        if (t != null && t.isNotEmpty) {
+          final retried = await _retry(error.requestOptions);
+          final d = retried.data;
+          if (d == null) return {'success': true, 'message': 'تم تنفيذ الطلب بنجاح'};
+          if (d is Map<String, dynamic>) return d;
+          return {'success': true, 'data': d};
+        }
+      }
       await _handleDioError(error);
-    } catch (e) {
-      throw AppException(e.toString());
     }
   }
 
   Future<Map<String, dynamic>> postForm(
       String endpoint,
       FormData formData, {
-        bool requireAuth = false, // الافتراضي الآن بدون مصادقة
+        bool requireAuth = false,
       }) async {
     await _ensureAuth(requireAuth);
     try {
@@ -197,32 +255,46 @@ class ApiService {
       );
       return response.data;
     } on DioException catch (error) {
+      final status = error.response?.statusCode ?? 0;
+      if (status == 401 && requireAuth) {
+        final auth = getIt<AuthCoordinator>();
+        final t = await auth.ensureTokenInteractive();
+        if (t != null && t.isNotEmpty) {
+          final retried = await _retry(error.requestOptions);
+          return retried.data;
+        }
+      }
       await _handleDioError(error);
-    } catch (e) {
-      throw AppException(e.toString());
     }
   }
 
   Future<Map<String, dynamic>> put(
       String endpoint, {
         dynamic data,
-        bool requireAuth = false, // الافتراضي الآن بدون مصادقة
+        bool requireAuth = false,
       }) async {
     await _ensureAuth(requireAuth);
     try {
       final response = await _dio.put(endpoint, data: data);
       return response.data;
     } on DioException catch (error) {
+      final status = error.response?.statusCode ?? 0;
+      if (status == 401 && requireAuth) {
+        final auth = getIt<AuthCoordinator>();
+        final t = await auth.ensureTokenInteractive();
+        if (t != null && t.isNotEmpty) {
+          final retried = await _retry(error.requestOptions);
+          return retried.data;
+        }
+      }
       await _handleDioError(error);
-    } catch (e) {
-      throw AppException(e.toString());
     }
   }
 
   Future<Map<String, dynamic>> deleteWithBody(
       String endpoint, {
         Map<String, dynamic>? data,
-        bool requireAuth = false, // الافتراضي الآن بدون مصادقة
+        bool requireAuth = false,
       }) async {
     await _ensureAuth(requireAuth);
     try {
@@ -240,9 +312,16 @@ class ApiService {
       if (d is Map<String, dynamic>) return d;
       return {'success': true, 'data': d};
     } on DioException catch (error) {
+      final status = error.response?.statusCode ?? 0;
+      if (status == 401 && requireAuth) {
+        final auth = getIt<AuthCoordinator>();
+        final t = await auth.ensureTokenInteractive();
+        if (t != null && t.isNotEmpty) {
+          final retried = await _retry(error.requestOptions);
+          return retried.data;
+        }
+      }
       await _handleDioError(error);
-    } catch (e) {
-      throw AppException(e.toString());
     }
   }
 }

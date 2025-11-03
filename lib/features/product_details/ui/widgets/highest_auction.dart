@@ -49,7 +49,7 @@ class HighestAuction extends StatelessWidget {
               ),
             ),
             horizontalSpace(4),
-            MySvg(image: 'riyal_new', width: 24.w, height: 24.h),
+            MySvg(image: 'saudi_riyal', width: 24.w, height: 24.h),
           ],
         ),
       ),

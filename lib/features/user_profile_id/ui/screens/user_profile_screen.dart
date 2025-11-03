@@ -14,8 +14,8 @@ import 'package:mushtary/features/user_profile_id/ui/cubit/user_auctions_cubit.d
 import 'package:mushtary/features/user_profile_id/ui/cubit/user_reviews_cubit.dart';
 
 // Models & Widgets
-import '../../../user_profile/data/model/my_ads_model.dart';
-import '../../../user_profile/data/model/my_auctions_model.dart';
+import '../../../user_profile_id/data/model/my_ads_model.dart';
+import '../../../user_profile_id/data/model/my_auctions_model.dart';
 import '../../../user_profile_id/ui/widgets/reviews_tab_view.dart';
 import '../../../user_profile_id/ui/widgets/publisher_product_item.dart'; // ← الودجت الجديدة
 

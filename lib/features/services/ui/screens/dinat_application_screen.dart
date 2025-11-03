@@ -13,6 +13,7 @@ import 'package:mushtary/features/create_ad/ui/widgets/customized_chip.dart';
 import 'package:mushtary/features/create_ad/ui/widgets/detail_selector.dart';
 import '../../../../core/dependency_injection/injection_container.dart';
 import '../../../../core/location/logic/cubit/location_state.dart';
+import '../../../../core/router/routes.dart';
 import '../../logic/cubit/service_request_state.dart';
 import '../widgets/map_picker_screen.dart';
 import 'package:mushtary/features/services/data/model/service_request_payload.dart';
@@ -125,7 +126,6 @@ class _DinatApplicationScreenState extends State<DinatApplicationScreen> {
       ],
       child: Scaffold(
         appBar: AppBar(
-          leading: Icon(Icons.arrow_forward_ios,color: ColorsManager.darkGray300,),
           title: Text('طلب نقل', style: TextStyles.font20Black500Weight),
           backgroundColor: ColorsManager.white,
           elevation: 4,
@@ -142,6 +142,7 @@ class _DinatApplicationScreenState extends State<DinatApplicationScreen> {
             } else if (state is ServiceRequestSuccess) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(state.message)),
+
               );
               Navigator.of(context).maybePop();
             } else if (state is ServiceRequestFailure) {

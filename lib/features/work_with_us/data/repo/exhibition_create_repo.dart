@@ -21,7 +21,7 @@ class ExhibitionCreateRepo {
     required int cityId,
     required int regionId,
     required File image,
-    int? promoterId,
+    // تم حذف: int? promoterId,
   }) async {
     final form = FormData.fromMap({
       'name': name,
@@ -31,7 +31,7 @@ class ExhibitionCreateRepo {
       'address': address,
       'city_id': cityId,
       'region_id': regionId,
-      if (promoterId != null) 'promoter_id': promoterId,
+      // تم حذف: if (promoterId != null) 'promoter_id': promoterId,
       'image': await MultipartFile.fromFile(
         image.path,
         filename: p.basename(image.path),
@@ -41,9 +41,17 @@ class ExhibitionCreateRepo {
   }
 
   // النسخة التي ترجع Response Model
-  Future<ExhibitionCreateResponse> createExhibition(ExhibitionCreateRequest request) async {
+  Future<ExhibitionCreateResponse> createExhibition(
+      ExhibitionCreateRequest request) async {
     final form = await request.toFormData();
-    final map = await _service.postForm(ApiConstants.exhibitions, form);
-    return ExhibitionCreateResponse.fromJson(map);
+    final rawResponse = await _service.postForm(ApiConstants.exhibitions, form,
+        requireAuth: true);
+
+    // 📝 Print الـ Response الخام (أضف ده)
+    print('==================================================');
+    print('Raw API Response: $rawResponse');
+    print('==================================================');
+
+    return ExhibitionCreateResponse.fromJson(rawResponse);
   }
 }

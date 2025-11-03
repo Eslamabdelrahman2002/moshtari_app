@@ -5,7 +5,7 @@ import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
 import 'package:mushtary/core/widgets/primary/my_svg.dart';
 import 'package:mushtary/core/widgets/safe_cached_image.dart';
-import 'package:mushtary/features/messages/data/models/messages_model.dart';
+import 'package:mushtary/features/messages/data/models/chat_model.dart';
 
 class ChatSelledItem extends StatelessWidget {
   final AdInfo? adInfo;

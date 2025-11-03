@@ -96,11 +96,12 @@ class _RealEstateFilterSheetState extends State<RealEstateFilterSheet> {
           children: [
             Row(
               children: [
-                TextButton(onPressed: _clearAll, child: const Text('حذف الكل', style: TextStyle(color: Colors.red))),
+
                 const Spacer(),
                 Text('تصفية العقارات', style: TextStyles.font20Black500Weight),
                 const Spacer(),
-                const SizedBox(width: 60),
+                TextButton(onPressed: _clearAll, child: const Text('حذف الكل', style: TextStyle(color: Colors.red))),
+                const SizedBox(width: 20),
               ],
             ),
             verticalSpace(12),

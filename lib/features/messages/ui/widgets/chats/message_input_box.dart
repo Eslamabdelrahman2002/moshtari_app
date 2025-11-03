@@ -10,7 +10,8 @@ import 'package:mushtary/core/utils/helpers/spacing.dart';
 
 class MessageInputBox extends StatefulWidget {
   final int receiverId;
-  final void Function(String message, String messageType)? onSend;
+  // onSend يستقبل content (نص أو مسار ملف) و messageType
+  final void Function(String content, String messageType)? onSend;
 
   const MessageInputBox({super.key, required this.receiverId, this.onSend});
 
@@ -44,7 +45,10 @@ class _MessageInputBoxState extends State<MessageInputBox> {
 
   Future<void> _pickImage() async {
     final XFile? img = await _picker.pickImage(source: ImageSource.gallery);
-    if (img != null) widget.onSend?.call(img.path, 'image');
+    if (img != null) {
+      // 💡 إرسال مسار الصورة كـ content ونوع الرسالة 'image'
+      widget.onSend?.call(img.path, 'image');
+    }
   }
 
   /// ✅ يبدأ التسجيل
@@ -86,6 +90,7 @@ class _MessageInputBoxState extends State<MessageInputBox> {
 
     final file = File(filePath);
     if (await file.exists() && (await file.length()) > 0) {
+      // 💡 إرسال مسار ملف الصوت كـ content ونوع الرسالة 'voice'
       widget.onSend?.call(filePath, 'voice');
       debugPrint('[MIC] Saved voice file: $filePath');
     } else {
@@ -135,7 +140,7 @@ class _MessageInputBoxState extends State<MessageInputBox> {
                 filled: true,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(25.r),
-                  borderSide: BorderSide(color: Colors.black12),
+                  borderSide: const BorderSide(color: Colors.black12),
                 ),
               ),
             ),

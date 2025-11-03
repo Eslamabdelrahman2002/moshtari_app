@@ -1,4 +1,5 @@
-// Helpers
+// lib/features/messages/data/models/chat_model.dart
+
 bool _asBool(dynamic v) {
   if (v is bool) return v;
   if (v is num) return v != 0;
@@ -17,9 +18,13 @@ int? _asInt(dynamic v) {
   return null;
 }
 
+int toIntSafe(dynamic v, {int fallback = 0}) {
+  final n = _asInt(v);
+  return n ?? fallback;
+}
+
 String? _asString(dynamic v) => v?.toString();
 
-// 1) المستخدم
 class UserModel {
   final int? id;
   final String? name;
@@ -40,7 +45,6 @@ class UserModel {
   };
 }
 
-// 2) المحادثة
 class MessagesModel {
   final int? conversationId;
   final UserModel? partnerUser;
@@ -48,19 +52,44 @@ class MessagesModel {
   final String? lastMessageTime;
   final bool isRead;
 
+  // ✅ أضفنا النوع
+  final String? lastMessageType;
+
   MessagesModel({
     this.conversationId,
     this.partnerUser,
     this.lastMessage,
     this.lastMessageTime,
+    this.lastMessageType, // ✅
     this.isRead = false,
   });
 
   factory MessagesModel.fromJson(Map<String, dynamic> json) => MessagesModel(
-    conversationId: _asInt(json['id'] ?? json['conversation_id'] ?? json['conversationId'] ?? json['chat_id'] ?? json['chatId']),
-    partnerUser: (json['user'] is Map) ? UserModel.fromJson(Map<String, dynamic>.from(json['user'])) : null,
-    lastMessage: _asString(json['last_message'] ?? json['last_message_content'] ?? json['lastMessage'] ?? json['content']),
-    lastMessageTime: _asString(json['last_message_time'] ?? json['lastMessageTime'] ?? json['created_at'] ?? json['createdAt']),
+    conversationId: _asInt(json['id'] ??
+        json['conversation_id'] ??
+        json['conversationId'] ??
+        json['chat_id'] ??
+        json['chatId']),
+    partnerUser: (json['user'] is Map)
+        ? UserModel.fromJson(Map<String, dynamic>.from(json['user']))
+        : null,
+    lastMessage: _asString(json['last_message'] ??
+        json['last_message_content'] ??
+        json['lastMessage'] ??
+        json['content'] ??
+        json['message']),
+    lastMessageTime: _asString(json['last_message_time'] ??
+        json['lastMessageTime'] ??
+        json['created_at'] ??
+        json['createdAt']),
+
+    // ✅ نقرأ نوع آخر رسالة (لو السيرفر بيرسله)
+    lastMessageType: _asString(json['last_message_type'] ??
+        json['lastMessageType'] ??
+        json['type'] ??
+        json['message_type'] ??
+        json['messageType']),
+
     isRead: _asBool(json['is_read'] ?? json['isRead']),
   );
 
@@ -69,36 +98,41 @@ class MessagesModel {
     'user': partnerUser?.toJson(),
     'last_message': lastMessage,
     'last_message_time': lastMessageTime,
+    'last_message_type': lastMessageType, // ✅ نحفظها مع البيانات
     'is_read': isRead,
   };
 }
 
-// 3) رسالة
 class Message {
   final int? id;
   final int? senderId;
   final int? receiverId;
   final int? conversationId;
-  final String? messageContent; // content
+  final String? messageContent;
   final String? createdAt;
-
+  final String? messageType;
+  final String? lastMessageType;
   Message({
     this.id,
     this.senderId,
+    this.lastMessageType,
     this.receiverId,
     this.conversationId,
     this.messageContent,
     this.createdAt,
+    this.messageType,
   });
 
   factory Message.fromJson(Map<String, dynamic> json) => Message(
-    id: _asInt(json['id']),
+    id: _asInt(json['id'] ?? json['msg_id'] ?? json['message_id'] ?? json['msgId'] ?? json['messageId']),
     senderId: _asInt(json['sender_id'] ?? json['senderId']),
     receiverId: _asInt(json['receiver_id'] ?? json['receiverId']),
     conversationId: _asInt(json['conversation_id'] ?? json['conversationId'] ?? json['chat_id'] ?? json['chatId']),
-    messageContent: _asString(json['message_content'] ?? json['messageContent'] ?? json['content']),
+    messageContent: _asString(json['message_content'] ?? json['messageContent'] ?? json['content'] ?? json['message']),
     createdAt: _asString(json['created_at'] ?? json['createdAt']),
+    messageType: _asString(json['message_type'] ?? json['type'] ?? json['messageType']) ?? 'text',
   );
+
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -107,62 +141,52 @@ class Message {
     'conversation_id': conversationId,
     'message_content': messageContent,
     'created_at': createdAt,
+    'message_type': messageType,
   };
+
 }
 
-// 4) Body لإرسال رسالة
 class SendMessageRequestBody {
   final int receiverId;
   final String messageContent;
-  final int? listingId; // اختياري
-  final String? messageType; // مثل "text"
+  final int? listingId;
+  final String messageType;
   final int? repliedToId;
 
   SendMessageRequestBody({
     required this.receiverId,
     required this.messageContent,
     this.listingId,
-    this.messageType,
+    this.messageType = 'text',
     this.repliedToId,
   });
 
   Map<String, dynamic> toMap() => {
     'receiver_id': receiverId,
     'message_content': messageContent,
+    'message_type': messageType,
     if (listingId != null) 'listing_id': listingId,
-    if (messageType != null) 'message_type': messageType,
     if (repliedToId != null) 'replied_to_id': repliedToId,
   };
 }
 
-// ==========================================================
-// ✅ إضافة موديل بيانات الإعلان ووسائط شاشة الدردشة
-// ==========================================================
-
 class AdInfo {
   final int id;
   final String title;
-  final String imageUrl;
   final String price;
-  final int receiverId;
-  final String receiverName;
+  final String imageUrl;
 
   AdInfo({
     required this.id,
     required this.title,
-    required this.imageUrl,
     required this.price,
-    required this.receiverId,
-    required this.receiverName,
+    required this.imageUrl,
   });
-}
 
-class ChatScreenArgs {
-  final MessagesModel chatModel;
-  final AdInfo? adInfo;
-
-  ChatScreenArgs({
-    required this.chatModel,
-    this.adInfo,
-  });
+  factory AdInfo.fromJson(Map<String, dynamic> json) => AdInfo(
+    id: toIntSafe(json['id']),
+    title: _asString(json['title']) ?? '',
+    price: _asString(json['price']) ?? '',
+    imageUrl: _asString(json['imageUrl'] ?? json['image_url'] ?? json['image']) ?? '',
+  );
 }

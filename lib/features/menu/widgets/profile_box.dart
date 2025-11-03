@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter/services.dart'; // 💡 استيراد هام للـ Clipboard
 import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
@@ -16,6 +17,26 @@ class ProfileBox extends StatelessWidget {
   final ProfileCubit profileCubit;
 
   const ProfileBox({super.key, required this.profileCubit});
+
+  // 🆕 دالة النسخ التي تضيف رسالة تأكيد
+  void _copyToClipboard(BuildContext context, String? text) {
+    if (text == null || text.isEmpty) return;
+
+    // 1. نسخ النص إلى الحافظة
+    Clipboard.setData(ClipboardData(text: text));
+
+    // 2. إظهار رسالة تأكيد
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'تم نسخ رابط الإحالة بنجاح!',
+          style: TextStyles.font14Black500Weight.copyWith(color: Colors.white),
+        ),
+        backgroundColor: ColorsManager.primaryColor,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -87,8 +108,9 @@ class ProfileBox extends StatelessWidget {
                     ],
                   ),
                   const Spacer(),
+                  // 💡 تطبيق وظيفة النسخ على هذا الـ InkWell
                   InkWell(
-                    onTap: () {},
+                    onTap: () => _copyToClipboard(context, user.referralCode),
                     child: Container(
                       padding: EdgeInsets.symmetric(vertical: 6.h, horizontal: 8.w),
                       decoration: BoxDecoration(

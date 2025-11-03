@@ -1,24 +1,50 @@
-// lib/features/messages/logic/cubit/messages_cubit.dart
-
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/repo/messages_repo.dart';
 import 'message_state.dart';
 
 class MessagesCubit extends Cubit<MessagesState> {
-  final MessagesRepo _messagesRepo;
-  MessagesCubit(this._messagesRepo) : super(MessagesInitial());
+  final MessagesRepo repo;
+  Timer? _refreshTimer;
 
-  void fetchConversations() async {
-    emit(MessagesLoading());
+  MessagesCubit(this.repo) : super(MessagesInitial());
+
+  // دالة البداية (بتيجي من MessagesScreen)
+  Future<void> fetchConversations() async {
     try {
-      // ✅ يجب هنا محاولة الاتصال بالـ WebSocket أولاً
-      // (يفترض أن هذا يحدث داخل MessagesRepo أو ChatSocketService قبل الـ emitWithAck)
-
-      final conversations = await _messagesRepo.getConversations();
+      emit(MessagesLoading());
+      final conversations = await repo.getConversations();
       emit(MessagesSuccess(conversations));
+
+      // ✅ ابدأ الـ polling كل 5 ثواني بعد أول تحميل
+      _startAutoRefresh();
     } catch (e) {
-      // ✅ تعديل رسالة الخطأ لتكون أوضح
-      emit(MessagesFailure('فشل الاتصال بخادم المحادثات أو جلب القائمة: ${e.toString()}'));
+      emit(MessagesFailure('فشل تحميل المحادثات: $e'));
     }
+  }
+
+  // ✅ التحديث كل 5 ثواني
+  void _startAutoRefresh() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      await _refreshConversations();
+    });
+  }
+
+  // ✅ تنفيذ الـ refresh بدون إظهار loading
+  Future<void> _refreshConversations() async {
+    if (state is! MessagesSuccess) return;
+    try {
+      final newList = await repo.getConversations();
+      emit(MessagesSuccess(newList));
+    } catch (e) {
+      // ممكن تتجاهل الأخطاء المؤقتة
+    }
+  }
+
+  @override
+  Future<void> close() {
+    _refreshTimer?.cancel();
+    return super.close();
   }
 }

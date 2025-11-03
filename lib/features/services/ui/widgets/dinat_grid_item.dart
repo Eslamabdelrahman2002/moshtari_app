@@ -147,28 +147,71 @@ class DinatGridItem extends StatelessWidget {
                           ),
                           horizontalSpace(12),
                           Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: submitting
+                            child:GestureDetector(
+                              onTap: submitting
                                   ? null
                                   : () {
                                 if (!formKey.currentState!.validate()) return;
-                                final num price = num.tryParse(priceCtrl.text.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0;
-                                // مبدئيًا نستخدم trip.id كـ request_id (عدّلها لو عندك requestId منفصل)
+                                final num price = num.tryParse(
+                                  priceCtrl.text.replaceAll(RegExp(r'[^0-9.]'), ''),
+                                ) ??
+                                    0;
                                 ctx.read<ServiceOfferCubit>().send(
                                   requestId: trip.id,
                                   price: price,
                                   message: msgCtrl.text.trim().isEmpty ? null : msgCtrl.text.trim(),
                                 );
                               },
-                              icon: submitting
-                                  ? SizedBox(width: 16.w, height: 16.w, child: const CircularProgressIndicator.adaptive(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))
-                                  : const Icon(Icons.send_rounded),
-                              label: Text(submitting ? 'جارٍ الإرسال...' : 'إرسال'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: ColorsManager.primary400,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                minimumSize: Size(double.infinity, 46.h),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 250),
+                                height: 46.h,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: submitting
+                                      ? ColorsManager.primaryColor.withOpacity(0.6)
+                                      : ColorsManager.primaryColor,
+                                  borderRadius: BorderRadius.circular(12.r),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 250),
+                                    child: submitting
+                                        ? SizedBox(
+                                      key: const ValueKey('loading'),
+                                      width: 18.w,
+                                      height: 18.w,
+                                      child: const CircularProgressIndicator.adaptive(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation(Colors.white),
+                                      ),
+                                    )
+                                        : Row(
+                                      key: const ValueKey('content'),
+                                      mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          'إرسال',
+                                          style: TextStyles.font14White500Weight,
+                                        ),
+
+                                        horizontalSpace(8),
+                                        const Icon(
+                                          Icons.send_rounded,
+                                          size: 22,
+                                          color: Colors.white,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ),

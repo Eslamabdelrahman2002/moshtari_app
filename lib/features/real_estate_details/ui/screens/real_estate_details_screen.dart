@@ -21,7 +21,7 @@ import 'package:mushtary/features/product_details/ui/logic/cubit/comment_send_cu
 import 'package:mushtary/features/user_profile/logic/cubit/profile_cubit.dart';
 import '../../../../core/router/routes.dart';
 import '../../../../core/utils/helpers/launcher.dart';
-import '../../../messages/data/models/messages_model.dart';
+import '../../../messages/data/models/chat_model.dart';
 import '../../../messages/data/repo/messages_repo.dart';
 import '../../../messages/ui/widgets/chats/chat_initiation_sheet.dart';
 import '../../../product_details/ui/widgets/offer_sheet.dart';

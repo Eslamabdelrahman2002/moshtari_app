@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart' as gmap; // إذا مطلوب لـ PickedLocation
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gmap;
 
 import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
@@ -17,14 +17,14 @@ import '../../../data/car/utils/car_mappers.dart';
 import 'logic/cubit/car_ads_cubit.dart';
 import 'logic/cubit/car_ads_state.dart';
 
-// ✅ إضافة CarAdRequest (من الكود اللي بعتته)
+// (CarAdRequest Class remains the same)
 class CarAdRequest {
   final String title;
   final String description;
   final num price;
   final String priceType;
 
-  final int categoryId; // لن يُستخدم مباشرة في toMap (سنرسل دائمًا 1)
+  final int categoryId;
   final int? cityId;
   final int? regionId;
   final double? latitude;
@@ -96,7 +96,6 @@ class CarAdRequest {
       'description': description,
       'price': price,
       'price_type': priceType,
-      // ثابت: سيارات
       'category_id': 1,
       'city_id': cityId,
       'region_id': regionId,
@@ -148,15 +147,22 @@ class _CarsDisplayInformationScreenState extends State<CarsDisplayInformationScr
   @override
   void initState() {
     super.initState();
-    final state = context.read<CarAdsCubit>().state;
+    final state = context.read<CarAdsCubit>().state as dynamic;
+
     // التهيئة من الـ Cubit
     _titleCtrl = TextEditingController(text: state.title ?? '');
     _descriptionCtrl = TextEditingController(text: state.description ?? '');
     _priceCtrl = TextEditingController(text: state.price?.toString() ?? '');
+    _phoneCtrl = TextEditingController(text: state.phone ?? '');
 
-    // تهيئة متحكمات الموقع والجوال من حالة Cubit
-    _phoneCtrl = TextEditingController(text: (state as dynamic).phone ?? '');
-    _locationCtrl = TextEditingController(text: (state as dynamic).addressAr ?? '');
+    // تهيئة متحكم الموقع
+    String locationText = 'اختر الموقع على الخريطة أو ابحث';
+    if (state.addressAr != null && state.addressAr!.isNotEmpty) {
+      locationText = state.addressAr!;
+    } else if (state.latitude != null && state.longitude != null) {
+      locationText = 'تم اختيار الموقع (خ.ط: ${state.latitude!.toStringAsFixed(4)}, د.ع: ${state.longitude!.toStringAsFixed(4)})';
+    }
+    _locationCtrl = TextEditingController(text: locationText);
   }
 
   @override
@@ -173,20 +179,22 @@ class _CarsDisplayInformationScreenState extends State<CarsDisplayInformationScr
   Future<void> _pickImages(BuildContext context) async {
     final images = await _picker.pickMultiImage(
       imageQuality: 85,
-      maxWidth: 1024, // تحسين حجم
+      maxWidth: 1024,
       maxHeight: 1024,
-      limit: 10, // حد أقصى 10 صور
+      limit: 10,
     );
     if (images.isNotEmpty) {
       final cubit = context.read<CarAdsCubit>() as dynamic;
       for (final x in images) {
-        cubit.addImage(File(x.path));
+        if (cubit.state.images.length < 10) {
+          cubit.addImage(File(x.path));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('تم الوصول للحد الأقصى (10 صور)')),
+          );
+          break;
+        }
       }
-      print('>>> Added ${images.length} images'); // Debug
-    } else if (images.isEmpty && images.length >= 10) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('الحد الأقصى 10 صور')),
-      );
     }
   }
 
@@ -198,28 +206,68 @@ class _CarsDisplayInformationScreenState extends State<CarsDisplayInformationScr
     }
   }
 
-  // اختيار الموقع من الخريطة
+  // ✅ عرض اسم المكان (addressAr) أو الإحداثيات كبديل
   Future<void> _pickLocation() async {
     FocusScope.of(context).unfocus();
-    final picked = await Navigator.of(context).push<gmap.LatLng?>(
+    final picked = await Navigator.of(context).push<PickedLocation>(
       MaterialPageRoute(builder: (_) => const MapPickerScreen()),
     );
     if (picked != null) {
       final cubit = context.read<CarAdsCubit>() as dynamic;
-      cubit.setLatLng(picked.latitude, picked.longitude);
-      cubit.setAddressAr('تم اختيار الموقع'); // أو استخدم picked.addressAr إذا متاح
+      cubit.setLatLng(picked.latLng.latitude, picked.latLng.longitude);
+
+      // تحديث المتحكم لعرض اسم المكان أو الإحداثيات
+      String locationText = 'تم اختيار الموقع (خ.ط: ${picked.latLng.latitude.toStringAsFixed(4)}, د.ع: ${picked.latLng.longitude.toStringAsFixed(4)})';
+      if (picked.addressAr != null && picked.addressAr!.isNotEmpty) {
+        locationText = picked.addressAr!;
+      }
+
       setState(() {
-        _locationCtrl.text = 'تم اختيار الموقع (${picked.latitude.toStringAsFixed(4)}, ${picked.longitude.toStringAsFixed(4)})';
+        _locationCtrl.text = locationText;
       });
     }
   }
 
-  Widget _addMediaTile(BuildContext context) {
+  // ✅ عنصر إضافة صور/فيديو (بعرض الشاشة إذا لا توجد صور)
+  Widget _addMediaTileFullWidth(BuildContext context) {
+    return DottedBorder(
+      color: const Color(0xFFCDD6E1),
+      strokeWidth: 1.2,
+      dashPattern: const [6, 4],
+      borderType: BorderType.RRect,
+      radius: Radius.circular(12.r),
+      child: InkWell(
+        onTap: () => _pickImages(context),
+        borderRadius: BorderRadius.circular(12.r),
+        child: Container(
+          width: double.infinity,
+          height: 66.h,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12.r),
+          ),
+          child: Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.add_photo_alternate_outlined, size: 24, color: Color(0xFF0A45A6)),
+                SizedBox(width: 8.w),
+                Text('أضف صورة/فيديو (حتى 10)', style: TextStyle(fontSize: 13.sp, color: const Color(0xFF0A45A6), fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ✅ عنصر إضافة صور/فيديو (في الشريط الأفقي)
+  Widget _addMediaTileHorizontal(BuildContext context) {
     return InkWell(
       onTap: () => _pickImages(context),
       borderRadius: BorderRadius.circular(12.r),
       child: Container(
-        width: MediaQuery.of(context).size.width * .9,
+        width: 110.w, // عرض ثابت في الشريط
         height: 82.h,
         decoration: BoxDecoration(
           color: Colors.white,
@@ -227,12 +275,13 @@ class _CarsDisplayInformationScreenState extends State<CarsDisplayInformationScr
           border: Border.all(color: const Color(0xFFE6E6E6)),
         ),
         child: Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.add_photo_alternate_outlined, size: 18, color: Color(0xFF0A45A6)),
-              SizedBox(width: 6.w),
-              Text('إضافة صورة/فيديو (حتى 10)', style: TextStyle(fontSize: 11.sp, color: const Color(0xFF0A45A6))),
+              const Icon(Icons.add_photo_alternate_outlined, size: 24, color: Color(0xFF0A45A6)),
+              SizedBox(height: 4.h),
+              Text('إضافة',
+                  style: TextStyle(fontSize: 10.sp, color: const Color(0xFF0A45A6)), textAlign: TextAlign.center),
             ],
           ),
         ),
@@ -240,7 +289,8 @@ class _CarsDisplayInformationScreenState extends State<CarsDisplayInformationScr
     );
   }
 
-  Widget _imageTile(File file, CarAdsCubit cubit) {
+  // ✅ عنصر عرض صورة/فيديو
+  Widget _imageTile(File file, CarAdsCubit cubit, int index) {
     return Container(
       width: 110.w,
       height: 82.h,
@@ -257,7 +307,7 @@ class _CarsDisplayInformationScreenState extends State<CarsDisplayInformationScr
             top: 6,
             right: 6,
             child: InkWell(
-              onTap: () => (cubit as dynamic).removeImage(file),
+              onTap: () => (cubit as dynamic).removeImageAt(index),
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.red.withOpacity(0.8),
@@ -275,7 +325,8 @@ class _CarsDisplayInformationScreenState extends State<CarsDisplayInformationScr
     );
   }
 
-  Widget _reportTile(File file, CarAdsCubit cubit) {
+  // عنصر عرض التقرير الفني في الشريط الأفقي
+  Widget _reportTileHorizontal(File file, CarAdsCubit cubit) {
     return Container(
       width: 110.w,
       height: 82.h,
@@ -310,6 +361,7 @@ class _CarsDisplayInformationScreenState extends State<CarsDisplayInformationScr
     );
   }
 
+  // مربع مرفق الفحص الفني (بعرض الشاشة)
   Widget _dottedReportBox(BuildContext context) {
     return DottedBorder(
       color: const Color(0xFFCDD6E1),
@@ -343,7 +395,7 @@ class _CarsDisplayInformationScreenState extends State<CarsDisplayInformationScr
 
   @override
   Widget build(BuildContext context) {
-    final cubit = context.read<CarAdsCubit>() as dynamic; // استخدام dynamic لتفادي أخطاء الدوال
+    final cubit = context.read<CarAdsCubit>() as dynamic;
     return BlocConsumer<CarAdsCubit, CarAdsState>(
       listener: (context, state) {
         if (state.error != null && !state.success) {
@@ -351,6 +403,15 @@ class _CarsDisplayInformationScreenState extends State<CarsDisplayInformationScr
         }
       },
       builder: (context, state) {
+        final dynamicState = state as dynamic;
+        final hasImages = state.images.isNotEmpty;
+        final showReport = state.technicalReport != null;
+
+        // حساب عدد العناصر في الشريط الأفقي
+        int imagesCount = state.images.length;
+        // عدد العناصر في الـ ListView: صور + (التقرير إذا موجود) + (زر الإضافة إذا لم نصل لـ 10)
+        int listCount = imagesCount + (showReport ? 1 : 0) + (imagesCount < 10 ? 1 : 0);
+
         return SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           child: Padding(
@@ -360,28 +421,42 @@ class _CarsDisplayInformationScreenState extends State<CarsDisplayInformationScr
               children: [
                 verticalSpace(12),
 
-                // قسم الوسائط (صور متعددة + تقرير)
+                // قسم الوسائط (صور متعددة)
                 Text('الصور ومقاطع الفيديو', style: TextStyles.font14DarkGray400Weight),
                 SizedBox(height: 8.h),
-                SizedBox(
-                  height: 90.h,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: 1 + state.images.length + (state.technicalReport == null ? 0 : 1), // ✅ دعم متعدد
-                    separatorBuilder: (_, __) => SizedBox(width: 8.w),
-                    itemBuilder: (context, index) {
-                      if (index == 0) return _addMediaTile(context); // ✅ tile إضافة
-                      final imgCount = state.images.length;
-                      if (index <= imgCount) {
-                        final f = state.images[index - 1]; // ✅ عرض كل الصور
-                        return _imageTile(f, cubit);
-                      } else {
-                        return _reportTile(state.technicalReport!, cubit); // تقرير فني
-                      }
-                    },
+
+                // ✅ عرض شريط أفقي عند وجود الصور، أو مربع إضافة بعرض الشاشة عند عدم وجود صور
+                if (!hasImages)
+                  _addMediaTileFullWidth(context) // مربع كامل إذا لا توجد صور
+                else
+                  SizedBox(
+                    height: 90.h,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: listCount,
+                      separatorBuilder: (_, __) => SizedBox(width: 8.w),
+                      itemBuilder: (context, index) {
+                        if (index < imagesCount) {
+                          // 1. عرض الصور المضافة
+                          final f = state.images[index];
+                          return _imageTile(f, cubit, index);
+                        } else if (showReport && index == imagesCount) {
+                          // 2. عرض التقرير الفني (بعد آخر صورة)
+                          return _reportTileHorizontal(state.technicalReport!, cubit);
+                        } else {
+                          // 3. عرض أيقونة الإضافة (في نهاية الشريط)
+                          return _addMediaTileHorizontal(context);
+                        }
+                      },
+                    ),
                   ),
-                ),
-                SizedBox(height: 16.h),
+                verticalSpace(16.h),
+
+                // مربع مرفق الفحص الفني (بعرض الشاشة)
+                state.technicalReport == null
+                    ? _dottedReportBox(context)
+                    : _reportTileHorizontal(state.technicalReport!, cubit), // عرض التقرير بعرض الشاشة إذا كان وحيداً
+                verticalSpace(16.h),
 
                 // عنوان الإعلان
                 SecondaryTextFormField(
@@ -418,10 +493,10 @@ class _CarsDisplayInformationScreenState extends State<CarsDisplayInformationScr
                 ),
                 verticalSpace(12),
 
-                // الموقع
+                // الموقع (يعرض اسم المكان أو الإحداثيات)
                 SecondaryTextFormField(
                   label: 'موقع الخدمة',
-                  hint: (state as dynamic).addressAr ?? 'اختر الموقع على الخريطة أو ابحث',
+                  hint: _locationCtrl.text,
                   maxheight: 56.h,
                   minHeight: 56.h,
                   controller: _locationCtrl,
@@ -485,35 +560,29 @@ class _CarsDisplayInformationScreenState extends State<CarsDisplayInformationScr
                       Expanded(
                         child: CustomizedChip(
                           title: 'محادثة',
-                          isSelected: (state as dynamic).contactChat,
-                          onTap: () => cubit.setContactChat(!(state as dynamic).contactChat),
+                          isSelected: dynamicState.contactChat,
+                          onTap: () => cubit.setContactChat(!dynamicState.contactChat),
                         ),
                       ),
                       horizontalSpace(12),
                       Expanded(
                         child: CustomizedChip(
                           title: 'واتساب',
-                          isSelected: (state as dynamic).contactWhatsapp,
-                          onTap: () => cubit.setContactWhatsapp(!(state as dynamic).contactWhatsapp),
+                          isSelected: dynamicState.contactWhatsapp,
+                          onTap: () => cubit.setContactWhatsapp(!dynamicState.contactWhatsapp),
                         ),
                       ),
                       horizontalSpace(12),
                       Expanded(
                         child: CustomizedChip(
                           title: 'جوال',
-                          isSelected: (state as dynamic).contactCall,
-                          onTap: () => cubit.setContactCall(!(state as dynamic).contactCall),
+                          isSelected: dynamicState.contactCall,
+                          onTap: () => cubit.setContactCall(!dynamicState.contactCall),
                         ),
                       ),
                     ],
                   ),
                 ),
-                verticalSpace(12),
-
-                // مربع مرفق الفحص الفني
-                state.technicalReport == null
-                    ? _dottedReportBox(context)
-                    : _reportTile(state.technicalReport!, cubit),
                 verticalSpace(12),
 
                 // سويتشات
@@ -548,57 +617,22 @@ class _CarsDisplayInformationScreenState extends State<CarsDisplayInformationScr
                   title: state.submitting ? 'جاري النشر...' : 'نشر الاعلان',
                   onPressed: () {
                     if (state.submitting) return;
-                    // ✅ تحديث نهائي للقيم من المتحكمات قبل النشر
+                    // ... (منطق إرسال البيانات)
                     cubit
                       ..setPrice(num.tryParse(_priceCtrl.text))
                       ..setPhone(_phoneCtrl.text)
                       ..setTitle(_titleCtrl.text)
                       ..setDescription(_descriptionCtrl.text);
 
-                    // ✅ استخدام CarAdRequest لإنشاء payload منظّم
                     final request = CarAdRequest(
-                      title: _titleCtrl.text,
-                      description: _descriptionCtrl.text,
-                      price: num.tryParse(_priceCtrl.text) ?? 0,
-                      priceType: state.priceType ?? 'fixed',
-                      categoryId: 1, // سيارات ثابت
-                      cityId: (state as dynamic).cityId,
-                      regionId: (state as dynamic).regionId,
-                      latitude: (state as dynamic).latitude,
-                      longitude: (state as dynamic).longitude,
-                      phone: _phoneCtrl.text,
-                      contactChat: (state as dynamic).contactChat ?? false,
-                      contactWhatsapp: (state as dynamic).contactWhatsapp ?? false,
-                      contactCall: (state as dynamic).contactCall ?? false,
-                      condition: (state as dynamic).condition ?? '',
-                      saleType: (state as dynamic).saleType ?? '',
-                      warranty: (state as dynamic).warranty ?? '',
-                      mileage: (state as dynamic).mileage ?? 0,
-                      transmission: (state as dynamic).transmission ?? '',
-                      cylinders: (state as dynamic).cylinders ?? 0,
-                      color: (state as dynamic).color ?? '',
-                      fuelType: (state as dynamic).fuelType ?? '',
-                      driveType: (state as dynamic).driveType ?? '',
-                      horsepower: (state as dynamic).horsepower ?? 0,
-                      doors: (state as dynamic).doors ?? '',
-                      vehicleType: (state as dynamic).vehicleType ?? '',
-                      brandId: (state as dynamic).brandId ?? 0,
-                      modelId: (state as dynamic).modelId ?? 0,
-                      year: (state as dynamic).year ?? 0,
-                      allowComments: state.allowComments,
-                      allowMarketing: state.allowMarketing,
-                      images: state.images, // ✅ تمرير الصور المتعددة
-                      technicalReport: state.technicalReport,
+                      // ... (باقي الحقول)
+                      title: _titleCtrl.text, description: _descriptionCtrl.text, price: num.tryParse(_priceCtrl.text) ?? 0, priceType: state.priceType ?? 'fixed', categoryId: 1, contactChat: dynamicState.contactChat, contactWhatsapp: dynamicState.contactWhatsapp, contactCall: dynamicState.contactCall, condition: dynamicState.condition ?? '', saleType: dynamicState.saleType ?? '', warranty: dynamicState.warranty ?? '', mileage: dynamicState.mileage ?? 0, transmission: dynamicState.transmission ?? '', cylinders: dynamicState.cylinders ?? 0, color: dynamicState.color ?? '', fuelType: dynamicState.fuelType ?? '', driveType: dynamicState.driveType ?? '', horsepower: dynamicState.horsepower ?? 0, doors: dynamicState.doors ?? '', vehicleType: dynamicState.vehicleType ?? '', brandId: dynamicState.brandId ?? 0, modelId: dynamicState.modelId ?? 0, year: dynamicState.year ?? 0, allowComments: state.allowComments, allowMarketing: state.allowMarketing, images: state.images, technicalReport: state.technicalReport,
                     );
-
-                    // استخدام toMap للـ payload
                     final payload = request.toMap();
-                    print('>>> Submit Payload: $payload'); // Debug
-
                     if (widget.onPressed != null) {
                       widget.onPressed!();
                     } else {
-                      cubit.submit(payload: payload); // افتراض أن submit يقبل payload
+                      cubit.submit(payload: payload);
                     }
                   },
                 ),

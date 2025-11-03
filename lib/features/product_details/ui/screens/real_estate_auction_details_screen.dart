@@ -9,6 +9,7 @@ import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
 import 'package:mushtary/core/widgets/primary/my_divider.dart';
+import 'package:mushtary/core/widgets/primary/my_svg.dart';
 
 import '../../../../core/router/routes.dart';
 import '../../../../core/utils/helpers/launcher.dart';
@@ -36,7 +37,7 @@ import 'package:mushtary/features/favorites/ui/logic/cubit/favorites_cubit.dart'
 import 'package:mushtary/features/favorites/ui/logic/cubit/favorites_state.dart';
 
 // Chat models
-import 'package:mushtary/features/messages/data/models/messages_model.dart';
+import 'package:mushtary/features/messages/data/models/chat_model.dart';
 import 'package:mushtary/features/messages/data/repo/messages_repo.dart';
 import 'package:mushtary/features/messages/ui/widgets/chats/chat_initiation_sheet.dart';
 import 'package:mushtary/features/messages/ui/screens/chat_screen.dart';
@@ -613,7 +614,7 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
                             itemId: itemId,
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF14457F),
+                            backgroundColor: ColorsManager.primaryColor,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
                           ),
                           child: const Text('قم بالمزايدة', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -624,7 +625,7 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
 
                     // أيقونات التواصل
                     _squareIconBtn(
-                      icon:  const Icon(Icons.message, color: ColorsManager.primaryColor),
+                      icon: MySvg(image: 'message_icon'),
                       bg: ColorsManager.primary50,
                       borderColor: const Color(0xFFEAEAEA),
                       onTap: ended
@@ -655,14 +656,14 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
 
                     horizontalSpace(8),
                     _squareIconBtn(
-                      icon:  const Icon(Icons.phone, color: ColorsManager.primaryColor),
+                      icon:  MySvg(image: 'callCalling'),
                       bg: ColorsManager.primary50,
                       borderColor: const Color(0xFFEAEAEA),
                       onTap: ended ? null : (phone?.isNotEmpty ?? false) ? () => launchCaller(context, phone!) : null,
                     ),
                     horizontalSpace(8),
                     _squareIconBtn(
-                      icon: const MyDivider(), // ضع أيقونة واتساب الخاصة بك هنا
+                      icon: MySvg(image: 'logos_whatsapp'), // ضع أيقونة واتساب الخاصة بك هنا
                       bg: ColorsManager.success200,
                       onTap: ended ? null : (phone?.isNotEmpty ?? false) ? () => launchWhatsApp(context, phone!, message: 'مرحباً 👋 بخصوص مزاد: ${d.title}') : null,
                     ),

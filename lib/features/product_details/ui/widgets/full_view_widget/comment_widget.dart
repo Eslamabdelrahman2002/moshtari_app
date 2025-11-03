@@ -46,7 +46,7 @@ class CommentWidget extends StatelessWidget {
               style: TextStyles.font12Blue400Weight,
             ),
             horizontalSpace(4),
-            const MySvg(image: 'riyal_new'),
+            const MySvg(image: 'saudi_riyal'),
           ],
         ),
       );

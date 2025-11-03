@@ -9,7 +9,7 @@ class OffersRepo {
   OffersRepo(this._apiService);
 
   Future<String> submitOffer(OfferRequest request) async {
-    final res = await _apiService.post(ApiConstants.submitOffer, request.toMap());
+    final res = await _apiService.post(ApiConstants.submitOffer, request.toMap(),requireAuth: true);
     if (res is Map<String, dynamic>) {
       return (res['message'] ?? 'تم إرسال عرض المساومة بنجاح.').toString();
     }
@@ -17,7 +17,7 @@ class OffersRepo {
   }
 
   Future<OfferDetails> getOfferById(int id) async {
-    final res = await _apiService.get(ApiConstants.offerById(id));
+    final res = await _apiService.get(ApiConstants.offerById(id),requireAuth: true);
     final Map<String, dynamic> data =
     (res is Map && res['data'] is Map)
         ? Map<String, dynamic>.from(res['data'])

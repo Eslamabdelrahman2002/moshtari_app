@@ -1,6 +1,8 @@
+// lib/features/user_profile_id/data/repo/publisher_repo.dart
+
 import 'package:mushtary/core/api/api_service.dart';
-import 'package:mushtary/features/user_profile/data/model/my_ads_model.dart';
-import 'package:mushtary/features/user_profile/data/model/my_auctions_model.dart';
+import 'package:mushtary/features/user_profile_id/data/model/my_ads_model.dart';
+import 'package:mushtary/features/user_profile_id/data/model/my_auctions_model.dart';
 import 'package:mushtary/core/api/app_exception.dart';
 import 'package:mushtary/core/api/api_constants.dart';
 
@@ -9,13 +11,13 @@ class PublisherRepo {
 
   PublisherRepo(this._api);
 
-  /// 🔹 إعلانات الناشر
+  /// 🔹 إعلانات الناشر (المسار: /car-ads/my-ads/{userId})
   Future<List<MyAdsModel>> getPublisherAds(int userId, {int page = 1, int limit = 10}) async {
     try {
       final data = await _api.get(
-        // السيرفر يقبل /car-ads/my-ads?user_id=xxx
-        '${ApiConstants.carAds}/my-ads',
-        queryParameters: {'user_id': userId, 'page': page, 'limit': limit},
+        ApiConstants.getPublisherAds(userId), // ✅ استخدام المسار الجديد بالـ ID
+        requireAuth: true,
+        queryParameters: {'page': page, 'limit': limit}, // إرسال pagination كـ query
       );
 
       final List list = (data['data'] as List?) ?? const [];
@@ -25,13 +27,12 @@ class PublisherRepo {
     }
   }
 
-  /// 🔹 مزادات الناشر
+  /// 🔹 مزادات الناشر (المسار: /car-auctions/my-auctions/{userId})
   Future<List<MyAuctionModel>> getPublisherAuctions(int userId, {int page = 1, int limit = 10}) async {
     try {
       final data = await _api.get(
-        // السيرفر يقبل /car-auctions/my-auctions?user_id=xxx
-        ApiConstants.myAuctions,
-        queryParameters: {'user_id': userId, 'page': page, 'limit': limit},
+        ApiConstants.getPublisherAuctions(userId), // ✅ استخدام المسار الجديد بالـ ID
+        queryParameters: {'page': page, 'limit': limit}, // إرسال pagination كـ query
       );
 
       final List list = (data['data'] as List?) ?? const [];

@@ -9,7 +9,7 @@ class ExhibitionDetailsRepo {
   ExhibitionDetailsRepo(this._api);
 
   Future<ExhibitionDetailsData> fetchById(int id) async {
-    final res = await _api.get(ApiConstants.exhibitionDetailsById(id));
+    final res = await _api.get(ApiConstants.exhibitionDetailsById(id),requireAuth: true);
     final parsed = ExhibitionDetailsResponse.fromJson(res as Map<String, dynamic>);
     return parsed.data;
   }

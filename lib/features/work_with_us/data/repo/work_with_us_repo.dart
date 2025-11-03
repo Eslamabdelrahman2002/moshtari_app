@@ -35,6 +35,6 @@ class WorkWithUsRepo {
       'birth_date': birthDate,
     });
 
-    await _api.postForm(ApiConstants.promoterApplicationsApply, formData);
+    await _api.postForm(ApiConstants.promoterApplicationsApply, formData,requireAuth: true);
   }
 }

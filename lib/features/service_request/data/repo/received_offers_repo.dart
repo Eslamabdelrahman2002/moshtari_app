@@ -6,19 +6,27 @@ class ReceivedOffersRepo {
   final ApiService _api;
   ReceivedOffersRepo(this._api);
 
+  /// 🔹 الحصول على العروض المستلمة
   Future<List<ReceivedOffer>> fetchMyReceivedOffers() async {
-    final res = await _api.get(ApiConstants.serviceRequestsMyReceivedOffers);
-    final parsed = MyReceivedOffersResponse.fromJson(res as Map<String, dynamic>);
+    final res = await _api.get(
+      ApiConstants.serviceRequestsMyReceivedOffers,
+      requireAuth: true, // ✅ يفتح شاشة الدخول عند الحاجة
+    );
+    final parsed =
+    MyReceivedOffersResponse.fromJson(res as Map<String, dynamic>);
     return parsed.offers;
   }
 
-  // NEW: قبول العرض
+  /// 🔹 قبول العرض
   Future<String?> acceptOffer(int offerId) async {
-    final res = await _api.post(ApiConstants.serviceOfferAccept(offerId), const {});
-    // يحترم بنية الاستجابة كما في Postman
+    final res = await _api.post(
+      ApiConstants.serviceOfferAccept(offerId),
+      const {},
+      requireAuth: true, // ✅
+    );
     try {
       final data = (res['data'] as Map?) ?? const {};
-      return data['request_status']?.toString(); // غالباً in_progress
+      return data['request_status']?.toString(); // مثل: "in_progress"
     } catch (_) {
       return null;
     }

@@ -117,7 +117,9 @@ class PropertyCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  MySvg(image: 'riyal_new', width: 16.w, height: 16.w),
+                  Text('﷼ ',
+                      style: TextStyles.font10Secondary500700Weight.copyWith(
+                          color: ColorsManager.darkGray300)),
                   horizontalSpace(4.w),
                   Text(
                     '$lowestPrice - $highestPrice ',

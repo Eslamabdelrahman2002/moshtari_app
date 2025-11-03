@@ -1,3 +1,5 @@
+// lib/features/user_profile_id/data/repo/user_reviews_repo.dart
+
 import 'package:mushtary/core/api/api_constants.dart';
 import 'package:mushtary/core/api/api_service.dart';
 import 'package:mushtary/core/api/app_exception.dart';
@@ -10,10 +12,10 @@ class UserReviewsRepo {
 
   Future<Map<String, dynamic>> getUserReviews(int userId) async {
     try {
-      // 🔹 1. جلب بيانات المستخدم (التي تحتوي على التقييمات)
+      // 🔹 1. جلب بيانات المستخدم (باستخدام ID في المسار)
       final userResponse = await _apiService.get(
-        ApiConstants.userProfile,
-        queryParameters: {'user_id': userId},
+        ApiConstants.getPublisherProfile(userId), // ✅ استخدام المسار الجديد
+        // لا نحتاج لـ queryParameters: {'user_id': userId} هنا
         requireAuth: true,
       );
 
@@ -27,7 +29,7 @@ class UserReviewsRepo {
       final Map<String, dynamic> userData =
       (rawUser is Map<String, dynamic>) ? rawUser : <String, dynamic>{};
 
-      // 🔹 3. استخراج قائمة التقييمات من داخل userData['reviews']
+      // 🔹 3. استخراج قائمة التقييمات
       final List<dynamic> reviewsRaw =
           (userData['reviews'] as List<dynamic>?) ?? [];
 
@@ -35,7 +37,7 @@ class UserReviewsRepo {
         return ReviewModel.fromJson(Map<String, dynamic>.from(item));
       }).toList();
 
-      // 🔹 4. إرجاع البيانات للـ Cubit
+      // 🔹 4. إرجاع البيانات للـ Cubit
       return {
         'user': userData,
         'reviews': reviews,

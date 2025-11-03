@@ -14,10 +14,8 @@ import '../../../../../favorites/ui/logic/cubit/favorites_state.dart';
 
 class CarDetailsImages extends StatefulWidget {
   final List<String> images;
-
-  // جديد: نحتاج هوية الإعلان ونوعه (ad/auction)
   final int adId;
-  final String favoriteType; // 'ad' أو 'auction' (هنا غالباً 'ad')
+  final String favoriteType; // 'ad' أو 'auction'
 
   const CarDetailsImages({
     super.key,
@@ -37,7 +35,6 @@ class _CarDetailsImagesState extends State<CarDetailsImages> {
   @override
   void initState() {
     super.initState();
-    // في حال ما تم تحميل المفضلة سابقاً، نطلبها مرة واحدة بعد بناء الودجت
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final cubit = context.read<FavoritesCubit>();
       if (cubit.state is FavoritesInitial) {
@@ -52,6 +49,17 @@ class _CarDetailsImagesState extends State<CarDetailsImages> {
     super.dispose();
   }
 
+  // ✅ الدالة الجديدة لفتح الـ Dialog المخصص للمشاركة
+  void _shareAd() {
+    final link = 'https://moshtary.com/ad/${widget.adId}';
+    showDialog(
+      context: context,
+      useRootNavigator: true,
+      barrierDismissible: true,
+      builder: (_) => ShareDialog(shareLink: link),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final total = widget.images.isEmpty ? 1 : widget.images.length;
@@ -62,7 +70,7 @@ class _CarDetailsImagesState extends State<CarDetailsImages> {
       child: Stack(
         alignment: Alignment.bottomCenter,
         children: [
-          // ✅ PageView مع تأثير تمرير جميل
+          // ✅ PageView لعرض الصور
           PageView.builder(
             controller: pageController,
             itemCount: total,
@@ -72,7 +80,6 @@ class _CarDetailsImagesState extends State<CarDetailsImages> {
                 return const Center(child: MySvg(image: 'image'));
               }
               final url = widget.images[i];
-              // نعطي انميشن scale بسيط
               final scale = (i == currentIndex) ? 1.0 : 0.9;
               return AnimatedScale(
                 duration: const Duration(milliseconds: 300),
@@ -88,8 +95,11 @@ class _CarDetailsImagesState extends State<CarDetailsImages> {
                       height: 300.h,
                       placeholder: (_, __) =>
                           Container(color: Colors.grey.shade200),
-                      errorWidget: (_, __, ___) =>
-                      const Icon(Icons.broken_image, size: 80, color: Colors.grey),
+                      errorWidget: (_, __, ___) => const Icon(
+                        Icons.broken_image,
+                        size: 80,
+                        color: Colors.grey,
+                      ),
                     ),
                   ),
                 ),
@@ -97,7 +107,7 @@ class _CarDetailsImagesState extends State<CarDetailsImages> {
             },
           ),
 
-          // ✅ عدّاد نقطي أنيق أسفل الصور
+          // ✅ عدّاد النقاط في أسفل الصور
           if (total > 1)
             Positioned(
               bottom: 10.h,
@@ -121,23 +131,19 @@ class _CarDetailsImagesState extends State<CarDetailsImages> {
               ),
             ),
 
-          // ✅ شريط علوي: مفضلة + مشاركة
+          // ✅ الشريط العلوي: المشاركة + المفضلة
           Positioned(
             top: 12.h,
             left: 12.w,
             child: Row(
               children: [
-                // مشاركة
+                // زر المشاركة
                 IconButton(
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (_) => const ShareDialog(),
-                    );
-                  },
+                  onPressed: _shareAd,
                   icon: const Icon(Icons.share, color: Colors.white),
                 ),
-                // مفضلة
+
+                // زر المفضلة
                 BlocBuilder<FavoritesCubit, FavoritesState>(
                   builder: (context, state) {
                     bool isFav = false;
@@ -153,7 +159,9 @@ class _CarDetailsImagesState extends State<CarDetailsImages> {
                       },
                       icon: Icon(
                         isFav ? Icons.favorite : Icons.favorite_border,
-                        color: isFav ? ColorsManager.redButton : Colors.white,
+                        color: isFav
+                            ? ColorsManager.redButton
+                            : Colors.white,
                       ),
                     );
                   },

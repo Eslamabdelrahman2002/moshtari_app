@@ -36,7 +36,8 @@ class _OtherAdDetailsImagesState extends State<OtherAdDetailsImages> {
   @override
   void initState() {
     super.initState();
-    _ctrl = PageController(viewportFraction: 0.9);
+    // ✅ تعطيل الـ viewportFraction لتظهر الصورة بالحجم الكامل
+    _ctrl = PageController(viewportFraction: 1.0);
   }
 
   @override
@@ -45,15 +46,27 @@ class _OtherAdDetailsImagesState extends State<OtherAdDetailsImages> {
     super.dispose();
   }
 
+  /// ✅ دالة مشاركة موحّدة
+  void _shareAd(BuildContext context) {
+    final link = 'https://moshtary.com/ad/${widget.adId}';
+    showDialog(
+      context: context,
+      useRootNavigator: true,
+      barrierDismissible: true,
+      builder: (_) => ShareDialog(shareLink: link),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final total = widget.images.isEmpty ? 1 : widget.images.length;
+
     return SizedBox(
       height: 285.h,
       width: double.infinity,
       child: Stack(
-        alignment: Alignment.bottomCenter,
         children: [
+          // ✅ عرض الصور يشغل العرض كاملاً
           PageView.builder(
             controller: _ctrl,
             itemCount: total,
@@ -62,26 +75,82 @@ class _OtherAdDetailsImagesState extends State<OtherAdDetailsImages> {
               if (widget.images.isEmpty) {
                 return const Center(child: MySvg(image: 'image'));
               }
+
               final url = widget.images[i];
-              final scale = i == current ? 1.0 : 0.9;
-              return AnimatedScale(
-                scale: scale,
-                duration: const Duration(milliseconds: 300),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16.r),
-                  child: CachedNetworkImage(
-                    imageUrl: url,
-                    fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) =>
-                    const Center(child: MySvg(image: 'image')),
-                  ),
+              return ClipRRect(
+                borderRadius: BorderRadius.zero, // لا انحناء لحافة الصورة
+                child: CachedNetworkImage(
+                  imageUrl: url,
+                  width: double.infinity,
+                  height: 285.h,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) =>
+                  const Center(child: MySvg(image: 'image')),
                 ),
               );
             },
           ),
+
+          // ✅ شارة الحالة (جديدة / مستعملة ...)
+          if ((widget.status ?? '').isNotEmpty)
+            Positioned(
+              top: 16.h,
+              left: 16.w,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.85),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Text(
+                  widget.status!,
+                  style: TextStyles.font12Black400Weight,
+                ),
+              ),
+            ),
+
+          // ✅ أزرار المشاركة والمفضلة في الزاوية العلوية اليمنى
+          Positioned(
+            top: 16.h,
+            left: 12.w,
+            child: SafeArea(
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.share, color: Colors.white),
+                    onPressed: () => _shareAd(context),
+                  ),
+                  BlocBuilder<FavoritesCubit, FavoritesState>(
+                    builder: (context, state) {
+                      final isFav = state is FavoritesLoaded &&
+                          state.favoriteIds.contains(widget.adId);
+                      return IconButton(
+                        icon: Icon(
+                          isFav ? Icons.favorite : Icons.favorite_border,
+                          color: isFav
+                              ? ColorsManager.redButton
+                              : Colors.white,
+                        ),
+                        onPressed: () => context
+                            .read<FavoritesCubit>()
+                            .toggleFavorite(
+                          type: widget.favoriteType,
+                          id: widget.adId,
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ✅ مؤشّر الصفحات في الأسفل
           if (widget.images.length > 1)
             Positioned(
               bottom: 10.h,
+              left: 0,
+              right: 0,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(widget.images.length, (i) {
@@ -101,50 +170,6 @@ class _OtherAdDetailsImagesState extends State<OtherAdDetailsImages> {
                 }),
               ),
             ),
-          if ((widget.status ?? '').isNotEmpty)
-            Positioned(
-              top: 12.h,
-              left: 12.w,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.85),
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Text(widget.status!, style: TextStyles.font12Black400Weight),
-              ),
-            ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.share, color: Colors.white),
-                    onPressed: () =>
-                        showDialog(context: context, builder: (_) => const ShareDialog()),
-                  ),
-                  BlocBuilder<FavoritesCubit, FavoritesState>(
-                    builder: (context, state) {
-                      bool isFav = state is FavoritesLoaded &&
-                          state.favoriteIds.contains(widget.adId);
-                      return IconButton(
-                        icon: Icon(
-                          isFav ? Icons.favorite : Icons.favorite_border,
-                          color: isFav ? ColorsManager.redButton : Colors.white,
-                        ),
-                        onPressed: () => context.read<FavoritesCubit>().toggleFavorite(
-                          type: widget.favoriteType,
-                          id: widget.adId,
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );

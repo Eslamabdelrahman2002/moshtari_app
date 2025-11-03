@@ -21,6 +21,7 @@ import 'package:mushtary/features/services/data/model/service_request_payload.da
 import 'package:mushtary/features/services/logic/cubit/service_request_cubit.dart';
 import 'package:mushtary/features/services/logic/cubit/service_request_state.dart';
 
+import '../../../../core/router/routes.dart';
 import '../widgets/map_picker_screen.dart'; // PickedLocation
 
 class ShrejScreen extends StatefulWidget {
@@ -130,7 +131,6 @@ class _ShrejScreenState extends State<ShrejScreen> {
       ],
       child: Scaffold(
         appBar: AppBar(
-          leading: IconButton(onPressed: () => Navigator.pop(context), icon: Icon(Icons.arrow_back_ios, color: ColorsManager.darkGray300)),
           title: Text('طلب صهريج ماء', style: TextStyles.font20Black500Weight),
           backgroundColor: ColorsManager.white,
           elevation: 4,
@@ -140,15 +140,29 @@ class _ShrejScreenState extends State<ShrejScreen> {
         ),
         body: SafeArea(
           child: BlocConsumer<ServiceRequestCubit, ServiceRequestState>(
-            listenWhen: (p, c) => c is ServiceRequestSuccess || c is ServiceRequestFailure,
+            listenWhen: (p, c) =>
+            c is ServiceRequestSuccess || c is ServiceRequestFailure,
             listener: (context, state) {
-              final m = ScaffoldMessenger.of(context);
-              m.hideCurrentSnackBar();
+              // Messenger آمن للتعامل مع الـ SnackBars
+              final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+
               if (state is ServiceRequestSuccess) {
-                m.showSnackBar(SnackBar(content: Text(state.message)));
+                if (!context.mounted) return;
+                messenger.showSnackBar(
+                  SnackBar(content: Text(state.message)),
+                );
+
+                // ✔️ اغلق الصفحة أو bottom sheet مرة واحدة فقط
                 Navigator.of(context).maybePop();
               } else if (state is ServiceRequestFailure) {
-                m.showSnackBar(SnackBar(content: Text(state.error.replaceFirst('Exception: ', ''))));
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      state.error.replaceFirst('Exception: ', ''),
+                    ),
+                    backgroundColor: Colors.redAccent,
+                  ),
+                );
               }
             },
             builder: (context, reqState) {
@@ -162,7 +176,8 @@ class _ShrejScreenState extends State<ShrejScreen> {
                     builder: (context, state) {
                       final cubit = context.read<LocationCubit>();
 
-                      return Column(
+                      // ✨ بقية الفورم كما هي بدون تغيير
+                      return  Column(
                         children: [
                           SecondaryTextFormField(
                             label: 'وصف الخدمة *',

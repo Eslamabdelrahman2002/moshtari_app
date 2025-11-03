@@ -39,11 +39,12 @@ class CarAdsRepository {
           request.technicalReport!.path,
           filename: p.basename(request.technicalReport!.path),
         ),
+
     });
 
     final resData = await _apiService.postForm(
       ApiConstants.carAdsCreate,
-      formData,
+      formData,requireAuth: true
     );
 
     if (resData is Map<String, dynamic>) {

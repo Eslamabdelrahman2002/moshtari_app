@@ -10,7 +10,7 @@ class MarketingRequestsRepo {
     required int adId,
     required String message,
   }) async {
-    final resp = await _api.post(ApiConstants.marketingRequests, {
+    final resp = await _api.post(requireAuth: true,ApiConstants.marketingRequests, {
       'ad_id': adId,
       'message': message,
     });

@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mushtary/core/theme/colors.dart';
+import 'package:mushtary/core/theme/text_styles.dart';
+import 'package:mushtary/core/widgets/primary/my_svg.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
 import 'package:mushtary/features/product_details/ui/logic/cubit/comment_send_cubit.dart';
 import 'package:mushtary/features/product_details/ui/logic/cubit/comment_send_state.dart';
+// افتراض استيراد PrimaryTextFormField
+import 'package:mushtary/core/widgets/primary/primary_text_form_field.dart';
+// قد تحتاج لعمل import لـ flutter/widgets.dart أيضاً
 
 class CarPartAddCommentField extends StatefulWidget {
   final int adId;
@@ -26,6 +31,7 @@ class _CarPartAddCommentFieldState extends State<CarPartAddCommentField> {
   @override
   void initState() {
     super.initState();
+    // ✅ Keep listener for UI update, especially for submit button state
     _ctrl.addListener(() => setState(() {}));
   }
 
@@ -52,6 +58,7 @@ class _CarPartAddCommentFieldState extends State<CarPartAddCommentField> {
       },
       builder: (context, state) {
         final sending = state.submitting;
+        // ✅ Can send when not submitting and text is not empty
         final canSend = !sending && _ctrl.text.trim().isNotEmpty;
 
         void submit() {
@@ -62,44 +69,45 @@ class _CarPartAddCommentFieldState extends State<CarPartAddCommentField> {
           );
         }
 
+        // ✅ تم تعديل الأبعاد لتطابق تصميم CommentTextField
         return Container(
-          height: 65.h,
+          // تم تقليص الارتفاع
+          height: 56.h,
           width: double.infinity,
-          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 12.h),
+          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h), // تعديل الـ padding
           decoration: BoxDecoration(
             color: ColorsManager.dark50,
             borderRadius: BorderRadius.circular(16.r),
           ),
           child: Row(
             children: [
-              Expanded(
-                child: TextField(
+              // ✅ استخدام PrimaryTextFormField وتحديد الـ dimensions
+              SizedBox(
+                width: 302.w,
+                height: 40.h, // تم تحديد ارتفاع مُناسب لـ TextField
+                child: PrimaryTextFormField(
                   controller: _ctrl,
-                  minLines: 1,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    hintText: 'اكتب تعليقك هنا ...........',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                    contentPadding:
-                    EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-                  ),
-                  onSubmitted: (_) => submit(),
+                  validationError: '', // لا نحتاج validation error هنا
+                  hint: 'اكتب تعليقك هنا ...........',
+                  fillColor: ColorsManager.white,
+                  // ✅ Handle submit on keyboard done button
+                  onFieldSubmitted: (_) => submit(),
                 ),
               ),
               horizontalSpace(8),
+              // ✅ استخدام MySvg لزر الإرسال مع حالة Loading
               GestureDetector(
                 onTap: canSend ? submit : null,
                 child: sending
                     ? SizedBox(
-                  width: 22.w,
-                  height: 22.w,
+                  width: 24.w,
+                  height: 24.w,
                   child: const CircularProgressIndicator.adaptive(strokeWidth: 2),
                 )
-                    : const Icon(Icons.send, color: Colors.blue),
+                    : Opacity( // ✅ إضافة Opacity للتعبير عن حالة canSend
+                  opacity: canSend ? 1.0 : 0.4,
+                  child: const MySvg(image: 'send-2'), // ✅ استخدام MySvg
+                ),
               ),
             ],
           ),

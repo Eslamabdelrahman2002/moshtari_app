@@ -83,6 +83,9 @@ import 'package:mushtary/features/create_ad/ui/screens/other/other_ad_view_scree
 import 'package:mushtary/features/create_ad/ui/screens/car_parts/car_part_create_ad_step1_screen.dart';
 import 'package:mushtary/features/create_ad/ui/screens/car_parts/car_part_create_ad_step2_screen.dart';
 
+// ✅ FIXED: Import للـ Car Create Flow (من الكود اللي بعثته)
+import 'package:mushtary/features/create_ad/ui/screens/cars/create_car_ad_flow.dart'; // تأكد من المسار الصحيح
+
 // Chat
 import 'package:mushtary/features/messages/ui/screens/chat_screen.dart';
 import '../../features/ real_estate_request_details/ui/cubit/real_estate_request_details_cubit.dart';
@@ -175,6 +178,30 @@ class AppRouter {
 
       case Routes.createAdScreen:
         return NoAnimationPageRoute(builder: (_) => const CreateAdScreen());
+
+// ✅ FIXED: إضافة route لـ Car Create Ad Flow (مع تمرير exhibitionId)
+      case Routes.createCarAdFlow: { // ✅ FIXED: استخدم Routes.createCarAdFlow
+        final args = arguments as Map<String, dynamic>?;
+        final exhibitionId = args?['exhibitionId'] as int?;
+        return NoAnimationPageRoute(
+          builder: (_) => BlocProvider<CarAdsCubit>(
+            create: (_) => getIt<CarAdsCubit>(),
+            child: CreateCarAdFlow(exhibitionId: exhibitionId), // ✅ FIXED: مرر exhibitionId مباشرة للـ widget (بدون setExhibitionId)
+          ),
+        );
+      }
+
+// ✅ FIXED: إضافة route لـ Real Estate Create Ad Flow (مع تمرير exhibitionId)
+      case Routes.createRealEstateAdFlow: { // ✅ FIXED: استخدم Routes.createRealEstateAdFlow
+        final args = arguments as Map<String, dynamic>?;
+        final exhibitionId = args?['exhibitionId'] as int?;
+        return NoAnimationPageRoute(
+          builder: (_) => BlocProvider<RealEstateAdsCubit>(
+            create: (_) => getIt<RealEstateAdsCubit>()..setExhibitionId(exhibitionId), // ✅ يستخدم setExhibitionId (موجود في Cubit)
+            child: RealEstateCreateAdFlow(exhibitionId: exhibitionId),
+          ),
+        );
+      }
 
 // Content
       case Routes.reelsScreen:

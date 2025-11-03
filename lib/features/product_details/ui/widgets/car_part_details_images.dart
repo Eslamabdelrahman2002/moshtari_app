@@ -28,101 +28,145 @@ class CarPartDetailsImages extends StatefulWidget {
 }
 
 class _CarPartDetailsImagesState extends State<CarPartDetailsImages> {
-  int current = 0;
-  late final PageController _ctrl;
+  // ✅ تغيير أسماء المتغيرات لتطابق التصميم المطلوب
+  final PageController pageController = PageController();
+  int currentIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = PageController(viewportFraction: 0.9);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final cubit = context.read<FavoritesCubit>();
+      if (cubit.state is FavoritesInitial) {
+        cubit.fetchFavorites();
+      }
+    });
   }
 
   @override
   void dispose() {
-    _ctrl.dispose();
+    pageController.dispose();
     super.dispose();
+  }
+
+  // ✅ الدالة الجديدة لفتح الـ Dialog المخصص للمشاركة
+  void _shareAd() {
+    final link = 'https://moshtary.com/ad/${widget.adId}';
+    showDialog(
+      context: context,
+      useRootNavigator: true,
+      barrierDismissible: true,
+      builder: (_) => ShareDialog(shareLink: link),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final total = widget.images.isEmpty ? 1 : widget.images.length;
 
+    // ✅ زيادة الارتفاع ليتطابق مع الـ UI المطلوب
     return SizedBox(
-      height: 260.h,
+      height: 300.h,
       width: double.infinity,
       child: Stack(
         alignment: Alignment.bottomCenter,
         children: [
+          // ✅ PageView لعرض الصور
           PageView.builder(
-            controller: _ctrl,
+            controller: pageController,
             itemCount: total,
-            onPageChanged: (i) => setState(() => current = i),
-            itemBuilder: (_, i) {
+            onPageChanged: (i) => setState(() => currentIndex = i),
+            itemBuilder: (context, i) {
               if (widget.images.isEmpty) {
                 return const Center(child: MySvg(image: 'image'));
               }
               final url = widget.images[i];
-              final scale = i == current ? 1.0 : 0.9;
+              // ✅ تغيير اسم المتغير هنا
+              final scale = (i == currentIndex) ? 1.0 : 0.9;
               return AnimatedScale(
-                scale: scale,
                 duration: const Duration(milliseconds: 300),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16.r),
-                  child: CachedNetworkImage(
-                    imageUrl: url,
-                    fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) =>
-                    const Center(child: MySvg(image: 'image')),
+                scale: scale,
+                // ✅ إضافة Padding ليتطابق مع الـ UI المطلوب
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16.r),
+                    child: CachedNetworkImage(
+                      imageUrl: url,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: 300.h,
+                      placeholder: (_, __) =>
+                          Container(color: Colors.grey.shade200),
+                      errorWidget: (_, __, ___) => const Icon(
+                        Icons.broken_image,
+                        size: 80,
+                        color: Colors.grey,
+                      ),
+                    ),
                   ),
                 ),
               );
             },
           ),
-          if (widget.images.length > 1)
+
+          // ✅ عدّاد النقاط في أسفل الصور
+          if (total > 1)
             Positioned(
               bottom: 10.h,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(widget.images.length, (i) {
-                  final active = i == current;
+                  // ✅ تغيير اسم المتغير هنا
+                  final isActive = i == currentIndex;
                   return AnimatedContainer(
                     duration: const Duration(milliseconds: 250),
                     margin: EdgeInsets.symmetric(horizontal: 3.w),
                     height: 6.h,
-                    width: active ? 20.w : 8.w,
+                    width: isActive ? 20.w : 8.w,
                     decoration: BoxDecoration(
-                      color: active
+                      color: isActive
                           ? ColorsManager.primary400
                           : Colors.white.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12.r),
                     ),
                   );
                 }),
               ),
             ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
+
+          // ✅ الشريط العلوي: المشاركة + المفضلة (موقع جديد: أعلى اليسار)
+          Positioned(
+            top: 12.h,
+            left: 12.w,
+            child: SafeArea( // ✅ وضع SafeArea حول الأزرار العلوية
               child: Row(
                 children: [
-                  const Spacer(),
+                  // زر المشاركة
                   IconButton(
+                    onPressed: _shareAd,
                     icon: const Icon(Icons.share, color: Colors.white),
-                    onPressed: () =>
-                        showDialog(context: context, builder: (_) => const ShareDialog()),
                   ),
+
+                  // زر المفضلة
                   BlocBuilder<FavoritesCubit, FavoritesState>(
                     builder: (context, state) {
-                      bool isFav = state is FavoritesLoaded &&
-                          state.favoriteIds.contains(widget.adId);
+                      bool isFav = false;
+                      if (state is FavoritesLoaded) {
+                        isFav = state.favoriteIds.contains(widget.adId);
+                      }
                       return IconButton(
+                        onPressed: () {
+                          context.read<FavoritesCubit>().toggleFavorite(
+                            type: widget.favoriteType,
+                            id: widget.adId,
+                          );
+                        },
                         icon: Icon(
                           isFav ? Icons.favorite : Icons.favorite_border,
-                          color: isFav ? ColorsManager.redButton : Colors.white,
-                        ),
-                        onPressed: () => context.read<FavoritesCubit>().toggleFavorite(
-                          type: widget.favoriteType,
-                          id: widget.adId,
+                          color: isFav
+                              ? ColorsManager.redButton
+                              : Colors.white,
                         ),
                       );
                     },
