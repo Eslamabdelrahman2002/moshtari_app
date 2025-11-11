@@ -30,30 +30,35 @@ class OtherAdDetailsImages extends StatefulWidget {
 }
 
 class _OtherAdDetailsImagesState extends State<OtherAdDetailsImages> {
-  int current = 0;
-  late final PageController _ctrl;
+  // ✅ تغيير أسماء المتغيرات لتطابق التصميم المطلوب (مطابق للثاني)
+  final PageController pageController = PageController();
+  int currentIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    // ✅ تعطيل الـ viewportFraction لتظهر الصورة بالحجم الكامل
-    _ctrl = PageController(viewportFraction: 1.0);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final cubit = context.read<FavoritesCubit>();
+      if (cubit.state is FavoritesInitial) {
+        cubit.fetchFavorites();
+      }
+    });
   }
 
   @override
   void dispose() {
-    _ctrl.dispose();
+    pageController.dispose();
     super.dispose();
   }
 
-  /// ✅ دالة مشاركة موحّدة
-  void _shareAd(BuildContext context) {
+  /// ✅ دالة مشاركة موحّدة (مطابقة للثاني، بدون معلمة)
+  void shareAd() {
     final link = 'https://moshtary.com/ad/${widget.adId}';
     showDialog(
       context: context,
       useRootNavigator: true,
       barrierDismissible: true,
-      builder: (_) => ShareDialog(shareLink: link),
+      builder: (ctx) => ShareDialog(shareLink: link), // ✅ تصحيح الـ builder ليأخذ BuildContext
     );
   }
 
@@ -61,37 +66,53 @@ class _OtherAdDetailsImagesState extends State<OtherAdDetailsImages> {
   Widget build(BuildContext context) {
     final total = widget.images.isEmpty ? 1 : widget.images.length;
 
+    // ✅ زيادة الارتفاع ليتطابق مع الـ UI المطلوب (300.h مثل الثاني)
     return SizedBox(
-      height: 285.h,
+      height: 300.h,
       width: double.infinity,
       child: Stack(
+        alignment: Alignment.bottomCenter, // ✅ مطابق للثاني
         children: [
-          // ✅ عرض الصور يشغل العرض كاملاً
+          // ✅ PageView لعرض الصور (مطابق للثاني)
           PageView.builder(
-            controller: _ctrl,
+            controller: pageController,
             itemCount: total,
-            onPageChanged: (i) => setState(() => current = i),
-            itemBuilder: (_, i) {
+            onPageChanged: (i) => setState(() => currentIndex = i),
+            itemBuilder: (context, i) {
               if (widget.images.isEmpty) {
                 return const Center(child: MySvg(image: 'image'));
               }
-
               final url = widget.images[i];
-              return ClipRRect(
-                borderRadius: BorderRadius.zero, // لا انحناء لحافة الصورة
-                child: CachedNetworkImage(
-                  imageUrl: url,
-                  width: double.infinity,
-                  height: 285.h,
-                  fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) =>
-                  const Center(child: MySvg(image: 'image')),
+              // ✅ تغيير اسم المتغير هنا (مطابق)
+              final scale = (i == currentIndex) ? 1.0 : 0.9;
+              return AnimatedScale(
+                duration: const Duration(milliseconds: 300),
+                scale: scale,
+                // ✅ إضافة Padding ليتطابق مع الـ UI المطلوب
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16.r), // ✅ إضافة انحناء للحواف
+                    child: CachedNetworkImage(
+                      imageUrl: url,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: 300.h,
+                      placeholder: (_, __) =>
+                          Container(color: Colors.grey.shade200), // ✅ مطابق
+                      errorWidget: (_, __, ___) => const Icon(
+                        Icons.broken_image,
+                        size: 80,
+                        color: Colors.grey,
+                      ), // ✅ مطابق
+                    ),
+                  ),
                 ),
               );
             },
           ),
 
-          // ✅ شارة الحالة (جديدة / مستعملة ...)
+          // ✅ شارة الحالة (جديدة / مستعملة ...) - محتفظ بها من الأول لأنها موجودة في الـ Widget
           if ((widget.status ?? '').isNotEmpty)
             Positioned(
               top: 16.h,
@@ -109,33 +130,63 @@ class _OtherAdDetailsImagesState extends State<OtherAdDetailsImages> {
               ),
             ),
 
-          // ✅ أزرار المشاركة والمفضلة في الزاوية العلوية اليمنى
+          // ✅ عدّاد النقاط في أسفل الصور (مطابق للثاني)
+          if (total > 1)
+            Positioned(
+              bottom: 10.h,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(widget.images.length, (i) {
+                  // ✅ تغيير اسم المتغير هنا
+                  final isActive = i == currentIndex;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    margin: EdgeInsets.symmetric(horizontal: 3.w),
+                    height: 6.h,
+                    width: isActive ? 20.w : 8.w,
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? ColorsManager.primary400
+                          : Colors.white.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(12.r), // ✅ مطابق
+                    ),
+                  );
+                }),
+              ),
+            ),
+
+          // ✅ الشريط العلوي: المشاركة + المفضلة (موقع جديد: أعلى اليسار، مطابق للثاني)
           Positioned(
-            top: 16.h,
+            top: 12.h,
             left: 12.w,
-            child: SafeArea(
+            child: SafeArea( // ✅ وضع SafeArea حول الأزرار العلوية
               child: Row(
                 children: [
+                  // زر المشاركة
                   IconButton(
+                    onPressed: shareAd, // ✅ مطابق للثاني (بدون _)
                     icon: const Icon(Icons.share, color: Colors.white),
-                    onPressed: () => _shareAd(context),
                   ),
+
+                  // زر المفضلة
                   BlocBuilder<FavoritesCubit, FavoritesState>(
                     builder: (context, state) {
-                      final isFav = state is FavoritesLoaded &&
-                          state.favoriteIds.contains(widget.adId);
+                      bool isFav = false;
+                      if (state is FavoritesLoaded) {
+                        isFav = state.favoriteIds.contains(widget.adId);
+                      }
                       return IconButton(
+                        onPressed: () {
+                          context.read<FavoritesCubit>().toggleFavorite(
+                            type: widget.favoriteType,
+                            id: widget.adId,
+                          );
+                        },
                         icon: Icon(
                           isFav ? Icons.favorite : Icons.favorite_border,
                           color: isFav
                               ? ColorsManager.redButton
                               : Colors.white,
-                        ),
-                        onPressed: () => context
-                            .read<FavoritesCubit>()
-                            .toggleFavorite(
-                          type: widget.favoriteType,
-                          id: widget.adId,
                         ),
                       );
                     },
@@ -144,32 +195,6 @@ class _OtherAdDetailsImagesState extends State<OtherAdDetailsImages> {
               ),
             ),
           ),
-
-          // ✅ مؤشّر الصفحات في الأسفل
-          if (widget.images.length > 1)
-            Positioned(
-              bottom: 10.h,
-              left: 0,
-              right: 0,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(widget.images.length, (i) {
-                  final active = i == current;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    margin: EdgeInsets.symmetric(horizontal: 3.w),
-                    height: 6.h,
-                    width: active ? 20.w : 8.w,
-                    decoration: BoxDecoration(
-                      color: active
-                          ? ColorsManager.primary400
-                          : Colors.white.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  );
-                }),
-              ),
-            ),
         ],
       ),
     );

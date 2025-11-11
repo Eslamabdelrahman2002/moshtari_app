@@ -55,14 +55,18 @@ class ApiConstants {
   static String carAdDetails(int id) => '$carAds/$id';
   static String carAdDetailsByQuery(int id) => '$carAds?id=$id';
   static const String carAdsCreate = 'car-ads/car-ads';
+  static String updateCarAd(int id) => '$carAds/$id';
   static const String carImagesKey = 'image_urls';
   static const String carTechnicalReportKey = 'technical_report';
 
   // Car parts
   static const String carPartAds = 'car-part-ads';
+
+  static  String carPartAdsUpdate(int id)=>"$carPartAds/$carPartAds/$id";
   static String carPartAdDetails(int id) => '$carPartAds/$carPartAds/$id';
   static const String carPartAdsCreate = 'car-part-ads/car-part-ads'; // تم تصحيح المسار
   static const String carPartImagesKey = 'image_urls';
+
 
 
   // Real estate ads
@@ -74,12 +78,18 @@ class ApiConstants {
   // Other ads
   static const String otherAds = 'other-ads';
   static String otherAdDetails(int id) => '$otherAds/$id';
+  static String updateOtherAd(int id) => '$otherAds/$id';
   static const String otherAdImagesKey = 'image_urls';
-
+  static String getRealEstateAdDetails(int id) => '$realEstateAds/$id';
   // Reviews
   static const String adReviews = 'ad-reviews';
   static String adReviewForAd(int adId) => '$adReviews/$adId/review';
-
+  // مفاتيح الحقول
+  static const String realEstateImageUrlsKey = 'image_urls'; // للتحديث فقط
+  // لو عندك خدمات
+  static const String servicesKey = 'services';
+  // ✅ New: Endpoint لتعديل إعلان عقار (PUT/PATCH)
+  static String updateRealEstateAd(int id) => '$realEstateAds/$id';
   // Marketing
   static const String marketingRequests = 'marketing-requests';
   //offers
@@ -155,10 +165,26 @@ class ApiConstants {
         throw ArgumentError('Unsupported adType: $adType');
     }
   }
+
   static String getPublisherProfile(int userId) => 'users/$userId';
   static String getPublisherAds(int userId) => '$carAds/my-ads/$userId';
   static String getPublisherAuctions(int userId) => '$carAuctions/my-auctions/$userId';
   static const String dynaTripsAvailable = 'dyna-trips/available';
   static const String serviceOffers = 'service-offers/offers';
   static const String resendOtp = 'auth/resend-otp';
+  static String bumpAdPath({required String adType, required int id}) {
+    switch (adType) {
+      case 'car':
+        return '$carAds/$id'; // car-ads/{id}
+      case 'real_estate':
+        return '$realEstateAds/$id'; // real-estate-ads/{id}
+      case 'car_part':
+      // car-part-ads/car-part-ads/{id}
+        return '$carPartAds/$carPartAds/$id';
+      case 'other':
+        return '$otherAds/$id'; // other-ads/{id}
+      default:
+        throw ArgumentError('Unsupported adType: $adType');
+    }
+  }
 }

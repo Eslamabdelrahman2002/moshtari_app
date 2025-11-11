@@ -1,4 +1,3 @@
-// lib/features/create_ad/ui/screens/real_estate/real_estate_advanced_details_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -25,6 +24,60 @@ class _RealEstateAdvancedDetailsScreenState
     extends State<RealEstateAdvancedDetailsScreen> {
   final Set<String> selectedServices = {};
 
+  // Controllers لعرض القيم القديمة (وإرسال التعديلات)
+  late final TextEditingController _priceCtrl;
+  late final TextEditingController _areaCtrl;
+  late final TextEditingController _streetCountCtrl;
+  late final TextEditingController _floorCountCtrl;
+  late final TextEditingController _roomsCtrl;
+  late final TextEditingController _bathsCtrl;
+  late final TextEditingController _livingCtrl;
+  late final TextEditingController _streetWidthCtrl;
+  late final TextEditingController _licenseCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    final s = context.read<RealEstateAdsCubit>().state;
+
+    _priceCtrl = TextEditingController(text: s.price?.toString() ?? '');
+    _areaCtrl = TextEditingController(text: s.areaM2?.toString() ?? '');
+    _streetCountCtrl =
+        TextEditingController(text: s.streetCount?.toString() ?? '');
+    _floorCountCtrl =
+        TextEditingController(text: s.floorCount?.toString() ?? '');
+    _roomsCtrl = TextEditingController(text: s.roomCount?.toString() ?? '');
+    _bathsCtrl =
+        TextEditingController(text: s.bathroomCount?.toString() ?? '');
+    _livingCtrl =
+        TextEditingController(text: s.livingroomCount?.toString() ?? '');
+    _streetWidthCtrl =
+        TextEditingController(text: s.streetWidth?.toString() ?? '');
+    _licenseCtrl = TextEditingController(text: s.licenseNumber ?? '');
+
+    // تهيئة الخدمات المختارة من الحالة (إن وجدت)
+    try {
+      selectedServices
+          .addAll(s.services is List<String> ? s.services as List<String> : []);
+    } catch (_) {
+      // تجاهل في حال كانت null
+    }
+  }
+
+  @override
+  void dispose() {
+    _priceCtrl.dispose();
+    _areaCtrl.dispose();
+    _streetCountCtrl.dispose();
+    _floorCountCtrl.dispose();
+    _roomsCtrl.dispose();
+    _bathsCtrl.dispose();
+    _livingCtrl.dispose();
+    _streetWidthCtrl.dispose();
+    _licenseCtrl.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<RealEstateAdsCubit>();
@@ -43,6 +96,7 @@ class _RealEstateAdvancedDetailsScreenState
                   isNumber: true,
                   maxheight: 56.h,
                   minHeight: 56.h,
+                  controller: _priceCtrl,
                   onChanged: (v) => cubit.setPrice(num.tryParse(v)),
                 ),
                 verticalSpace(16),
@@ -57,7 +111,8 @@ class _RealEstateAdvancedDetailsScreenState
                           title: 'سعر محدد',
                           isSelected: state.priceType == 'fixed',
                           onTap: () => cubit.setPriceType(
-                              RealEstateMappers.priceType('سعر محدد')),
+                            RealEstateMappers.priceType('سعر محدد'),
+                          ),
                         ),
                       ),
                       horizontalSpace(16),
@@ -66,7 +121,8 @@ class _RealEstateAdvancedDetailsScreenState
                           title: 'علي السوم',
                           isSelected: state.priceType == 'negotiable',
                           onTap: () => cubit.setPriceType(
-                              RealEstateMappers.priceType('علي السوم')),
+                            RealEstateMappers.priceType('علي السوم'),
+                          ),
                         ),
                       ),
                       horizontalSpace(16),
@@ -75,7 +131,8 @@ class _RealEstateAdvancedDetailsScreenState
                           title: 'مزاد',
                           isSelected: state.priceType == 'auction',
                           onTap: () => cubit.setPriceType(
-                              RealEstateMappers.priceType('مزاد')),
+                            RealEstateMappers.priceType('مزاد'),
+                          ),
                         ),
                       ),
                     ],
@@ -90,6 +147,7 @@ class _RealEstateAdvancedDetailsScreenState
                   isNumber: true,
                   maxheight: 56.h,
                   minHeight: 56.h,
+                  controller: _areaCtrl,
                   onChanged: (v) => cubit.setAreaM2(num.tryParse(v)),
                 ),
                 verticalSpace(16),
@@ -104,6 +162,7 @@ class _RealEstateAdvancedDetailsScreenState
                         isNumber: true,
                         maxheight: 56.h,
                         minHeight: 56.h,
+                        controller: _streetCountCtrl,
                         onChanged: (v) =>
                             cubit.setStreetCount(int.tryParse(v)),
                       ),
@@ -116,7 +175,9 @@ class _RealEstateAdvancedDetailsScreenState
                         isNumber: true,
                         maxheight: 56.h,
                         minHeight: 56.h,
-                        onChanged: (v) => cubit.setFloorCount(int.tryParse(v)),
+                        controller: _floorCountCtrl,
+                        onChanged: (v) =>
+                            cubit.setFloorCount(int.tryParse(v)),
                       ),
                     ),
                   ],
@@ -133,7 +194,9 @@ class _RealEstateAdvancedDetailsScreenState
                         isNumber: true,
                         maxheight: 56.h,
                         minHeight: 56.h,
-                        onChanged: (v) => cubit.setRoomCount(int.tryParse(v)),
+                        controller: _roomsCtrl,
+                        onChanged: (v) =>
+                            cubit.setRoomCount(int.tryParse(v)),
                       ),
                     ),
                     horizontalSpace(12),
@@ -144,6 +207,7 @@ class _RealEstateAdvancedDetailsScreenState
                         isNumber: true,
                         maxheight: 56.h,
                         minHeight: 56.h,
+                        controller: _bathsCtrl,
                         onChanged: (v) =>
                             cubit.setBathroomCount(int.tryParse(v)),
                       ),
@@ -156,6 +220,7 @@ class _RealEstateAdvancedDetailsScreenState
                         isNumber: true,
                         maxheight: 56.h,
                         minHeight: 56.h,
+                        controller: _livingCtrl,
                         onChanged: (v) =>
                             cubit.setLivingroomCount(int.tryParse(v)),
                       ),
@@ -171,6 +236,7 @@ class _RealEstateAdvancedDetailsScreenState
                   isNumber: true,
                   maxheight: 56.h,
                   minHeight: 56.h,
+                  controller: _streetWidthCtrl,
                   onChanged: (v) => cubit.setStreetWidth(num.tryParse(v)),
                 ),
                 verticalSpace(16),
@@ -184,8 +250,8 @@ class _RealEstateAdvancedDetailsScreenState
                         child: CustomizedChip(
                           title: 'شمال',
                           isSelected: state.facade == 'north',
-                          onTap: () =>
-                              cubit.setFacade(RealEstateMappers.facade('شمال')),
+                          onTap: () => cubit
+                              .setFacade(RealEstateMappers.facade('شمال')),
                         ),
                       ),
                       horizontalSpace(12),
@@ -193,8 +259,8 @@ class _RealEstateAdvancedDetailsScreenState
                         child: CustomizedChip(
                           title: 'جنوب',
                           isSelected: state.facade == 'south',
-                          onTap: () =>
-                              cubit.setFacade(RealEstateMappers.facade('جنوب')),
+                          onTap: () => cubit
+                              .setFacade(RealEstateMappers.facade('جنوب')),
                         ),
                       ),
                       horizontalSpace(12),
@@ -274,8 +340,10 @@ class _RealEstateAdvancedDetailsScreenState
                         hint: '123456',
                         maxheight: 56.h,
                         minHeight: 56.h,
+                        controller: _licenseCtrl,
                         onChanged: (v) => cubit.setLicenseNumber(
-                            v.trim().isEmpty ? null : v.trim()),
+                          v.trim().isEmpty ? null : v.trim(),
+                        ),
                       ),
                     ),
                   ],

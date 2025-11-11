@@ -1,3 +1,5 @@
+import 'offer_model.dart';
+
 class CarDetailsModel {
   final int id;
   final String title;
@@ -11,6 +13,7 @@ class CarDetailsModel {
   final String brand;
   final String modelAr;
   final String modelEn;
+  final List<OfferModel> offers;
   final int year;
   final String condition;
   final String saleType;
@@ -35,6 +38,7 @@ class CarDetailsModel {
   final List<SimilarCarAdModel> similarAds;
 
   CarDetailsModel({
+    required this.offers,
     required this.id,
     required this.title,
     required this.description,
@@ -80,6 +84,10 @@ class CarDetailsModel {
     final userMap = (data['user'] as Map?)?.cast<String, dynamic>();
 
     return CarDetailsModel(
+      offers: (data['offers'] as List? ?? const [])
+          .whereType<Map>()
+          .map((e) => OfferModel.fromJson(e.cast<String, dynamic>()))
+          .toList(),
       id: (data['id'] as num?)?.toInt() ?? 0,
       title: data['title']?.toString() ?? '',
       description: data['description']?.toString() ?? '',
@@ -106,6 +114,7 @@ class CarDetailsModel {
       doorCount: data['door_count']?.toString() ?? '',
       vehicleType: data['vehicle_type']?.toString() ?? '',
 
+
       // مالك الإعلان
       userId: (userMap?['id'] as num?)?.toInt() ?? (data['user_id'] as num?)?.toInt(),
       username: userMap?['username']?.toString() ?? (data['username']?.toString() ?? ''),
@@ -131,14 +140,27 @@ class CarDetailsModel {
 class CommentModel {
   final String userName;
   final String text;
+  final String? userPicture;
+  final String? offerPrice;
+  final DateTime? createdAt;
 
-  CommentModel({required this.userName, required this.text});
+  CommentModel({required this.userName, required this.text,this.userPicture,
+    this.offerPrice,
+    this.createdAt,});
 
   factory CommentModel.fromJson(dynamic json) {
+
     if (json is! Map) {
       return CommentModel(userName: '', text: json?.toString() ?? '');
     }
     final map = (json as Map).cast<String, dynamic>();
+    final price = map['offer_price']?.toString() ??
+        map['price']?.toString() ??
+        map['amount']?.toString();
+
+    // ✅ استخلاص صورة المستخدم وتاريخ الإنشاء (إذا وجدت في الـ JSON)
+    final userPic = map['user_picture']?.toString() ?? map['profile_picture_url']?.toString();
+    final created = map['created_at']?.toString();
     return CommentModel(
       userName: (map['username'] ?? map['userName'] ?? map['user_name'] ?? '').toString(),
       text: (map['text'] ?? map['content'] ?? map['comment'] ?? map['comment_text'] ?? '').toString(),

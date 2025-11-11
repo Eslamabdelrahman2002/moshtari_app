@@ -14,20 +14,19 @@ class CarInfoDescription extends StatefulWidget {
 }
 
 class _CarInfoDescriptionState extends State<CarInfoDescription> {
-  double? _height = 30.h;
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.w),
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
           child: Align(
               alignment: Alignment.centerRight,
               child: Text("الوصف", style: TextStyles.font16Dark300Grey400Weight)),
         ),
         AnimatedContainer(
           duration: const Duration(milliseconds: 300),
-          height: _height,
           child: Padding(
             padding: EdgeInsets.all(8.w),
             child: Text(widget.description,
@@ -36,12 +35,6 @@ class _CarInfoDescriptionState extends State<CarInfoDescription> {
                 maxLines: 10),
           ),
         ),
-        verticalSpace(16),
-        ShowMore(onTap: () {
-          setState(() {
-            _height = _height == 30.h ? null : 30.h;
-          });
-        })
       ],
     );
   }

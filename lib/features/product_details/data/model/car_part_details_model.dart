@@ -1,4 +1,6 @@
 
+import 'offer_model.dart';
+
 class CarPartDetailsModel {
   final int id;
   final String title;
@@ -14,8 +16,10 @@ class CarPartDetailsModel {
   final User user;
   final List<Comment> comments;
   final List<SimilarAd> similarAds;
+  final List<OfferModel> offers;
 
   CarPartDetailsModel({
+    required this.offers,
     required this.id,
     required this.title,
     required this.description,
@@ -35,6 +39,10 @@ class CarPartDetailsModel {
   factory CarPartDetailsModel.fromJson(Map<String, dynamic> json) {
     return CarPartDetailsModel(
       id: json['id'],
+      offers: (json['offers'] as List? ?? const [])
+          .whereType<Map>()
+          .map((e) => OfferModel.fromJson(e.cast<String, dynamic>()))
+          .toList(),
       title: json['title'] ?? '',
       description: json['description'] ?? '',
       price: json['price'] ?? '',

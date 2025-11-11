@@ -11,7 +11,7 @@ class OfferRequest {
 
   Map<String, dynamic> toMap() => {
     'ad_id': adId,
-    'amount': amount,
+    'offer_price': amount,
     if (message != null && message!.trim().isNotEmpty) 'message': message,
   };
 }

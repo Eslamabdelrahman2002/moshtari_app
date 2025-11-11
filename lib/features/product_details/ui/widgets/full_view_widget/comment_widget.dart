@@ -30,7 +30,7 @@ class CommentWidget extends StatelessWidget {
 
     Widget buildPriceBadge() {
       if (price == null || price!.trim().isEmpty) {
-        return const SizedBox.shrink();
+        return const SizedBox.shrink(); // لا يعرض إذا كان null أو فارغ (مثل null في JSON)
       }
       return Container(
         padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
@@ -42,7 +42,7 @@ class CommentWidget extends StatelessWidget {
         child: Row(
           children: [
             Text(
-              'يسوم $price',
+              'يسوم $price', // يعرض "يسوم [قيمة offer_price]"
               style: TextStyles.font12Blue400Weight,
             ),
             horizontalSpace(4),
@@ -110,11 +110,6 @@ class CommentWidget extends StatelessWidget {
                     splashColor: Colors.transparent,
                     onTap: () {},
                     child: const MySvg(image: 'reply'),
-                  ),
-                  horizontalSpace(6),
-                  Text(
-                    'الرد',
-                    style: TextStyles.font14Blue400Weight,
                   ),
                   horizontalSpace(12),
                   if (createdAt != null)

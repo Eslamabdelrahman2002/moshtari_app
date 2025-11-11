@@ -372,5 +372,6 @@ void setupServiceLocator() {
   registerFactoryReplacing<ServiceOfferCubit>(
         () => ServiceOfferCubit(getIt<ServiceOffersRepo>()),
   );
+
 }
 

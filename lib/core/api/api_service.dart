@@ -45,7 +45,7 @@ class ApiService {
         requestHeader: true,
         requestBody: true,
         responseHeader: false,
-        responseBody: false,
+        responseBody: true,
         error: true,
         logPrint: (object) => print(object.toString()),
       ),

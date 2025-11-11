@@ -1,3 +1,5 @@
+// lib/features/real_estate/data/models/real_estate_list_model.dart (افتراضيًا)
+
 class RealEstateListModel {
   final int id;
   final String? title;
@@ -17,6 +19,10 @@ class RealEstateListModel {
   final List<String>? imageUrls;
   final DateTime? createdAt;
 
+  // ✅ الحقول الجديدة للإحداثيات
+  final double? latitude;
+  final double? longitude;
+
   RealEstateListModel({
     required this.id,
     this.title,
@@ -35,6 +41,8 @@ class RealEstateListModel {
     this.profilePicture,
     this.imageUrls,
     this.createdAt,
+    this.latitude, // ✅ إضافتها للـ constructor
+    this.longitude, // ✅ إضافتها للـ constructor
   });
 
   factory RealEstateListModel.fromJson(Map<String, dynamic> json) {
@@ -59,6 +67,13 @@ class RealEstateListModel {
           .toList(),
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
+          : null,
+      // ✅ استخراج الإحداثيات
+      latitude: json['latitude'] != null
+          ? double.tryParse(json['latitude'].toString())
+          : null,
+      longitude: json['longitude'] != null
+          ? double.tryParse(json['longitude'].toString())
           : null,
     );
   }

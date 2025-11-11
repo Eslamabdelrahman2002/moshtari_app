@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -9,7 +8,6 @@ import 'package:mushtary/core/utils/helpers/spacing.dart';
 import 'package:mushtary/core/widgets/primary/my_svg.dart';
 import 'package:mushtary/core/widgets/primary/primary_button.dart';
 import 'package:mushtary/features/create_ad/ui/screens/car_parts/two_step_header.dart';
-import 'package:mushtary/core/router/routes.dart';
 
 // DI + Cubits
 import 'package:mushtary/core/dependency_injection/injection_container.dart';
@@ -22,9 +20,6 @@ import 'package:mushtary/core/car/data/model/car_type.dart';
 import 'package:mushtary/core/car/logic/cubit/car_catalog_cubit.dart';
 import 'package:mushtary/core/car/logic/cubit/car_catalog_state.dart';
 
-
-import '../../../../../core/widgets/primary/confirmation_dialog.dart';
-import '../../../../../core/widgets/primary/custom_app_bar.dart';
 import 'car_part_create_ad_step2_screen.dart';
 import 'logic/cubit/car_part_ads_cubit.dart';
 
@@ -48,6 +43,26 @@ class _CarPartCreateAdStep1ScreenState extends State<CarPartCreateAdStep1Screen>
 
   String _condition = 'used'; // new | used
 
+  bool _prefilledBrand = false;
+  bool _prefilledLocation = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final s = context.read<CarPartAdsCubit>().state;
+
+    _partNameCtrl.text = s.partName ?? '';
+    _descCtrl.text = s.description ?? '';
+    _condition = s.condition;
+
+    _brandId = s.brandId;
+    if (s.supportedModel.isNotEmpty) {
+      _selectedModels
+        ..clear()
+        ..addAll(s.supportedModel);
+    }
+  }
+
   @override
   void dispose() {
     _partNameCtrl.dispose();
@@ -55,6 +70,7 @@ class _CarPartCreateAdStep1ScreenState extends State<CarPartCreateAdStep1Screen>
     super.dispose();
   }
 
+  // UI helpers
   Widget _pickerField({
     required String label,
     required String hint,
@@ -132,268 +148,298 @@ class _CarPartCreateAdStep1ScreenState extends State<CarPartCreateAdStep1Screen>
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<CarPartAdsCubit>();
+    final baseState = cubit.state;
 
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (_) => getIt<CarCatalogCubit>()..loadBrands(autoSelectFirst: false)),
+        BlocProvider(create: (_) => getIt<CarCatalogCubit>()..loadBrands(
+          preselectBrandId: baseState.brandId,
+          autoSelectFirst: false,
+        )),
         BlocProvider(create: (_) => getIt<LocationCubit>()..loadRegions()),
       ],
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        // appBar: CustomAppBar(
-        //   title: "إنشاء إعلان قطع غيار",
-        //   onBackPressed: () async {
-        //     // إضافة dialog للتأكيد من الخروج
-        //     final shouldExit = await ConfirmationDialog.show(
-        //       context: context,
-        //       title: "تأكيد الخروج",
-        //       message: "هل أنت متأكد من الخروج؟ سيتم فقدان البيانات المدخلة.",
-        //       confirmText: "خروج",
-        //       cancelText: "البقاء",
-        //       confirmColor: Colors.red,
-        //       icon: Icons.warning_amber_rounded,
-        //     );
-        //
-        //     if (shouldExit == true && context.mounted) {
-        //       Navigator.pop(context);
-        //     }
-        //   },
-        // ),
-        body: SafeArea(
-          child: Column(
-            children: [
-              // AppBar بسيط
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: MySvg(image: "arrow-right", color: ColorsManager.black),
+      child: BlocListener<CarCatalogCubit, CarCatalogState>(
+        listenWhen: (p, c) => p.brandsLoading != c.brandsLoading || p.modelsLoading != c.modelsLoading,
+        listener: (context, cat) async {
+          // Prefill brand/model names بعد تحميل البراندات/الموديلات
+          final s = context.read<CarPartAdsCubit>().state;
+          if (!_prefilledBrand && !cat.brandsLoading) {
+            if (_brandId != null) {
+              final b = cat.brands.where((x) => x.id == _brandId).toList();
+              if (b.isNotEmpty) {
+                setState(() => _brandName = b.first.name);
+                // تحميل موديلات البراند الحالي
+                await context.read<CarCatalogCubit>().loadModels(_brandId!);
+              }
+            }
+            _prefilledBrand = true;
+          }
+        },
+        child: BlocListener<LocationCubit, LocationState>(
+          listenWhen: (p, c) =>
+          p.regionsLoading != c.regionsLoading || p.citiesLoading != c.citiesLoading,
+          listener: (context, loc) async {
+            // Prefill region/city بالـ IDs
+            final s = context.read<CarPartAdsCubit>().state;
+            if (!_prefilledLocation && !loc.regionsLoading && loc.regions.isNotEmpty) {
+              if (s.regionId != null) {
+                final r = loc.regions.where((e) => e.id == s.regionId).toList();
+                if (r.isNotEmpty) {
+                  setState(() => _selectedRegion = r.first);
+                  await context.read<LocationCubit>().loadCities(r.first.id);
+                  final cities = context.read<LocationCubit>().state.cities;
+                  if (s.cityId != null) {
+                    final c = cities.where((e) => e.id == s.cityId).toList();
+                    if (c.isNotEmpty) {
+                      setState(() => _selectedCity = c.first);
+                    }
+                  }
+                }
+              }
+              _prefilledLocation = true;
+            }
+          },
+          child: Scaffold(
+            backgroundColor: Colors.white,
+            body: SafeArea(
+              child: Column(
+                children: [
+                  // AppBar بسيط
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: MySvg(image: "arrow-right", color: ColorsManager.black),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          baseState.isEditing ? "تعديل إعلان قطع غيار" : "إنشاء إعلان",
+                          style: TextStyles.font16Black500Weight,
+                        ),
+                      ],
                     ),
-                    SizedBox(width: 8.w),
-                    Text("إنشاء إعلان", style: TextStyles.font16Black500Weight),
-                  ],
-                ),
-              ),
-
-              // Header
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    verticalSpace(12),
-                    const TwoStepHeader(currentStep: 0),
-                  ],
-                ),
-              ),
-
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      verticalSpace(12),
-
-                      _textField(
-                        label: 'نوع القطعة',
-                        hint: 'ادخل نوع القطعة',
-                        controller: _partNameCtrl,
-                        onChanged: cubit.setPartName,
-                      ),
-                      verticalSpace(12),
-
-                      _segment(
-                        title: 'الحالة',
-                        items: const ['new', 'used'],
-                        labels: const {'new': 'جديد', 'used': 'مستعمل'},
-                        value: _condition,
-                        onSelect: (v) {
-                          setState(() => _condition = v);
-                          cubit.setCondition(v);
-                        },
-                      ),
-                      verticalSpace(12),
-
-                      // ماركة السيارة
-                      BlocBuilder<CarCatalogCubit, CarCatalogState>(
-                        builder: (context, catState) {
-                          return _pickerField(
-                            label: 'ماركة السيارة',
-                            hint: catState.brandsLoading ? 'جاري التحميل...' : 'حدد الماركة',
-                            value: _brandName,
-                            onTap: () async {
-                              FocusScope.of(context).unfocus();
-                              if (catState.brandsLoading) return;
-                              if (catState.brands.isEmpty) {
-                                await context.read<CarCatalogCubit>().loadBrands(autoSelectFirst: false);
-                              }
-
-                              final res = await _openCarBrandDialog(context);
-                              if (res != null) {
-                                setState(() {
-                                  _brandId = res.id;
-                                  _brandName = res.name;
-                                  _selectedModels.clear();
-                                });
-                                cubit.setBrandId(_brandId);
-                                await context.read<CarCatalogCubit>().loadModels(res.id);
-                              }
-                            },
-                          );
-                        },
-                      ),
-                      verticalSpace(12),
-
-                      // الموديلات المدعومة
-                      BlocBuilder<CarCatalogCubit, CarCatalogState>(
-                        builder: (context, catState) {
-                          final carModels = catState.models;
-                          final modelsLoading = catState.modelsLoading;
-
-                          String hintText;
-                          if (_brandId == null) {
-                            hintText = 'اختر الماركة أولًا';
-                          } else if (modelsLoading) {
-                            hintText = 'جاري تحميل الموديلات...';
-                          } else if (carModels.isEmpty) {
-                            hintText = 'لا توجد موديلات متاحة';
-                          } else {
-                            hintText = 'حدد الموديلات المدعومة';
-                          }
-
-                          return _pickerField(
-                            label: 'موديلات مدعومة',
-                            hint: hintText,
-                            value: _selectedModels.isEmpty ? null : _selectedModels.join('، '),
-                            onTap: () async {
-                              FocusScope.of(context).unfocus();
-                              if (_brandId == null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('اختر الماركة أولًا')),
-                                );
-                                return;
-                              }
-
-                              if (catState.models.isEmpty && !modelsLoading) {
-                                await context.read<CarCatalogCubit>().loadModels(_brandId!);
-                              }
-                              if (context.read<CarCatalogCubit>().state.models.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('لا توجد موديلات متاحة لهذه الماركة الآن')),
-                                );
-                                return;
-                              }
-
-                              final carModels2 = context.read<CarCatalogCubit>().state.models;
-                              final sel = await _openCarModelMultiSelectDialog(
-                                context: context,
-                                options: carModels2.map((m) => m.displayName).toList(),
-                                initialSelected: _selectedModels.toSet(),
-                              );
-                              if (sel != null) {
-                                setState(() {
-                                  _selectedModels
-                                    ..clear()
-                                    ..addAll(sel);
-                                });
-                                cubit.setSupportedModels(_selectedModels);
-                              }
-                            },
-                          );
-                        },
-                      ),
-                      verticalSpace(12),
-
-                      _textField(
-                        label: 'وصف القطعة',
-                        hint: 'اكتب وصف المنتج...',
-                        maxLines: 3,
-                        controller: _descCtrl,
-                        onChanged: cubit.setDescription,
-                      ),
-                      verticalSpace(12),
-
-                      // المدينة والمنطقة
-                      BlocBuilder<LocationCubit, LocationState>(
-                        builder: (context, locState) {
-                          final isLoading = locState.regionsLoading || locState.citiesLoading;
-
-                          return _pickerField(
-                            label: 'المدينة والمنطقة',
-                            hint: isLoading ? 'جاري تحميل المناطق...' : 'اختر المنطقة والمدينة',
-                            value: _selectedCity != null
-                                ? '${_selectedRegion?.nameAr} - ${_selectedCity?.nameAr}'
-                                : null,
-                            onTap: isLoading
-                                ? () {}
-                                : () async {
-                              FocusScope.of(context).unfocus();
-                              final res = await _openRegionAndCityDialog(context);
-                              if (res != null) {
-                                setState(() {
-                                  _selectedRegion = res.region;
-                                  _selectedCity = res.city;
-                                });
-                                cubit.setCityId(res.city.id);
-                                cubit.setRegionId(res.region.id);
-                              }
-                            },
-                          );
-                        },
-                      ),
-                      verticalSpace(12),
-
-                      PrimaryButton(
-                        text: 'التالي',
-                        onPressed: () {
-                          FocusScope.of(context).unfocus();
-
-                          final missing = <String>[];
-                          if (_partNameCtrl.text.isEmpty) missing.add('نوع القطعة');
-                          if (_brandId == null) missing.add('ماركة السيارة');
-                          if (_selectedModels.isEmpty) missing.add('موديلات مدعومة');
-                          if (_selectedCity == null) missing.add('المدينة');
-
-                          if (missing.isNotEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('يرجى تعبئة: ${missing.join('، ')}')),
-                            );
-                            return;
-                          }
-
-                          cubit.setPartName(_partNameCtrl.text);
-                          cubit.setDescription(_descCtrl.text);
-                          cubit.setCondition(_condition);
-                          cubit.setSupportedModels(_selectedModels);
-
-                          // مرر نفس نسخة Cubit
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => BlocProvider<CarPartAdsCubit>.value(
-                                value: cubit,
-                                child: const CarPartCreateAdStep2Screen(),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      verticalSpace(12),
-                    ],
                   ),
-                ),
+
+                  // Header
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        verticalSpace(12),
+                        const TwoStepHeader(currentStep: 0),
+                      ],
+                    ),
+                  ),
+
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          verticalSpace(12),
+
+                          _textField(
+                            label: 'نوع القطعة',
+                            hint: 'ادخل نوع القطعة',
+                            controller: _partNameCtrl,
+                            onChanged: cubit.setPartName,
+                          ),
+                          verticalSpace(12),
+
+                          _segment(
+                            title: 'الحالة',
+                            items: const ['new', 'used'],
+                            labels: const {'new': 'جديد', 'used': 'مستعمل'},
+                            value: _condition,
+                            onSelect: (v) {
+                              setState(() => _condition = v);
+                              cubit.setCondition(v);
+                            },
+                          ),
+                          verticalSpace(12),
+
+                          // ماركة السيارة
+                          BlocBuilder<CarCatalogCubit, CarCatalogState>(
+                            builder: (context, catState) {
+                              return _pickerField(
+                                label: 'ماركة السيارة',
+                                hint: catState.brandsLoading ? 'جاري التحميل...' : 'حدد الماركة',
+                                value: _brandName,
+                                onTap: () async {
+                                  FocusScope.of(context).unfocus();
+                                  if (catState.brandsLoading) return;
+                                  if (catState.brands.isEmpty) {
+                                    await context.read<CarCatalogCubit>().loadBrands(autoSelectFirst: false);
+                                  }
+
+                                  final res = await _openCarBrandDialog(context);
+                                  if (res != null) {
+                                    setState(() {
+                                      _brandId = res.id;
+                                      _brandName = res.name;
+                                      _selectedModels.clear();
+                                    });
+                                    cubit.setBrandId(_brandId);
+                                    await context.read<CarCatalogCubit>().loadModels(res.id);
+                                  }
+                                },
+                              );
+                            },
+                          ),
+                          verticalSpace(12),
+
+                          // الموديلات المدعومة
+                          BlocBuilder<CarCatalogCubit, CarCatalogState>(
+                            builder: (context, catState) {
+                              final carModels = catState.models;
+                              final modelsLoading = catState.modelsLoading;
+
+                              String hintText;
+                              if (_brandId == null) {
+                                hintText = 'اختر الماركة أولًا';
+                              } else if (modelsLoading) {
+                                hintText = 'جاري تحميل الموديلات...';
+                              } else if (carModels.isEmpty) {
+                                hintText = 'لا توجد موديلات متاحة';
+                              } else {
+                                hintText = 'حدد الموديلات المدعومة';
+                              }
+
+                              return _pickerField(
+                                label: 'موديلات مدعومة',
+                                hint: hintText,
+                                value: _selectedModels.isEmpty ? null : _selectedModels.join('، '),
+                                onTap: () async {
+                                  FocusScope.of(context).unfocus();
+                                  if (_brandId == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('اختر الماركة أولًا')),
+                                    );
+                                    return;
+                                  }
+
+                                  if (catState.models.isEmpty && !modelsLoading) {
+                                    await context.read<CarCatalogCubit>().loadModels(_brandId!);
+                                  }
+                                  if (context.read<CarCatalogCubit>().state.models.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('لا توجد موديلات متاحة لهذه الماركة الآن')),
+                                    );
+                                    return;
+                                  }
+
+                                  final carModels2 = context.read<CarCatalogCubit>().state.models;
+                                  final sel = await _openCarModelMultiSelectDialog(
+                                    context: context,
+                                    options: carModels2.map((m) => m.displayName).toList(),
+                                    initialSelected: _selectedModels.toSet(),
+                                  );
+                                  if (sel != null) {
+                                    setState(() {
+                                      _selectedModels
+                                        ..clear()
+                                        ..addAll(sel);
+                                    });
+                                    cubit.setSupportedModels(_selectedModels);
+                                  }
+                                },
+                              );
+                            },
+                          ),
+                          verticalSpace(12),
+
+                          _textField(
+                            label: 'وصف القطعة',
+                            hint: 'اكتب وصف المنتج...',
+                            maxLines: 3,
+                            controller: _descCtrl,
+                            onChanged: cubit.setDescription,
+                          ),
+                          verticalSpace(12),
+
+                          // المدينة والمنطقة
+                          BlocBuilder<LocationCubit, LocationState>(
+                            builder: (context, locState) {
+                              final isLoading = locState.regionsLoading || locState.citiesLoading;
+
+                              return _pickerField(
+                                label: 'المدينة والمنطقة',
+                                hint: isLoading ? 'جاري تحميل المناطق...' : 'اختر المنطقة والمدينة',
+                                value: _selectedCity != null
+                                    ? '${_selectedRegion?.nameAr} - ${_selectedCity?.nameAr}'
+                                    : null,
+                                onTap: isLoading
+                                    ? () {}
+                                    : () async {
+                                  FocusScope.of(context).unfocus();
+                                  final res = await _openRegionAndCityDialog(context);
+                                  if (res != null) {
+                                    setState(() {
+                                      _selectedRegion = res.region;
+                                      _selectedCity = res.city;
+                                    });
+                                    cubit.setCityId(res.city.id);
+                                    cubit.setRegionId(res.region.id);
+                                  }
+                                },
+                              );
+                            },
+                          ),
+                          verticalSpace(12),
+
+                          PrimaryButton(
+                            text: 'التالي',
+                            onPressed: () {
+                              FocusScope.of(context).unfocus();
+
+                              final missing = <String>[];
+                              if (_partNameCtrl.text.isEmpty) missing.add('نوع القطعة');
+                              if (_brandId == null) missing.add('ماركة السيارة');
+                              if (_selectedModels.isEmpty) missing.add('موديلات مدعومة');
+                              if (_selectedCity == null) missing.add('المدينة');
+
+                              if (missing.isNotEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('يرجى تعبئة: ${missing.join('، ')}')),
+                                );
+                                return;
+                              }
+
+                              cubit.setPartName(_partNameCtrl.text);
+                              cubit.setDescription(_descCtrl.text);
+                              cubit.setCondition(_condition);
+                              cubit.setSupportedModels(_selectedModels);
+
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => BlocProvider<CarPartAdsCubit>.value(
+                                    value: cubit,
+                                    child: const CarPartCreateAdStep2Screen(),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          verticalSpace(12),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  // حوارات
+  // Dialogs
 
   Future<CarType?> _openCarBrandDialog(BuildContext context) async {
     final catalogCubit = context.read<CarCatalogCubit>();

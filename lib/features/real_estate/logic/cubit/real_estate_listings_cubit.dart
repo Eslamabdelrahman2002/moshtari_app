@@ -16,7 +16,10 @@ class RealEstateListingsCubit extends Cubit<RealEstateListingsState> {
 
   RealEstateListingsCubit(this._repo)
       : super(
-    ListingsInitial(const RealEstateListingsFilter(type: 'ad')),
+    ListingsInitial(
+      const RealEstateListingsFilter(type: 'ad'),
+      listings: const [], // ✅ إضافة listings فارغة
+    ),
   );
 
   RealEstateListingsFilter get filter => _filter;
@@ -68,7 +71,7 @@ class RealEstateListingsCubit extends Cubit<RealEstateListingsState> {
     _isGrid = grid;
     final s = state;
     if (s is ListingsLoaded) {
-      emit(s.copyWith(isGrid: grid));
+      emit(s.copyWith(isGrid: grid)); // ✅ يعمل الآن مع listings
     }
   }
 
@@ -77,18 +80,18 @@ class RealEstateListingsCubit extends Cubit<RealEstateListingsState> {
     emit(ListingsLoading());
     try {
       // 🛰️ جلب البيانات مع جميع الفلاتر النشطة
-      final List<RealEstateListModel> items =
+      final List<RealEstateListModel> fetchedListings = // ✅ تغيير الاسم للوضوح
       await _repo.getListings(_filter);
 
       // 🧾 طباعة الفلتر في الكونسول وقت التطوير (اختياري)
       // print('➡️ Fetching listings with params: ${_filter.toQuery()}');
 
-      if (items.isEmpty) {
+      if (fetchedListings.isEmpty) {
         emit(ListingsEmpty());
       } else {
         emit(
           ListingsLoaded(
-            items,
+            fetchedListings, // ✅ تغيير من items إلى listings
             filter: _filter,
             isGrid: _isGrid,
           ),

@@ -6,14 +6,13 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmap;
 import 'package:path/path.dart' as p; // ✅ للتحقق من extension
+import 'package:geocoding/geocoding.dart' as geo; // ✅ لتحويل الإحداثيات لعنوان
 
 import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
 import 'package:mushtary/core/widgets/primary/secondary_text_form_field.dart';
 import 'package:mushtary/features/create_ad/ui/widgets/create_real_estate_ad_add_photo_video.dart';
-import 'package:mushtary/features/create_ad/ui/widgets/customized_chip.dart';
-import 'package:mushtary/features/create_ad/ui/widgets/detail_selector.dart';
 import 'package:mushtary/features/create_ad/ui/widgets/next_button_bar.dart';
 import '../../../../services/ui/widgets/map_picker_screen.dart';
 import 'logic/cubit/real_estate_ads_cubit.dart';
@@ -31,6 +30,10 @@ class _RealEstateViewIformationsScreenState
     extends State<RealEstateViewIformationsScreen> {
   final ImagePicker _picker = ImagePicker();
 
+  // Controllers لعنوان ووصف الإعلان (prefill من الحالة)
+  late final TextEditingController _titleCtrl;
+  late final TextEditingController _descCtrl;
+
   // حالة السويتشات
   bool isCommentsAvailable = true;
   bool isAllowedToAdvertisingMarketing = true;
@@ -41,10 +44,73 @@ class _RealEstateViewIformationsScreenState
 
   static const List<String> kAllowedMediaExt = ['.jpg', '.jpeg', '.png', '.mp4']; // ✅ صيغ مدعومة
 
+  @override
+  void initState() {
+    super.initState();
+    final s = context.read<RealEstateAdsCubit>().state;
+
+    _titleCtrl = TextEditingController(text: s.title ?? '');
+    _descCtrl = TextEditingController(text: s.description ?? '');
+
+    // تهيئة السويتشات من الحالة في وضع التعديل
+    if (s.allowComments != null) {
+      isCommentsAvailable = s.allowComments!;
+    }
+    if (s.allowMarketing != null) {
+      isAllowedToAdvertisingMarketing = s.allowMarketing!;
+    }
+
+    // تهيئة الموقع من الحالة (lat/lng) في حال التعديل + تحويلهم لعنوان
+    if (s.latitude != null && s.longitude != null) {
+      _pickedLatLng = gmap.LatLng(s.latitude!, s.longitude!);
+      _reverseGeocodeToAddress(_pickedLatLng!);
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _descCtrl.dispose();
+    super.dispose();
+  }
+
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), backgroundColor: Colors.red.shade600),
     );
+  }
+
+  // نحوّل الإحداثيات إلى نص عنوان عربي
+  Future<void> _reverseGeocodeToAddress(gmap.LatLng pos) async {
+    try {
+      final placemarks = await geo.placemarkFromCoordinates(
+        pos.latitude,
+        pos.longitude,
+        // localeIdentifier: 'ar', // ✅ عنوان بالعربي قدر الإمكان
+      );
+      if (placemarks.isNotEmpty) {
+        final p = placemarks.first;
+        final address = _formatAddress(p);
+        if (!mounted) return;
+        setState(() => _pickedAddressAr = address);
+      }
+    } catch (e) {
+      // في حال فشل التحويل، لا نعرض إحداثيات، نخلي النص الافتراضي فقط
+      debugPrint('Reverse geocoding failed: $e');
+    }
+  }
+
+  String _formatAddress(geo.Placemark p) {
+    // ركّب العنوان بشكل أنيق: شارع - حي - مدينة - منطقة
+    final parts = <String>[
+      if ((p.street ?? '').trim().isNotEmpty) p.street!.trim(),
+      if ((p.subLocality ?? '').trim().isNotEmpty) p.subLocality!.trim(),
+      if ((p.locality ?? '').trim().isNotEmpty) p.locality!.trim(),
+      if ((p.administrativeArea ?? '').trim().isNotEmpty) p.administrativeArea!.trim(),
+      // ممكن تضيف الدولة لو حاب:
+      // if ((p.country ?? '').trim().isNotEmpty) p.country!.trim(),
+    ];
+    return parts.join(' - ');
   }
 
   // ✅ اختيار صور متعددة (حد أقصى 10)
@@ -53,7 +119,8 @@ class _RealEstateViewIformationsScreenState
       imageQuality: 85,
       maxWidth: 1024,
       maxHeight: 1024,
-      limit: 10, // حد أقصى 10 صور
+      // ملاحظة: لو نسخة image_picker عندك لا تدعم limit احذف هذا السطر
+      limit: 10,
     );
     if (images.isNotEmpty) {
       final cubit = context.read<RealEstateAdsCubit>();
@@ -66,7 +133,6 @@ class _RealEstateViewIformationsScreenState
         cubit.addImage(file); // ✅ إضافة إلى Cubit
       }
       if (mounted) setState(() {}); // تحديث UI
-      print('>>> Added ${images.length} images'); // Debug
     } else if (context.read<RealEstateAdsCubit>().state.images.length >= 10) {
       _showError('تم الوصول للحد الأقصى (10 صور)');
     }
@@ -81,12 +147,19 @@ class _RealEstateViewIformationsScreenState
     if (picked != null) {
       setState(() {
         _pickedLatLng = picked.latLng;
-        _pickedAddressAr = picked.addressAr;
+        _pickedAddressAr = (picked.addressAr != null && picked.addressAr!.trim().isNotEmpty)
+            ? picked.addressAr
+            : _pickedAddressAr; // لو العنوان غير متوفر، نخليه كما هو
       });
       // تمرير القيم للكيوبت
       context
           .read<RealEstateAdsCubit>()
           .setLatLng(picked.latLng.latitude, picked.latLng.longitude);
+
+      // في حال ما رجع عنوان من الـ MapPicker، نجيب عنوان من الإحداثيات
+      if ((picked.addressAr == null || picked.addressAr!.trim().isEmpty) && _pickedLatLng != null) {
+        await _reverseGeocodeToAddress(_pickedLatLng!);
+      }
     }
   }
 
@@ -130,11 +203,10 @@ class _RealEstateViewIformationsScreenState
 
   // عنصر واجهة لاختيار الموقع من الخريطة
   Widget _mapPickerTile() {
-    final hasValue = _pickedLatLng != null || (_pickedAddressAr != null && _pickedAddressAr!.isNotEmpty);
-    final subtitle = _pickedAddressAr ??
-        (_pickedLatLng != null
-            ? '(${_pickedLatLng!.latitude.toStringAsFixed(6)}, ${_pickedLatLng!.longitude.toStringAsFixed(6)})'
-            : 'اختر الموقع على الخريطة أو ابحث');
+    final hasAddress = _pickedAddressAr != null && _pickedAddressAr!.trim().isNotEmpty;
+    final subtitle = hasAddress
+        ? _pickedAddressAr!
+        : 'اختر الموقع على الخريطة أو ابحث'; // ✅ بدون إظهار إحداثيات
 
     return InkWell(
       onTap: _openMapPicker,
@@ -160,7 +232,7 @@ class _RealEstateViewIformationsScreenState
                     subtitle,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: hasValue ? TextStyles.font14Black500Weight : TextStyles.font14DarkGray400Weight,
+                    style: hasAddress ? TextStyles.font14Black500Weight : TextStyles.font14DarkGray400Weight,
                   ),
                 ],
               ),
@@ -202,7 +274,7 @@ class _RealEstateViewIformationsScreenState
                       context.read<RealEstateAdsCubit>().removeImageAt(index);
                       if (mounted) setState(() {});
                     },
-                    pickedImages: state.images, // ✅ عرض المتعددة
+                    pickedImages: state.images, // ✅ عرض المتعددة (الصور الجديدة فقط)
                   ),
                   verticalSpace(16.h),
 
@@ -212,6 +284,7 @@ class _RealEstateViewIformationsScreenState
                     hint: 'مثال: فيلا للبيع في حي النسيم',
                     maxheight: 56.h,
                     minHeight: 56.h,
+                    controller: _titleCtrl,
                     onChanged: context.read<RealEstateAdsCubit>().setTitle,
                   ),
                   verticalSpace(16.h),
@@ -223,11 +296,12 @@ class _RealEstateViewIformationsScreenState
                     maxheight: 96.w,
                     minHeight: 96.w,
                     maxLines: 4,
+                    controller: _descCtrl,
                     onChanged: context.read<RealEstateAdsCubit>().setDescription,
                   ),
                   verticalSpace(16.h),
 
-                  // اختيار الموقع من الخريطة (بديل لحقول Lat/Lng)
+                  // اختيار الموقع من الخريطة (يعرض اسم العنوان)
                   _mapPickerTile(),
                   verticalSpace(16.h),
 
@@ -271,13 +345,13 @@ class _RealEstateViewIformationsScreenState
                   ),
                   verticalSpace(16),
 
-                  // زر النشر
+                  // زر النشر/التحديث
                   NextButtonBar(
                     title: state.submitting ? 'جاري النشر...' : 'نشر الاعلان',
                     onPressed: state.submitting
                         ? null
                         : () {
-                      debugPrint('[RealEstate] Publish button pressed');
+                      debugPrint('[RealEstate] Publish/Update button pressed');
                       context.read<RealEstateAdsCubit>().submit(
                         allowComments: isCommentsAvailable,
                         allowMarketing: isAllowedToAdvertisingMarketing,

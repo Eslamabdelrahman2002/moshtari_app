@@ -1,14 +1,15 @@
+// lib/features/home/ui/widgets/home_list_view_item.dart
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:intl/intl.dart';
 import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/widgets/primary/my_svg.dart';
 import 'package:mushtary/features/home/data/models/home_data_model.dart';
 import 'package:mushtary/features/home/ui/widgets/list_view_item_data_widget.dart';
 import 'package:timeago/timeago.dart' as timeago;
-
 import '../../../../core/router/routes.dart';
 import '../../../favorites/ui/logic/cubit/favorites_cubit.dart';
 import '../../../favorites/ui/logic/cubit/favorites_state.dart';
@@ -33,24 +34,14 @@ class HomeListViewItem extends StatelessWidget {
 
     final hasImage = adModel.imageUrls.isNotEmpty;
     final imageUrl = hasImage ? adModel.imageUrls.first : '';
-    final isAuction = adModel.auctionDisplayType != null;
-    final favoriteType = isAuction ? 'auction' : 'ad';
-    final favId = isAuction ? (adModel.auctionId ?? adModel.id) : adModel.id;
+    final favoriteType = 'ad';
+    final favId = adModel.id;
 
     final created = DateTime.tryParse(adModel.createdAt);
     final createdAgo = created != null ? timeago.format(created, locale: 'ar') : '';
 
     return InkWell(
       onTap: () {
-        if (isAuction) {
-          if (adModel.categoryId == 1) {
-            Navigator.of(context).pushNamed(Routes.carAuctionDetailsScreen, arguments: adModel.auctionId ?? adModel.id);
-          } else if (adModel.categoryId == 2) {
-            Navigator.of(context).pushNamed(Routes.realEstateAuctionDetailsScreen, arguments: adModel.auctionId ?? adModel.id);
-          }
-          return;
-        }
-
         switch (adModel.sourceType) {
           case 'car_ads':
             Navigator.of(context).pushNamed(Routes.carDetailsScreen, arguments: adModel.id);
@@ -62,7 +53,6 @@ class HomeListViewItem extends StatelessWidget {
           case 'car_part_ads':
             Navigator.of(context).pushNamed(Routes.carPartDetailsScreen, arguments: adModel.id);
             break;
-          case 'other_ads':
           default:
             Navigator.of(context).pushNamed(Routes.otherAdDetailsScreen, arguments: adModel.id);
         }
@@ -82,8 +72,9 @@ class HomeListViewItem extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(adModel.title.isEmpty ? 'No Title' : adModel.title, style: TextStyles.font12Black400Weight, maxLines: 2, overflow: TextOverflow.ellipsis),
-                  verticalSpace(16),
+                  Text(adModel.title.isEmpty ? 'No Title' : adModel.title,
+                      style: TextStyles.font12Black400Weight, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  verticalSpace(12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
@@ -96,7 +87,11 @@ class HomeListViewItem extends StatelessWidget {
                       ),
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          ListViewItemDataWidget(image: 'saudi_riyal', isColoredText: true, text: (adModel.price?.trim().isEmpty ?? true) ? 'N/A' : adModel.price!),
+                          ListViewItemDataWidget(
+                            image: 'saudi_riyal',
+                            isColoredText: true,
+                            text: _formatPrice(context, adModel.price),
+                          ),
                           verticalSpace(8),
                           ListViewItemDataWidget(image: 'clock', text: createdAgo),
                         ]),
@@ -107,7 +102,7 @@ class HomeListViewItem extends StatelessWidget {
               ),
             ),
             horizontalSpace(8),
-            // الصورة + الوسوم + المفضلة
+            // الصورة + مفضلة فقط
             Stack(
               children: [
                 SizedBox(
@@ -119,31 +114,12 @@ class HomeListViewItem extends StatelessWidget {
                         ? CachedNetworkImage(
                       imageUrl: imageUrl,
                       fit: BoxFit.cover,
-                      // Skeletonizer بدل الـ CircularProgressIndicator.adaptive
-                      placeholder: (_, __) => Skeletonizer(
-                        enabled: true,
-                        child: Container(color: ColorsManager.grey200),
-                      ),
-                      errorWidget: (_, __, ___) => Container(
-                        color: ColorsManager.grey200,
-                        child: const Icon(Icons.error),
-                      ),
+                      placeholder: (_, __) => Skeletonizer(enabled: true, child: Container(color: ColorsManager.grey200)),
+                      errorWidget: (_, __, ___) => Container(color: ColorsManager.grey200, child: const Icon(Icons.error)),
                     )
                         : Container(color: ColorsManager.grey200, child: Icon(Icons.image_not_supported, color: Colors.grey[400])),
                   ),
                 ),
-                if (isAuction)
-                  Positioned(
-                    top: 1.h,
-                    left: 1.w,
-                    child: Row(
-                      children: [
-                        _tag('single' == adModel.auctionDisplayType ? 'فردي' : 'متعدد', ColorsManager.success500),
-                        horizontalSpace(4),
-                        _tag('مزاد حي', ColorsManager.redButton),
-                      ],
-                    ),
-                  ),
                 Positioned(
                   top: 0,
                   right: 0,
@@ -176,9 +152,24 @@ class HomeListViewItem extends StatelessWidget {
     );
   }
 
-  Widget _tag(String text, Color color) => Container(
-    padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(20.r)),
-    child: Text(text, style: TextStyles.font10White500Weight.copyWith(fontSize: 8.sp)),
-  );
+  String _formatPrice(BuildContext context, String? raw) {
+    if (raw == null || raw.trim().isEmpty) return 'N/A';
+    String s = raw.trim();
+    const arabic = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+    const latin  = ['0','1','2','3','4','5','6','7','8','9'];
+    for (int i = 0; i < arabic.length; i++) {
+      s = s.replaceAll(arabic[i], latin[i]);
+    }
+    s = s.replaceAll('٬', '').replaceAll(',', '').replaceAll('٫', '.').replaceAll(RegExp(r'[^\d\.]'), '');
+    final num? value = num.tryParse(s);
+    if (value == null) return raw;
+
+    final bool arDigits = Directionality.of(context) == TextDirection.RTL;
+    final String locale = arDigits ? 'ar' : 'en';
+    final format = NumberFormat.decimalPattern(locale)
+      ..maximumFractionDigits = (value % 1 == 0) ? 0 : 2;
+
+    return format.format(value);
+  }
 }
+

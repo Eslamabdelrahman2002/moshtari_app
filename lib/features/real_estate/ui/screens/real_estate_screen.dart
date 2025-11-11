@@ -1,12 +1,16 @@
 // file: real_estate_screen.dart
 
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:latlong2/latlong.dart' as latlng;
+
 import 'package:mushtary/core/dependency_injection/injection_container.dart';
 import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
+
 import 'package:mushtary/features/real_estate/logic/cubit/real_estate_listings_cubit.dart';
 import 'package:mushtary/features/real_estate/logic/cubit/real_estate_listings_state.dart';
 import 'package:mushtary/features/real_estate/ui/widgets/real_estate_ads.dart';
@@ -14,11 +18,12 @@ import 'package:mushtary/features/real_estate/ui/widgets/real_estate_action_bar.
 import 'package:mushtary/features/real_estate/data/model/real_estate_ad_model.dart';
 import 'package:mushtary/features/favorites/ui/logic/cubit/favorites_cubit.dart';
 
-// 👇 إضافة الاستيراد الخاص باللوكيشن
 import 'package:mushtary/core/location/logic/cubit/location_cubit.dart';
 import 'package:mushtary/core/location/logic/cubit/location_state.dart';
 
 import '../../../../core/widgets/primary/my_svg.dart';
+import '../widgets/real_estate_map_view.dart';
+import '../widgets/map_details_sheet.dart';
 
 class RealEstateScreen extends StatelessWidget {
   const RealEstateScreen({super.key});
@@ -27,15 +32,12 @@ class RealEstateScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        // 👇 تصحيح: إضافة (context) كمعامل للدالة
         BlocProvider<RealEstateListingsCubit>(
           create: (context) => getIt<RealEstateListingsCubit>()..init(type: 'ad'),
         ),
-        // 👇 تصحيح: إضافة (context) كمعامل للدالة
         BlocProvider<FavoritesCubit>(
           create: (context) => getIt<FavoritesCubit>()..fetchFavorites(),
         ),
-        // 👇 تصحيح: إضافة (context) كمعامل للدالة (حتى لو لم نستخدمه)
         BlocProvider<LocationCubit>(
           create: (context) => getIt<LocationCubit>(),
         ),
@@ -53,46 +55,71 @@ class _RealEstateView extends StatefulWidget {
 }
 
 class _RealEstateViewState extends State<_RealEstateView> {
-  String _tab = 'ad'; // ad | request
+  String _tab = 'ad';
   String _combo = 'all';
+  bool _showMap = false;
 
-  // 👇 القائمة المحدثة للـ _combos مع جميع الأنواع (من الرد السابق)
+  List<RealEstateListModel> _selectedListings = [];
+
+  // فلترة الإحداثيات الشاذّة (لتثبيت الكاميرا فقط)
+  List<RealEstateListModel> _filterOutliers(List<RealEstateListModel> items) {
+    final pts = items.where((e) => e.latitude != null && e.longitude != null).toList();
+    if (pts.length <= 2) return pts;
+
+    // حدود السعودية أولاً إن أمكن
+    final inKSA = pts.where((e) {
+      final lat = e.latitude!, lon = e.longitude!;
+      return lat >= 15 && lat <= 33 && lon >= 34 && lon <= 56;
+    }).toList();
+    if (inKSA.length >= 3) return inKSA;
+
+    // Median Window fallback
+    final lats = pts.map((e) => e.latitude!).toList()..sort();
+    final lons = pts.map((e) => e.longitude!).toList()..sort();
+    final latMedian = lats[lats.length ~/ 2];
+    final lonMedian = lons[lons.length ~/ 2];
+
+    const maxDelta = 5.0; // ~550km
+    return pts.where((e) =>
+    (e.latitude! - latMedian).abs() <= maxDelta &&
+        (e.longitude! - lonMedian).abs() <= maxDelta
+    ).toList();
+  }
+
+  void _handleMarkerClusterTap(List<RealEstateListModel> listings) {
+    setState(() {
+      final isSameCluster = _selectedListings.isNotEmpty &&
+          listings.isNotEmpty &&
+          _selectedListings.first.id == listings.first.id &&
+          _selectedListings.length == listings.length;
+      _selectedListings = isSameCluster ? [] : listings;
+    });
+  }
+
+  void _handleCloseSheet() {
+    setState(() {
+      _selectedListings = [];
+    });
+  }
+
   final List<_Combo> _combos = const [
     _Combo('all', 'الكل', null, null),
-
-    // شقق
     _Combo('apartment_sell', 'شقق للبيع', 'apartment', 'sell'),
     _Combo('apartment_rent', 'شقق للإيجار', 'apartment', 'rent'),
-
-    // فلل
     _Combo('villa_sell', 'فلل للبيع', 'villa', 'sell'),
     _Combo('villa_rent', 'فلل للإيجار', 'villa', 'rent'),
-
-    // أراضي سكنية
     _Combo('residential_land_sell', 'أراضي سكنية للبيع', 'residential_land', 'sell'),
     _Combo('residential_land_rent', 'أراضي سكنية للإيجار', 'residential_land', 'rent'),
-
-    // أراضي (عامة)
     _Combo('lands_sell', 'أراضي للبيع', 'lands', 'sell'),
     _Combo('lands_rent', 'أراضي للإيجار', 'lands', 'rent'),
-
-    // شقق وغرف
     _Combo('apartments_and_rooms_sell', 'شقق وغرف للبيع', 'apartments_and_rooms', 'sell'),
     _Combo('apartments_and_rooms_rent', 'شقق وغرف للإيجار', 'apartments_and_rooms', 'rent'),
-
-    // فلل وقصور
     _Combo('villas_and_palaces_sell', 'فلل وقصور للبيع', 'villas_and_palaces', 'sell'),
     _Combo('villas_and_palaces_rent', 'فلل وقصور للإيجار', 'villas_and_palaces', 'rent'),
-
-    // طابق
     _Combo('floor_sell', 'طابق للبيع', 'floor', 'sell'),
     _Combo('floor_rent', 'طابق للإيجار', 'floor', 'rent'),
-
-    // مباني وأبراج
     _Combo('buildings_and_towers_sell', 'مباني وأبراج للبيع', 'buildings_and_towers', 'sell'),
     _Combo('buildings_and_towers_rent', 'مباني وأبراج للإيجار', 'buildings_and_towers', 'rent'),
-
-    // شاليهات ومنازل إجازة
     _Combo('chalets_and_resthouses_sell', 'شاليهات ومنازل إجازة للبيع', 'chalets_and_resthouses', 'sell'),
     _Combo('chalets_and_resthouses_rent', 'شاليهات ومنازل إجازة للإيجار', 'chalets_and_resthouses', 'rent'),
   ];
@@ -106,15 +133,12 @@ class _RealEstateViewState extends State<_RealEstateView> {
     setState(() => _combo = c.key);
     await context.read<RealEstateListingsCubit>().applyCombo(
       realEstateType: c.type,
-      requestType: c.purpose, // 👈 يتوافق مع purpose في النماذج
+      requestType: c.purpose,
     );
   }
 
   Future<void> _pickCity() async {
-    // خد نفس النسخة اللي فوق في الشجرة
     final locationCubit = context.read<LocationCubit>();
-
-    // ممكن تجهّز تحميل المناطق قبل فتح الشيت
     if (locationCubit.state.regions.isEmpty && !locationCubit.state.regionsLoading) {
       locationCubit.loadRegions();
     }
@@ -131,10 +155,48 @@ class _RealEstateViewState extends State<_RealEstateView> {
     if (sel != null) {
       await context.read<RealEstateListingsCubit>().applyCity(sel);
     }
-    // لو حابب ترجع "الكل" لما المستخدم يقفل الشيت بدون اختيار:
-    // else {
-    //   await context.read<RealEstateListingsCubit>().applyCity(null);
-    // }
+  }
+
+  latlng.LatLng? _computeCenter(List<RealEstateListModel> items) {
+    final pts = items.where((e) => e.latitude != null && e.longitude != null).toList();
+    if (pts.isEmpty) return null;
+    if (pts.length == 1) {
+      return latlng.LatLng(pts.first.latitude!, pts.first.longitude!);
+    }
+    double minLat = pts.first.latitude!, maxLat = pts.first.latitude!;
+    double minLng = pts.first.longitude!, maxLng = pts.first.longitude!;
+    for (final e in pts) {
+      minLat = math.min(minLat, e.latitude!);
+      maxLat = math.max(maxLat, e.latitude!);
+      minLng = math.min(minLng, e.longitude!);
+      maxLng = math.max(maxLng, e.longitude!);
+    }
+    return latlng.LatLng((minLat + maxLat) / 2.0, (minLng + maxLng) / 2.0);
+  }
+
+  double? _estimateZoom(List<RealEstateListModel> items) {
+    final pts = items.where((e) => e.latitude != null && e.longitude != null).toList();
+    if (pts.isEmpty) return null;
+    if (pts.length == 1) return 13.5;
+
+    double minLat = pts.first.latitude!, maxLat = pts.first.latitude!;
+    double minLng = pts.first.longitude!, maxLng = pts.first.longitude!;
+    for (final e in pts) {
+      minLat = math.min(minLat, e.latitude!);
+      maxLat = math.max(maxLat, e.latitude!);
+      minLng = math.min(minLng, e.longitude!);
+      maxLng = math.max(maxLng, e.longitude!);
+    }
+    final latSpan = (maxLat - minLat).abs();
+    final lngSpan = (maxLng - minLng).abs();
+    final span = math.max(latSpan, lngSpan);
+
+    if (span < 0.10) return 13.5;
+    if (span < 0.50) return 12.0;
+    if (span < 1.50) return 11.0;
+    if (span < 4.00) return 9.5;
+    if (span < 10.0) return 7.5;
+    return 5.5;
   }
 
   @override
@@ -151,7 +213,6 @@ class _RealEstateViewState extends State<_RealEstateView> {
             boxShadow: [
               BoxShadow(
                 color: ColorsManager.black.withOpacity(0.03),
-                blurRadius: 5,
                 offset: const Offset(0, 5),
               ),
             ],
@@ -162,117 +223,151 @@ class _RealEstateViewState extends State<_RealEstateView> {
           ),
         ),
       ),
-      body: Column(
-        children: [
-          // تبويبات
-          Padding(
-            padding: EdgeInsets.fromLTRB(8.w, 8.h, 8.w, 0),
-            child: Container(
-              height: 44.h,
-              decoration: BoxDecoration(
-                color: ColorsManager.dark50,
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-              child: Row(
-                children: [
-                  _segBtn('إعلانات', _tab == 'ad', () => _onTab('ad')),
-                  _segBtn('طلبات', _tab == 'request', () => _onTab('request')),
-                ],
-              ),
-            ),
-          ),
-          verticalSpace(8),
+      body: BlocBuilder<RealEstateListingsCubit, RealEstateListingsState>(
+        buildWhen: (prev, curr) => (prev is! ListingsLoaded || curr is! ListingsLoaded) || prev.isGrid != curr.isGrid,
+        builder: (context, state) {
+          final bool isGrid = state is ListingsLoaded ? state.isGrid : cubit.isGrid;
 
-          // الكومبو
-          _CombosBar(
-            combos: _combos,
-            selectedKey: _combo,
-            onSelected: (c) => _onCombo(c),
-          ),
-          verticalSpace(8),
+          return Column(
+            children: [
+              // تبويبات
+              Container(
+                color: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(child:  _TabItem(label: 'إعلانات', isActive: _tab == 'ad', onTap: () => _onTab('ad'))),
+                    horizontalSpace(16),
+                    Expanded(child: _TabItem(label: 'طلبات', isActive: _tab == 'request', onTap: () => _onTab('request'))),
+                  ],
+                ),
+              ),
+              verticalSpace(8),
 
-          // شريط عرض + مدينة
-          BlocBuilder<RealEstateListingsCubit, RealEstateListingsState>(
-            buildWhen: (prev, curr) => prev != curr,
-            builder: (context, state) {
-              final bool isGrid = state is ListingsLoaded ? state.isGrid : cubit.isGrid;
-              return RealEstateActionBar(
+              // الكومبو
+              _CombosBar(
+                combos: _combos,
+                selectedKey: _combo,
+                onSelected: (c) => _onCombo(c),
+              ),
+              verticalSpace(8),
+
+              // شريط الأكشن
+              RealEstateActionBar(
                 onGridViewTap: () => cubit.setLayout(true),
                 onListViewTap: () => cubit.setLayout(false),
                 isGridView: isGrid,
                 isListView: !isGrid,
-                onMapViewTap: () {},
-                onCityTap: _pickCity, // 👈 تفتح بيكر المدن الديناميكي
-                isMapView: false,
+                onMapViewTap: () {
+                  setState(() {
+                    _showMap = !_showMap;
+                    if (!_showMap) _selectedListings = [];
+                  });
+                },
+                onCityTap: _pickCity,
+                isMapView: _showMap,
                 isApplications: false,
-              );
-            },
-          ),
-          verticalSpace(8),
+              ),
+              verticalSpace(8),
 
-          Expanded(
-            child: BlocBuilder<RealEstateListingsCubit, RealEstateListingsState>(
-              builder: (context, state) {
-                if (state is ListingsLoading) {
-                  return const Center(child: CircularProgressIndicator.adaptive());
-                }
-                if (state is ListingsError) {
-                  return Center(child: Text(state.message));
-                }
-                if (state is ListingsEmpty) {
-                  return const Center(child: Text('لا توجد نتائج مطابقة'));
-                }
+              // الخريطة أو القائمة
+              if (_showMap)
+                BlocBuilder<RealEstateListingsCubit, RealEstateListingsState>(
+                  builder: (context, state) {
+                    if (state is ListingsLoaded) {
+                      final listings = state.listings;
 
-                final bool isGrid = state is ListingsLoaded ? state.isGrid : cubit.isGrid;
-                List<RealEstateListModel> properties = [];
-                if (state is ListingsLoaded) {
-                  properties = state.items.cast<RealEstateListModel>();
-                }
+                      final focus = _filterOutliers(listings);
+                      final target = focus.isNotEmpty ? focus : listings;
+                      final center = _computeCenter(target);
+                      final zoom = _estimateZoom(target);
 
-                if (properties.isEmpty) {
-                  return const Center(child: Text('لا توجد نتائج مطابقة'));
-                }
+                      return Expanded(
+                        child: Stack(
+                          children: [
+                            // إطار أصفر حول الخريطة + قص الزوايا
+                            Positioned.fill(
+                              child: RealEstateMapView(
+                                listings: listings,
+                                center: center,
+                                zoom: zoom,
+                                logPlotted: false,
+                                onClusterTap: _handleMarkerClusterTap,
+                              ),
+                            ),
 
-                return RealEstateAds(
-                  isListView: !isGrid,
-                  isGridView: isGrid,
-                  isMapView: false,
-                  isApplications: false,
-                  properties: properties,
-                );
-              },
-            ),
-          ),
-        ],
+                            if (_selectedListings.isNotEmpty)
+                              Align(
+                                alignment: Alignment.bottomCenter,
+                                child: MapDetailsSheet(
+                                  listings: _selectedListings,
+                                  onClose: _handleCloseSheet,
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    }
+                    if (state is ListingsLoading) {
+                      return SizedBox(height: 200.h, child: const Center(child: CircularProgressIndicator.adaptive()));
+                    }
+                    return const SizedBox.shrink();
+                  },
+                )
+              else
+                Expanded(
+                  child: BlocBuilder<RealEstateListingsCubit, RealEstateListingsState>(
+                    builder: (context, state) {
+                      if (state is ListingsLoading) {
+                        return const Center(child: CircularProgressIndicator.adaptive());
+                      }
+                      if (state is ListingsError) {
+                        return Center(child: Text(state.message));
+                      }
+                      if (state is ListingsEmpty) {
+                        return const Center(child: Text('لا توجد نتائج مطابقة'));
+                      }
+                      if (state is ListingsLoaded) {
+                        return RealEstateAds(
+                          isListView: !state.isGrid,
+                          isGridView: state.isGrid,
+                          isMapView: false,
+                          isApplications: false,
+                          properties: state.listings,
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
+}
 
-  Widget _segBtn(String label, bool active, VoidCallback onTap) {
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          height: 44.h,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: active ? ColorsManager.primaryColor : ColorsManager.dark50,
-            borderRadius: BorderRadius.circular(12.r),
-            boxShadow: active
-                ? [
-              BoxShadow(
-                color: Colors.black.withOpacity(.06),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              )
-            ]
-                : null,
-          ),
-          child: Text(
-            label,
-            style: active ? TextStyles.font14White500Weight : TextStyles.font14Black500Weight,
-          ),
+class _TabItem extends StatelessWidget {
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+  const _TabItem({required this.label, required this.isActive, required this.onTap});
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+        decoration: BoxDecoration(
+          color: isActive ? ColorsManager.primary400 : Colors.white,
+          borderRadius: BorderRadius.circular(10.r),
+          boxShadow: isActive
+              ? [BoxShadow(color: ColorsManager.primary400.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))]
+              : null,
         ),
+        child: Text(label, style: isActive ? TextStyles.font14White500Weight : TextStyles.font14Black500Weight, textAlign: TextAlign.center,),
       ),
     );
   }
@@ -290,14 +385,7 @@ class _CombosBar extends StatelessWidget {
   final List<_Combo> combos;
   final String selectedKey;
   final ValueChanged<_Combo> onSelected;
-
-  const _CombosBar({
-    super.key,
-    required this.combos,
-    required this.selectedKey,
-    required this.onSelected,
-  });
-
+  const _CombosBar({super.key, required this.combos, required this.selectedKey, required this.onSelected});
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -318,7 +406,8 @@ class _CombosBar extends StatelessWidget {
             labelStyle: sel ? TextStyles.font14Blue500Weight : TextStyles.font14Black500Weight,
             backgroundColor: Colors.white,
             side: BorderSide(color: sel ? ColorsManager.primary400 : ColorsManager.dark200),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+            padding: EdgeInsets.symmetric(horizontal: 8.w),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
           );
         },
       ),
@@ -326,155 +415,111 @@ class _CombosBar extends StatelessWidget {
   }
 }
 
-// 👇 BottomSheet ديناميكي لاختيار المدينة باستخدام LocationCubit
 class _CityPickerSheet extends StatefulWidget {
-  const _CityPickerSheet({super.key});
-
+  const _CityPickerSheet();
   @override
   State<_CityPickerSheet> createState() => _CityPickerSheetState();
 }
 
 class _CityPickerSheetState extends State<_CityPickerSheet> {
   int? _selectedRegionId;
-
-  @override
-  void initState() {
-    super.initState();
-    final loc = context.read<LocationCubit>();
-    final st = loc.state;
-    // لو المناطق لسه متحمّلتش، حمّلها
-    if (!st.regionsLoading && (st.regions.isEmpty)) {
-      loc.loadRegions();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 16.h + MediaQuery.of(context).viewInsets.bottom),
+    return DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      maxChildSize: 0.9,
+      builder: (_, scrollController) => Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
+        ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Text('اختر المدينة', style: TextStyles.font16Dark400Weight),
-            verticalSpace(12),
-
-            // اختيار المنطقة
-            BlocBuilder<LocationCubit, LocationState>(
-              buildWhen: (p, c) =>
-              p.regions != c.regions ||
-                  p.regionsLoading != c.regionsLoading ||
-                  p.regionsError != c.regionsError,
-              builder: (context, state) {
-                if (state.regionsLoading) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Center(child: CircularProgressIndicator.adaptive()),
-                  );
-                }
-                if (state.regionsError != null) {
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(state.regionsError!, style: TextStyles.font14Black500Weight),
-                      TextButton(
-                        onPressed: () => context.read<LocationCubit>().loadRegions(),
-                        child: const Text('إعادة المحاولة'),
-                      ),
-                    ],
-                  );
-                }
-
-                return DropdownButtonFormField<int>(
-                  decoration: InputDecoration(
-                    labelText: 'اختر المنطقة',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r)),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-                  ),
-                  value: _selectedRegionId,
-                  items: state.regions
-                      .map((r) => DropdownMenuItem<int>(
-                    value: r.id,
-                    // NOTE: لو اسم الحقل مختلف استخدمه هنا بدلاً من nameAr
-                    child: Text(r.nameAr ?? r.nameAr ?? 'بدون اسم'),
-                  ))
-                      .toList(),
-                  onChanged: (v) {
-                    setState(() => _selectedRegionId = v);
-                    if (v != null) {
-                      context.read<LocationCubit>().loadCities(v);
-                    }
-                  },
-                );
-              },
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: 12.h),
+              child: Container(
+                width: 40.w,
+                height: 4.h,
+                decoration: BoxDecoration(
+                  color: ColorsManager.dark200,
+                  borderRadius: BorderRadius.circular(2.r),
+                ),
+              ),
             ),
-
-            verticalSpace(16),
-
-            // اختيار المدينة
-            BlocBuilder<LocationCubit, LocationState>(
-              buildWhen: (p, c) =>
-              p.cities != c.cities ||
-                  p.citiesLoading != c.citiesLoading ||
-                  p.citiesError != c.citiesError,
-              builder: (context, state) {
-                if (_selectedRegionId == null) {
-                  return Align(
-                    alignment: Alignment.centerRight,
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8.h),
-                      child: Text('من فضلك اختر المنطقة أولاً', style: TextStyles.font14Black500Weight),
-                    ),
-                  );
-                }
-
-                if (state.citiesLoading) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Center(child: CircularProgressIndicator.adaptive()),
-                  );
-                }
-
-                if (state.citiesError != null) {
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(state.citiesError!, style: TextStyles.font14Black500Weight),
-                      TextButton(
-                        onPressed: () {
-                          if (_selectedRegionId != null) {
-                            context.read<LocationCubit>().loadCities(_selectedRegionId!);
-                          }
-                        },
-                        child: const Text('إعادة المحاولة'),
-                      ),
-                    ],
-                  );
-                }
-
-                // لستة المدن
-                return SizedBox(
-                  height: 300.h, // ارتفاع مناسب داخل الـ BottomSheet
-                  child: ListView.builder(
-                    itemCount: state.cities.length + 1, // +1 لخيار "الكل"
-                    itemBuilder: (context, index) {
-                      if (index == 0) {
-                        // "الكل" => null
-                        return ListTile(
-                          title: const Text('الكل'),
-                          onTap: () => Navigator.of(context).pop<int?>(null),
+            Expanded(
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 120.w,
+                    child: BlocBuilder<LocationCubit, LocationState>(
+                      builder: (context, state) {
+                        if (state.regionsLoading) {
+                          return const Center(child: CircularProgressIndicator.adaptive());
+                        }
+                        if (state.regionsError != null) {
+                          return Center(child: Text(state.regionsError!));
+                        }
+                        return ListView.builder(
+                          controller: scrollController,
+                          itemCount: state.regions.length,
+                          itemBuilder: (context, index) {
+                            final region = state.regions[index];
+                            final isSelected = _selectedRegionId == region.id;
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() {_selectedRegionId = region.id;});
+                                context.read<LocationCubit>().loadCities(region.id);
+                              },
+                              child: Container(
+                                color: isSelected ? ColorsManager.primary50 : Colors.transparent,
+                                padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 8.w),
+                                child: Text(region.nameAr ?? 'بدون اسم', style: isSelected ? TextStyles.font14Blue500Weight : TextStyles.font14Black500Weight),
+                              ),
+                            );
+                          },
                         );
-                      }
-                      final city = state.cities[index - 1];
-                      return ListTile(
-                        // NOTE: لو اسم الحقل مختلف استخدمه بدلاً من nameAr
-                        title: Text(city.nameAr ?? city.nameAr ?? 'بدون اسم'),
-                        onTap: () => Navigator.of(context).pop<int?>(city.id),
-                      );
-                    },
+                      },
+                    ),
                   ),
-                );
-              },
+                  Container(width: 1.w, color: ColorsManager.dark50),
+                  Expanded(
+                    child: BlocBuilder<LocationCubit, LocationState>(
+                      builder: (context, state) {
+                        if (_selectedRegionId == null) {
+                          return Padding(padding: EdgeInsets.symmetric(vertical: 8.h), child: Text('من فضلك اختر المنطقة أولاً', style: TextStyles.font14Black500Weight));
+                        }
+                        if (state.citiesLoading) {
+                          return const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Center(child: CircularProgressIndicator.adaptive()));
+                        }
+                        if (state.citiesError != null) {
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(state.citiesError!, style: TextStyles.font14Black500Weight),
+                              TextButton(
+                                onPressed: () {
+                                  if (_selectedRegionId != null) {context.read<LocationCubit>().loadCities(_selectedRegionId!);}
+                                },
+                                child: const Text('إعادة المحاولة'),
+                              ),
+                            ],
+                          );
+                        }
+                        return Expanded(
+                          child: ListView.builder(
+                            itemCount: state.cities.length + 1,
+                            itemBuilder: (context, index) {
+                              if (index == 0) return ListTile(title: const Text('الكل'), onTap: () => Navigator.of(context).pop<int?>(null));
+                              final city = state.cities[index - 1];
+                              return ListTile(title: Text(city.nameAr ?? 'بدون اسم'), onTap: () => Navigator.of(context).pop<int?>(city.id));
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

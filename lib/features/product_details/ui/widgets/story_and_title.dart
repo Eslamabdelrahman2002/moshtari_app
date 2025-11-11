@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
-import 'package:mushtary/features/product_details/ui/widgets/story_avater.dart';
 import 'package:mushtary/core/theme/colors.dart';
+import 'story_avater.dart';
 
 import 'package:mushtary/features/home/data/models/home_data_model.dart';
-
 import 'car_part_similar_story.dart';
 
 class StoryAndTitleWidget extends StatelessWidget {
   final String title;
-
-  // جديد: الإعلانات المشابهة (كموديل هوم)، افتراضيًا فاضي
   final List<HomeAdModel> similarAds;
 
   const StoryAndTitleWidget({
@@ -44,8 +41,8 @@ class StoryAndTitleWidget extends StatelessWidget {
             );
           },
         ),
-        Container(
-          constraints: BoxConstraints(maxWidth: 290.w),
+        SizedBox(width: 12.w),
+        Expanded(
           child: Text(
             title,
             style: TextStyles.font20Black500Weight,
@@ -70,7 +67,6 @@ class StoryAndTitleWidget extends StatelessWidget {
     final palette = <Color>[
       ColorsManager.primary500,
       ColorsManager.blueGradient2,
-
     ];
     return List<Color>.generate(count, (i) => palette[i % palette.length]);
   }

@@ -5,6 +5,7 @@
 //   static const String assetsIconsArrowLeft = 'assets/icons/arrow_left.svg';
 //   static const String assetsIconsArrowRight = 'assets/icons/arrow_right.svg';
 //   static const String assetsIconsCallCalling = 'assets/icons/call-calling.svg';
+//   static const String assetsIconsWaterTank = 'assets/icons/water_tank.svg';
 //   static const String boldLock = 'assets/icons/vuesax/bold/lock.svg';
 //   static const String fontsDIN NEXT™ ARABIC BLACK = 'assets/fonts/DIN NEXT™ ARABIC BLACK.otf';
 //   static const String fontsDIN NEXT™ ARABIC BOLD = 'assets/fonts/DIN NEXT™ ARABIC BOLD.otf';
@@ -14,6 +15,7 @@
 //   static const String fontsDIN NEXT™ ARABIC REGULAR = 'assets/fonts/DIN NEXT™ ARABIC REGULAR.otf';
 //   static const String fontsDIN NEXT™ ARABIC ULTRALIGHT = 'assets/fonts/DIN NEXT™ ARABIC ULTRALIGHT.otf';
 //   static const String iconsAboutGray = 'assets/icons/about_gray.svg';
+//   static const String iconsActionsNotification = 'assets/icons/actions_notification.svg';
 //   static const String iconsActiveCircle = 'assets/icons/active_circle.svg';
 //   static const String iconsAdRealState = 'assets/icons/ad_real_state.svg';
 //   static const String iconsAdd = 'assets/icons/add.svg';
@@ -60,6 +62,7 @@
 //   static const String iconsCopyIcon = 'assets/icons/copy_icon.svg';
 //   static const String iconsCreateRealState = 'assets/icons/create_real_state.svg';
 //   static const String iconsCylinder = 'assets/icons/cylinder.svg';
+//   static const String iconsDinah = 'assets/icons/dinah.svg';
 //   static const String iconsDinat = 'assets/icons/dinat.svg';
 //   static const String iconsDiscount = 'assets/icons/discount.svg';
 //   static const String iconsDocumentCloud = 'assets/icons/document-cloud.svg';
@@ -71,6 +74,7 @@
 //   static const String iconsElementEqualSecondary = 'assets/icons/element-equal-secondary.svg';
 //   static const String iconsElementEquals = 'assets/icons/element-equals.svg';
 //   static const String iconsEmail = 'assets/icons/email.svg';
+//   static const String iconsEmployee = 'assets/icons/employee.svg';
 //   static const String iconsExclude = 'assets/icons/Exclude.svg';
 //   static const String iconsEye = 'assets/icons/eye.svg';
 //   static const String iconsEyeBlack = 'assets/icons/eye-black.svg';
@@ -143,6 +147,7 @@
 //   static const String iconsMessageText = 'assets/icons/message-text.svg';
 //   static const String iconsMessagesEmpty = 'assets/icons/messages_empty.svg';
 //   static const String iconsMice = 'assets/icons/mice.svg';
+//   static const String iconsMingcuteSteeringWheelFill = 'assets/icons/mingcute_steering-wheel-fill.svg';
 //   static const String iconsMingcuteWhatsappLine = 'assets/icons/mingcute_whatsapp-line.svg';
 //   static const String iconsMobileDuotone = 'assets/icons/mobile-duotone.svg';
 //   static const String iconsMoneyRecive = 'assets/icons/money-recive.svg';
@@ -228,6 +233,7 @@
 //   static const String iconsVerified = 'assets/icons/verified.svg';
 //   static const String iconsVilla = 'assets/icons/villa.svg';
 //   static const String iconsWallet = 'assets/icons/wallet.svg';
+//   static const String iconsWaterTank = 'assets/icons/waterTank.svg';
 //   static const String iconsWheel = 'assets/icons/wheel.svg';
 //   static const String iconsWhiteLogoWithName = 'assets/icons/white_logo_with_name.svg';
 //   static const String iconsWhiteStar = 'assets/icons/white-star.svg';

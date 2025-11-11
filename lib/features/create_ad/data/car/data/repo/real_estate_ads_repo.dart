@@ -1,6 +1,7 @@
 // lib/features/real_estate_ads/data/repo/real_estate_ads_repo.dart
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:path/path.dart' as p;
 import 'package:mushtary/core/api/api_constants.dart';
 import 'package:mushtary/core/api/api_service.dart';
@@ -16,7 +17,7 @@ class RealEstateAdsRepo {
       RealEstateAdRequest req) async {
     final fields = req.toMap();
 
-    // تأكد إن السرويسز لو موجودة تتحوّل JSON
+    // تأكد إن السرويسز لو موجودة تتحوّل JSON (كما في الأصلي)
     if (fields['services'] != null) {
       fields['services'] = jsonEncode(fields['services']);
     }
@@ -37,11 +38,11 @@ class RealEstateAdsRepo {
         ApiConstants.realEstateImagesKey: images,
     });
 
-    // 🔹 استخدم ApiService.postForm بدلاً من Dio.post
+    // استخدم ApiService.postForm (كما في الأصلي)
     final data = await _api.postForm(
       ApiConstants.realEstateCreateAd,
       form,
-      requireAuth: true, // ✅ التوكن مطلوب، هيطلع Bottom Sheet لو مش متاح
+      requireAuth: true, // ✅ التوكن مطلوب
     );
 
     // تحليل الاستجابة
@@ -51,5 +52,33 @@ class RealEstateAdsRepo {
 
     return RealEstateAdResponse(
         success: true, message: 'تم الإرسال', id: null);
+  }
+
+  // إضافة UPDATE (جديد)
+  Future<RealEstateAdResponse> updateRealEstateAd(
+      int id,
+      RealEstateAdRequest req,
+      ) async {
+    final fields = req.toMap();
+
+    // الخدمات تُرسل JSON string (كما في CREATE)
+    if (fields['services'] != null) {
+      fields['services'] = jsonEncode(fields['services']);
+    }
+
+    // Logging للتصحيح
+    debugPrint('[Repo] Update fields: $fields');
+
+    // PUT مع JSON (بدون FormData، لأن UPDATE لا يدعم صور)
+    final data = await _api.put(
+      ApiConstants.updateRealEstateAd(id),
+      data: fields,
+      requireAuth: true,
+    );
+
+    if (data is Map<String, dynamic>) {
+      return RealEstateAdResponse.fromJson(data);
+    }
+    return RealEstateAdResponse(success: true, message: 'تم التحديث', id: id);
   }
 }

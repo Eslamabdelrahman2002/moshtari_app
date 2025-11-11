@@ -1,3 +1,4 @@
+// lib/features/car_ads/data/model/car_ad_request.dart
 import 'dart:io';
 
 class CarAdRequest {
@@ -6,12 +7,12 @@ class CarAdRequest {
   final num price;
   final String priceType;
 
-  final int categoryId; // لن يُستخدم مباشرة في toMap (سنرسل دائمًا 1)
+  final int categoryId; // ثابت 5
   final int? cityId;
   final int? regionId;
   final double? latitude;
   final double? longitude;
-  final String? phone;
+  final String? phone; // سيحوَّل إلى phone_number في الريبو
   final bool contactChat;
   final bool contactWhatsapp;
   final bool contactCall;
@@ -36,15 +37,14 @@ class CarAdRequest {
 
   final List<File> images;
   final File? technicalReport;
-
-  final int? exhibitionId; // ✅ NEW: أضف field لـ exhibitionId (اختياري)
+  final int? exhibitionId;
 
   CarAdRequest({
     required this.title,
     required this.description,
     required this.price,
     required this.priceType,
-    required this.categoryId,
+    this.categoryId = 5, // طابق السيرفر
     this.cityId,
     this.regionId,
     this.latitude,
@@ -72,22 +72,21 @@ class CarAdRequest {
     required this.allowMarketing,
     required this.images,
     this.technicalReport,
-    this.exhibitionId, // ✅ NEW: اجعله optional
+    this.exhibitionId,
   });
 
   Map<String, dynamic> toMap() {
     return {
       'title': title,
       'description': description,
-      'price': price,
+      if (priceType == 'fixed') 'price': price, // السعر فقط عند fixed
       'price_type': priceType,
-      // ثابت: سيارات
-      'category_id': 1,
+      'category_id': categoryId, // = 5
       'city_id': cityId,
       'region_id': regionId,
-      'latitude': latitude,
-      'longitude': longitude,
-      'phone': phone,
+      'latitude': latitude,   // سيُطبَّع ويُحوَّل String في الريبو
+      'longitude': longitude, // سيُطبَّع ويُحوَّل String في الريبو
+      'phone': phone, // سيحول إلى phone_number في الريبو
       'contact_chat': contactChat,
       'contact_whatsapp': contactWhatsapp,
       'contact_call': contactCall,
@@ -107,8 +106,8 @@ class CarAdRequest {
       'model_id': modelId,
       'year': year,
       'allow_comments': allowComments,
-      'allow_marketing': allowMarketing,
-      'exhibition_id': exhibitionId, // ✅ NEW: أضف exhibition_id في الـ map (لو موجود)
+      'allow_marketing': allowMarketing, // Postman
+      if (exhibitionId != null) 'exhibition_id': exhibitionId,
     };
   }
 }

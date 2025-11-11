@@ -11,7 +11,64 @@ class CarPartAdsCubit extends Cubit<CarPartAdsState> {
   final CarPartAdsCreateRepo _repo;
   CarPartAdsCubit(this._repo) : super(CarPartAdsState());
 
-  // setters
+  // =========== وضع التعديل ===========
+  void enterEditMode(int adId) => emit(state.copyWith(isEditing: true, editingAdId: adId));
+
+  void setExistingImageUrls(List<String> urls) =>
+      emit(state.copyWith(existingImageUrls: urls));
+
+  void removeExistingImageAt(int i) {
+    final list = [...state.existingImageUrls];
+    if (i >= 0 && i < list.length) {
+      list.removeAt(i);
+      emit(state.copyWith(existingImageUrls: list));
+    }
+  }
+
+  // Prefill من تفاصيل الإعلان (استخدم موديلك أو Map)
+  // متوافق مع JSON اللي أرسلته (image_urls, phone_number, communication_methods ...)
+  void prefillFromDetails(Map<String, dynamic> d) {
+    emit(state.copyWith(
+      title: _asString(d['title']),
+      partName: _asString(d['part_name']),
+      description: _asString(d['description']),
+      priceType: _asString(d['price_type'])?.isNotEmpty == true ? d['price_type'] : 'fixed',
+      price: _toNum(d['price']),
+      cityId: _toInt(d['city_id']),
+      regionId: _toInt(d['region_id']),
+      phoneNumber: _asString(d['phone_number']),
+      communicationMethods: (d['communication_methods'] as List?)
+          ?.map((e) => e.toString())
+          .toList() ??
+          state.communicationMethods,
+      allowComments: (d['allow_comments'] ?? state.allowComments) as bool,
+      allowMarketing: (d['allow_marketing_offers'] ?? state.allowMarketing) as bool,
+      latitude: _toDouble(d['latitude']),
+      longitude: _toDouble(d['longitude']),
+      existingImageUrls: (d['image_urls'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+    ));
+  }
+
+  String? _asString(dynamic v) => v?.toString();
+  num? _toNum(dynamic v) {
+    if (v == null) return null;
+    if (v is num) return v;
+    return num.tryParse(v.toString().replaceAll(',', '').trim());
+  }
+  int? _toInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return int.tryParse(v.toString());
+  }
+  double? _toDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is double) return v;
+    if (v is num) return v.toDouble();
+    return double.tryParse(v.toString());
+  }
+
+  // =========== setters ===========
   void setTitle(String v) => emit(state.copyWith(title: v));
   void setPartName(String v) => emit(state.copyWith(partName: v));
   void setCondition(String v) => emit(state.copyWith(condition: v));
@@ -24,7 +81,7 @@ class CarPartAdsCubit extends Cubit<CarPartAdsState> {
 
   void setCityId(int? v) => emit(state.copyWith(cityId: v));
   void setNeighborhoodId(int? v) => emit(state.copyWith(neighborhoodId: v));
-  void setRegionId(int? v) => emit(state.copyWith(regionId: v)); // 🟢 تمت الإضافة
+  void setRegionId(int? v) => emit(state.copyWith(regionId: v));
 
   void setPhoneNumber(String? v) => emit(state.copyWith(phoneNumber: v));
   void setCommunicationMethods(List<String> v) => emit(state.copyWith(communicationMethods: v));
@@ -40,8 +97,8 @@ class CarPartAdsCubit extends Cubit<CarPartAdsState> {
     emit(state.copyWith(images: imgs));
   }
 
+  // =========== submit ===========
   Future<void> submit() async {
-    // منع الضغط المزدوج أثناء الإرسال
     if (state.submitting) return;
 
     debugPrint('[CarPart] submit tapped');
@@ -57,7 +114,33 @@ class CarPartAdsCubit extends Cubit<CarPartAdsState> {
     }
 
     emit(state.copyWith(submitting: true, error: null));
+
     try {
+      // وضع التعديل: PUT JSON “خفيف”
+      if (state.isEditing && state.editingAdId != null) {
+        await _repo.updateCarPartAd(
+          state.editingAdId!,
+          title: state.title!,
+          description: state.description ?? '',
+          priceType: state.priceType,
+          price: state.price, // يُرسل داخل الريبو فقط إذا كان priceType= fixed
+          cityId: state.cityId ?? PostDefaults.carPartsCityId,
+          regionId: state.regionId ?? 1,
+          allowComments: state.allowComments,
+          allowMarketingOffers: state.allowMarketing,
+          phoneNumber: state.phoneNumber,
+          communicationMethods:
+          state.communicationMethods.isEmpty ? null : state.communicationMethods,
+          imageUrls: state.existingImageUrls.isEmpty ? null : state.existingImageUrls,
+          latitude: state.latitude,
+          longitude: state.longitude,
+        );
+
+        emit(state.copyWith(submitting: false, success: true));
+        return;
+      }
+
+      // وضع الإنشاء: Multipart
       final req = CarPartAdRequest(
         title: state.title!,
         partName: state.partName!,
@@ -68,7 +151,7 @@ class CarPartAdsCubit extends Cubit<CarPartAdsState> {
         price: state.price!,
         priceType: state.priceType,
         cityId: state.cityId ?? PostDefaults.carPartsCityId,
-        regionId: state.regionId, // 🟢 تمت الإضافة
+        regionId: state.regionId,
         neighborhoodId: state.neighborhoodId ?? PostDefaults.carPartsNeighborhoodId,
         phoneNumber: state.phoneNumber,
         communicationMethods: state.communicationMethods,

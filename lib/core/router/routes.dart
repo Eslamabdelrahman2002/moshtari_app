@@ -101,4 +101,5 @@ class Routes {
   static const String realEstateRequestDetailsCreate = '/real-estate-request-details-create'; // للإنشاء
   static const String realEstateRequestDetailsView = '/real-estate-request-details-view/:id';
 
+
 }

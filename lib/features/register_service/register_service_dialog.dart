@@ -103,7 +103,7 @@ class _RegisterServiceDialogState extends State<RegisterServiceDialog> {
             Center(
               child: Column(
                 children: [
-                  MySvg(image: imageName, width: 60.w, height: 60.w),
+                  MySvg(image: imageName, width: 80.w, height: 80.w),
                   Text(title, style: TextStyles.font18Black500Weight),
                 ],
               ),
@@ -155,10 +155,10 @@ class _RegisterServiceDialogState extends State<RegisterServiceDialog> {
               mainAxisSpacing: 8.h,
             ),
             children: [
-              _buildServiceOption(ServiceType.worker, 'أجير', 'labour'),
-              _buildServiceOption(ServiceType.satha, 'سطحة', 'flatbed'),
-              _buildServiceOption(ServiceType.dinat, 'دينة', 'tanker'),
-              _buildServiceOption(ServiceType.tanker, 'صهريج مياه', 'dyna'),
+              _buildServiceOption(ServiceType.worker, 'أجير', 'employee'),
+              _buildServiceOption(ServiceType.satha, 'سطحة', 'flat'),
+              _buildServiceOption(ServiceType.dinat, 'دينة', 'dinah'),
+              _buildServiceOption(ServiceType.tanker, 'صهريج مياه', 'waterTank'),
             ],
           ),
           verticalSpace(16),

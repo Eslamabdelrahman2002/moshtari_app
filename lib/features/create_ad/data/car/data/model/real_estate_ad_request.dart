@@ -1,3 +1,4 @@
+// lib/features/real_estate_ads/data/model/real_estate_ad_request.dart
 import 'dart:io';
 
 class RealEstateAdRequest {
@@ -6,7 +7,7 @@ class RealEstateAdRequest {
   final num price;
   final String priceType;        // fixed | negotiable | auction
 
-  final int categoryId;          // ثابت = 2
+  final int categoryId;          // ثابت = 3
   final int cityId;
   final int regionId;
   final double latitude;
@@ -37,7 +38,7 @@ class RealEstateAdRequest {
     required this.description,
     required this.price,
     required this.priceType,
-    this.categoryId = 3, // ✅ تم التعديل إلى 2 (فئة العقارات)
+    this.categoryId = 3, // ✅ فئة العقارات
     required this.cityId,
     required this.regionId,
     required this.latitude,
@@ -88,7 +89,7 @@ class RealEstateAdRequest {
     put('building_age', buildingAge);
     put('is_furnished', isFurnished);
     put('license_number', licenseNumber);
-    put('services', services == null ? null : services); // JSON تحويل لاحق في الريبو
+    put('services', services == null ? null : services); // JSON تحويل في الريبو
     put('exhibition_id', exhibitionId);
     return map;
   }

@@ -8,8 +8,6 @@ import 'package:mushtary/core/widgets/primary/secondary_text_form_field.dart';
 import 'package:mushtary/features/create_ad/ui/widgets/customized_chip.dart';
 import 'package:mushtary/features/create_ad/ui/widgets/detail_selector.dart';
 
-import '../../../../../core/car/data/model/car_model.dart';
-import '../../../../../core/car/data/model/car_type.dart';
 import '../../../../../core/car/logic/cubit/car_catalog_cubit.dart';
 import '../../../../../core/car/logic/cubit/car_catalog_state.dart';
 import '../../../../../core/widgets/primary/car_brand_model_picker.dart';
@@ -17,7 +15,6 @@ import '../../../data/car/utils/car_mappers.dart';
 import '../../widgets/next_button_bar.dart';
 import 'logic/cubit/car_ads_cubit.dart';
 import 'logic/cubit/car_ads_state.dart';
-
 
 class CarsSelectCategoryDetailsScreen extends StatefulWidget {
   final VoidCallback? onPressed;
@@ -43,7 +40,6 @@ class _CarsSelectCategoryDetailsScreenState extends State<CarsSelectCategoryDeta
     super.dispose();
   }
 
-  // 🟢 ويدجت لعرض الخطأ وإعادة المحاولة
   Widget _buildErrorState(BuildContext context, CarCatalogState state) {
     final cubit = context.read<CarCatalogCubit>();
     return Center(
@@ -83,7 +79,7 @@ class _CarsSelectCategoryDetailsScreenState extends State<CarsSelectCategoryDeta
             ..loadBrands(
               preselectBrandId: carState.brandId,
               preselectModelId: carState.modelId,
-              autoSelectFirst: false, // 🟢 لا يتم الاختيار التلقائي لتجنب تعيين قيم غير مرغوبة
+              autoSelectFirst: false,
             ),
         ),
       ],
@@ -92,35 +88,44 @@ class _CarsSelectCategoryDetailsScreenState extends State<CarsSelectCategoryDeta
           padding: EdgeInsets.symmetric(horizontal: 16.w),
           child: MultiBlocListener(
             listeners: [
-              // 🟢 ربط اختيارات الكتالوج بـ CarAdsCubit
               BlocListener<CarCatalogCubit, CarCatalogState>(
-                listenWhen: (p, c) => p.selectedBrand != c.selectedBrand || p.selectedModel != c.selectedModel,
+                listenWhen: (p, c) =>
+                p.selectedBrand != c.selectedBrand || p.selectedModel != c.selectedModel,
                 listener: (context, cat) {
                   final carAds = context.read<CarAdsCubit>();
-                  // 🟢 ربط الماركة
-                  if (cat.selectedBrand != null) carAds.setBrandId(cat.selectedBrand!.id);
-                  else carAds.setBrandId(null);
-
-                  // 🟢 ربط الموديل
-                  if (cat.selectedModel != null) carAds.setModelId(cat.selectedModel!.id);
-                  else carAds.setModelId(null);
+                  // ربط الماركة
+                  if (cat.selectedBrand != null) {
+                    carAds.setBrandId(cat.selectedBrand!.id);
+                  } else {
+                    carAds.setBrandId(null);
+                  }
+                  // ربط الموديل
+                  if (cat.selectedModel != null) {
+                    carAds.setModelId(cat.selectedModel!.id);
+                  } else {
+                    carAds.setModelId(null);
+                  }
                 },
               ),
             ],
             child: BlocBuilder<CarAdsCubit, CarAdsState>(
               builder: (context, state) {
-                return BlocBuilder<CarCatalogCubit, CarCatalogState>( // 🟢 BlocBuilder إضافي لمراقبة حالة جلب الكتالوج
+                return BlocBuilder<CarCatalogCubit, CarCatalogState>(
                   builder: (context, catalogState) {
-                    // 1. حالة التحميل
+                    // تحميل
                     if (catalogState.brandsLoading && catalogState.brands.isEmpty) {
                       return const Center(child: CircularProgressIndicator.adaptive());
                     }
-                    // 2. حالة الخطأ
+                    // خطأ
                     if (catalogState.error != null && catalogState.brands.isEmpty) {
                       return _buildErrorState(context, catalogState);
                     }
 
-                    // 3. حالة النجاح (عرض المحتوى)
+                    final canContinue = (state.condition.isNotEmpty &&
+                        state.brandId != null &&
+                        state.modelId != null &&
+                        state.year != null);
+
                     return SingleChildScrollView(
                       child: Column(
                         children: [
@@ -135,21 +140,24 @@ class _CarsSelectCategoryDetailsScreenState extends State<CarsSelectCategoryDeta
                                   child: CustomizedChip(
                                     title: 'جديد',
                                     isSelected: state.condition == 'new',
-                                    onTap: () => carAdsCubit.setCondition(CarMappers.condition('جديد')),
+                                    onTap: () => carAdsCubit
+                                        .setCondition(CarMappers.condition('جديد')),
                                   ),
                                 ),
                                 Expanded(
                                   child: CustomizedChip(
                                     title: 'مستعمل',
                                     isSelected: state.condition == 'used',
-                                    onTap: () => carAdsCubit.setCondition(CarMappers.condition('مستعمل')),
+                                    onTap: () => carAdsCubit
+                                        .setCondition(CarMappers.condition('مستعمل')),
                                   ),
                                 ),
                                 Expanded(
                                   child: CustomizedChip(
                                     title: 'تالف',
                                     isSelected: state.condition == 'damaged',
-                                    onTap: () => carAdsCubit.setCondition(CarMappers.condition('تالف')),
+                                    onTap: () => carAdsCubit
+                                        .setCondition(CarMappers.condition('تالف')),
                                   ),
                                 ),
                               ],
@@ -158,10 +166,14 @@ class _CarsSelectCategoryDetailsScreenState extends State<CarsSelectCategoryDeta
 
                           verticalSpace(16),
 
-                          // 🟢 استخدام الـ Picker الموحد للماركة والموديل
+                          // الماركة والموديل
                           CarBrandModelPicker(
-                            onBrandChanged: (brand) { /* يتم التعامل معه في BlocListener */ },
-                            onModelChanged: (model) { /* يتم التعامل معه في BlocListener */ },
+                            onBrandChanged: (brand) {
+                              // يتم التعامل معه في BlocListener
+                            },
+                            onModelChanged: (model) {
+                              // يتم التعامل معه في BlocListener
+                            },
                           ),
 
                           verticalSpace(16),
@@ -189,7 +201,22 @@ class _CarsSelectCategoryDetailsScreenState extends State<CarsSelectCategoryDeta
         ),
         bottomNavigationBar: Padding(
           padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16),
-          child: NextButtonBar(onPressed: widget.onPressed),
+          child: BlocBuilder<CarAdsCubit, CarAdsState>(
+            buildWhen: (p, c) =>
+            p.condition != c.condition ||
+                p.brandId != c.brandId ||
+                p.modelId != c.modelId ||
+                p.year != c.year,
+            builder: (context, s) {
+              final canContinue = (s.condition.isNotEmpty &&
+                  s.brandId != null &&
+                  s.modelId != null &&
+                  s.year != null);
+              return NextButtonBar(
+                onPressed: canContinue ? widget.onPressed : null,
+              );
+            },
+          ),
         ),
       ),
     );

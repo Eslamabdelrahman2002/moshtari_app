@@ -8,7 +8,6 @@ import 'package:mushtary/features/home/data/models/home_data_model.dart';
 
 import '../screens/car_part_details_screen.dart';
 
-
 class CarPartSimilarStory extends StatefulWidget {
   final List<HomeAdModel> items;
   final Duration segmentDuration;
@@ -165,9 +164,6 @@ class _CarPartSimilarStoryState extends State<CarPartSimilarStory>
           _resume(); // استئناف الحركة بعد التقليب
         },
 
-        // **إزالة onLongPressStart و onLongPressEnd**
-
-        // ✅ السحب العمودي (يبقى كما هو، لكن نستخدم الإيقاف/الاستئناف المحدث)
         onVerticalDragUpdate: (d) {
           _dragDy += d.delta.dy;
           if (!_paused) _pause();
@@ -276,8 +272,8 @@ class _CarPartSimilarStoryState extends State<CarPartSimilarStory>
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _chip(text: frame.ad.title ?? ''), // لو عندك اسم براند
-                        _chip(text: frame.ad.price?.toString() ?? '—'),
+                        _chip(text: frame.ad.location ?? ''), // أو brand إن أردت
+                        _chip(text: frame.ad.price ?? '—'),
                       ],
                     ),
                     SizedBox(height: 12.h),

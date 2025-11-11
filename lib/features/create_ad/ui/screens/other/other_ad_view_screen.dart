@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path/path.dart' as p; // ✅ للتحقق من extension
+import 'package:path/path.dart' as p;
 
 import 'package:mushtary/core/dependency_injection/injection_container.dart';
 import 'package:mushtary/core/theme/colors.dart';
@@ -15,7 +15,7 @@ import 'package:mushtary/core/widgets/primary/secondary_text_form_field.dart';
 import 'package:mushtary/features/create_ad/ui/widgets/create_real_estate_ad_add_photo_video.dart';
 import 'package:mushtary/features/create_ad/ui/widgets/next_button_bar.dart';
 
-// Location (الربط الفعلي بالمنطقة والمدينة)
+// Location
 import 'package:mushtary/core/location/logic/cubit/location_cubit.dart';
 import 'package:mushtary/core/location/logic/cubit/location_state.dart';
 import 'package:mushtary/core/location/data/model/location_models.dart';
@@ -32,21 +32,25 @@ class OtherAdViewScreen extends StatefulWidget {
 
 class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
   final ImagePicker _picker = ImagePicker();
-  final List<File> picked = []; // ✅ قائمة للصور المتعددة
+  final List<File> picked = [];
+
+  // controllers لعرض القيم القديمة
+  late final TextEditingController _titleCtrl;
+  late final TextEditingController _descCtrl;
+  late final TextEditingController _priceCtrl;
+  late final TextEditingController _phoneCtrl;
 
   bool chat = false;
   bool whatsapp = false;
-  bool phone = false; // سيتم تحويلها لـ 'call' عند الإرسال
+  bool phone = false;
 
   String priceType = 'fixed';
   bool allowComments = true;
   bool allowMarketing = true;
 
-  // ربط المنطقة والمدينة من LocationCubit
   Region? _selectedRegion;
   City? _selectedCity;
 
-  // التصنيف الفرعي
   int? _selectedSubCategoryId;
   String? subCategoryName;
 
@@ -59,7 +63,80 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
     {'id': 86, 'name': 'إلكترونيات'},
   ];
 
-  static const List<String> kAllowedMediaExt = ['.jpg', '.jpeg', '.png', '.mp4']; // ✅ صيغ مدعومة
+  static const List<String> kAllowedMediaExt = ['.jpg', '.jpeg', '.png', '.mp4'];
+
+  bool get _isEditing {
+    try {
+      // يدعم الحالة حتى لو OtherAdsState لا تحتوي isEditing (يرجع false)
+      return (context.read<OtherAdsCubit>().state as dynamic).isEditing == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final s = context.read<OtherAdsCubit>().state;
+
+    _titleCtrl = TextEditingController(text: s.title ?? '');
+    _descCtrl = TextEditingController(text: s.description ?? '');
+    _priceCtrl = TextEditingController(text: s.price?.toString() ?? '');
+    _phoneCtrl = TextEditingController(text: s.phone ?? '');
+
+    // تهيئة التبديلات من الحالة
+    final methods = s.communicationMethods;
+    chat = methods.contains('chat');
+    whatsapp = methods.contains('whatsapp');
+    phone = methods.contains('call') || methods.contains('phone');
+
+    priceType = s.priceType.isNotEmpty ? s.priceType : 'fixed';
+    allowComments = s.allowComments;
+    allowMarketing = s.allowMarketing;
+
+    // تهيئة التصنيف الفرعي (لو موجود في الحالة)
+    _selectedSubCategoryId = s.subCategoryId;
+    if (_selectedSubCategoryId != null) {
+      try {
+        subCategoryName = subCategories
+            .firstWhere((e) => e['id'] == _selectedSubCategoryId)['name'] as String?;
+      } catch (_) {}
+    }
+
+    // تهيئة المنطقة/المدينة بحسب IDs من الحالة بعد تحميل البيانات
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final loc = getIt<LocationCubit>();
+      // استخدم Provider للـ LocationCubit في هذه الشاشة
+      context.read<LocationCubit>(); // تأكد من وجوده في الشجرة
+
+      await context.read<LocationCubit>().loadRegions();
+      final st = context.read<LocationCubit>().state;
+
+      if (s.regionId != null) {
+        try {
+          final reg = st.regions.firstWhere((r) => r.id == s.regionId);
+          setState(() => _selectedRegion = reg);
+          await context.read<LocationCubit>().loadCities(reg.id);
+          final st2 = context.read<LocationCubit>().state;
+          if (s.cityId != null) {
+            try {
+              final c = st2.cities.firstWhere((x) => x.id == s.cityId);
+              setState(() => _selectedCity = c);
+            } catch (_) {}
+          }
+        } catch (_) {}
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _descCtrl.dispose();
+    _priceCtrl.dispose();
+    _phoneCtrl.dispose();
+    super.dispose();
+  }
 
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -67,13 +144,12 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
     );
   }
 
-  // ✅ اختيار صور متعددة (حد أقصى 10)
   Future<void> pickImages() async {
     final images = await _picker.pickMultiImage(
       imageQuality: 85,
       maxWidth: 1024,
       maxHeight: 1024,
-      limit: 10, // حد أقصى 10 صور
+      limit: 10,
     );
     if (images.isNotEmpty) {
       final cubit = context.read<OtherAdsCubit>();
@@ -84,10 +160,9 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
           continue;
         }
         picked.add(file);
-        cubit.addImage(file); // ✅ إضافة إلى Cubit (افتراض دالة addImage)
+        cubit.addImage(file);
       }
-      setState(() {}); // تحديث UI
-      print('>>> Added ${images.length} images'); // Debug
+      setState(() {});
     } else if (picked.length >= 10) {
       _showError('تم الوصول للحد الأقصى (10 صور)');
     }
@@ -102,19 +177,19 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
         BlocProvider<LocationCubit>(create: (_) => getIt<LocationCubit>()..loadRegions()),
       ],
       child: BlocListener<OtherAdsCubit, OtherAdsState>(
-        listenWhen: (p, c) =>
-        p.submitting != c.submitting || p.success != c.success || p.error != c.error,
+        listenWhen: (p, c) => p.submitting != c.submitting || p.success != c.success || p.error != c.error,
         listener: (context, state) {
           if (state.submitting) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('جاري نشر الإعلان...')),
-            );
+            final msg = _isEditing ? 'جارٍ حفظ التغييرات...' : 'جاري نشر الإعلان...';
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
           } else if (state.success) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('تم نشر الإعلان بنجاح')),
+              SnackBar(content: Text(_isEditing ? 'تم حفظ التغييرات' : 'تم نشر الإعلان بنجاح')),
             );
-            Navigator.pop(context);
-            Navigator.pop(context);
+            Navigator.pop(context, _isEditing ? true : null);
+            if (!_isEditing && Navigator.canPop(context)) {
+              Navigator.pop(context);
+            }
           } else if (state.error != null && state.error!.isNotEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(state.error!)),
@@ -126,7 +201,10 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
             backgroundColor: Colors.white,
             surfaceTintColor: Colors.white,
             elevation: 0,
-            title: const Text('إنشاء إعلان', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black)),
+            title: Text(
+              _isEditing ? 'تعديل إعلان' : 'إنشاء إعلان',
+              style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black),
+            ),
             automaticallyImplyLeading: false,
             leading: IconButton(
               onPressed: () => Navigator.pop(context),
@@ -139,10 +217,10 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
             child: Column(
               children: [
-                // ✅ قسم الوسائط (دعم متعدد)
+                // الصور/الفيديو
                 if (picked.isEmpty)
                   InkWell(
-                    onTap: pickImages, // ✅ اختيار متعدد
+                    onTap: pickImages,
                     child: Container(
                       width: MediaQuery.of(context).size.width * .89,
                       padding: EdgeInsets.all(12.w),
@@ -166,12 +244,12 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
                   )
                 else
                   CreateRealEstateAdAddPhotoVideo(
-                    pickImage: pickImages, // ✅ إضافة أكثر
+                    pickImage: pickImages,
                     remove: (i) {
                       setState(() => picked.removeAt(i));
-                      cubit.removeImageAt(i); // ✅ حذف من Cubit
+                      cubit.removeImageAt(i);
                     },
-                    pickedImages: picked, // ✅ عرض المتعددة
+                    pickedImages: picked,
                   ),
                 verticalSpace(16),
 
@@ -185,7 +263,7 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
                       title: 'اختر التصنيف الفرعي',
                       hint: 'ابحث اسم التصنيف...',
                       items: subCategories,
-                      multi: false, // اختيار واحد فقط
+                      multi: false,
                     );
                     if (chosen == null || chosen.isEmpty) return;
                     final id = chosen.first;
@@ -204,6 +282,7 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
                   hint: 'عنوان الاعلان',
                   maxheight: 56.h,
                   minHeight: 56.h,
+                  controller: _titleCtrl,
                   onChanged: cubit.setTitle,
                 ),
                 verticalSpace(12),
@@ -214,18 +293,19 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
                   maxheight: 96.w,
                   minHeight: 96.w,
                   maxLines: 4,
+                  controller: _descCtrl,
                   onChanged: cubit.setDescription,
                 ),
                 verticalSpace(12),
 
-                // المنطقة (Region) من LocationCubit
                 BlocBuilder<LocationCubit, LocationState>(
                   builder: (context, locState) {
                     final isLoading = locState.regionsLoading;
+                    final regionHint = _selectedRegion?.nameAr ??
+                        (isLoading ? 'جاري تحميل المناطق...' : 'اختر المنطقة');
                     return _OutlinedSelectorField(
                       label: 'المنطقة',
-                      hint: _selectedRegion?.nameAr ??
-                          (isLoading ? 'جاري تحميل المناطق...' : 'اختر المنطقة'),
+                      hint: regionHint,
                       onTap: isLoading
                           ? null
                           : () async {
@@ -248,25 +328,22 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
                 ),
                 verticalSpace(12),
 
-                // المدينة (City) تعتمد على المنطقة
                 BlocBuilder<LocationCubit, LocationState>(
                   builder: (context, locState) {
                     final canPickCity = _selectedRegion != null;
                     final citiesLoading = locState.citiesLoading;
-
+                    final cityHint = _selectedCity?.nameAr ??
+                        (!canPickCity
+                            ? 'اختر المنطقة أولًا'
+                            : (citiesLoading ? 'جاري تحميل المدن...' : 'اختر المدينة'));
                     return _OutlinedSelectorField(
                       label: 'المدينة',
-                      hint: _selectedCity?.nameAr ??
-                          (!canPickCity
-                              ? 'اختر المنطقة أولًا'
-                              : (citiesLoading ? 'جاري تحميل المدن...' : 'اختر المدينة')),
+                      hint: cityHint,
                       onTap: !canPickCity
                           ? null
                           : () async {
                         FocusScope.of(context).unfocus();
-                        await context
-                            .read<LocationCubit>()
-                            .loadCities(_selectedRegion!.id);
+                        await context.read<LocationCubit>().loadCities(_selectedRegion!.id);
                         final st = context.read<LocationCubit>().state;
                         if (st.cities.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -285,20 +362,14 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
                 ),
                 verticalSpace(12),
 
-                // السعر
-                Row(
-                  children: [
-                    Expanded(
-                      child: SecondaryTextFormField(
-                        label: 'السعر',
-                        hint: '250',
-                        maxheight: 56.h,
-                        minHeight: 56.h,
-                        isNumber: true,
-                        onChanged: (v) => cubit.setPrice(num.tryParse(v)),
-                      ),
-                    ),
-                  ],
+                SecondaryTextFormField(
+                  label: 'السعر',
+                  hint: '250',
+                  maxheight: 56.h,
+                  minHeight: 56.h,
+                  isNumber: true,
+                  controller: _priceCtrl,
+                  onChanged: (v) => cubit.setPrice(num.tryParse(v)),
                 ),
                 verticalSpace(12),
 
@@ -308,6 +379,7 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
                   maxheight: 56.h,
                   minHeight: 56.h,
                   isPhone: true,
+                  controller: _phoneCtrl,
                   onChanged: cubit.setPhone,
                 ),
                 verticalSpace(16),
@@ -361,14 +433,13 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
                 verticalSpace(16),
 
                 NextButtonBar(
-                  title: 'نشر الاعلان',
+                  title: _isEditing ? 'حفظ التغييرات' : 'نشر الاعلان',
                   onPressed: () {
-                    // تحقق سريع قبل الإرسال
                     final missing = <String>[];
                     if (_selectedSubCategoryId == null) missing.add('التصنيف الفرعي');
                     if (_selectedRegion == null) missing.add('المنطقة');
                     if (_selectedCity == null) missing.add('المدينة');
-                    if (picked.isEmpty) missing.add('صورة واحدة على الأقل');
+                    if (!_isEditing && picked.isEmpty) missing.add('صورة واحدة على الأقل');
                     if (!chat && !whatsapp && !phone) missing.add('طريقة تواصل واحدة على الأقل');
 
                     if (missing.isNotEmpty) {
@@ -378,8 +449,13 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
                       return;
                     }
 
-                    // مرّر نوع السعر (إن كان الباك يتطلبه)
                     cubit.setPriceType(priceType);
+                    // مزامنة أخيرة مع الكونترولرز (لو عدلها المستخدم)
+                    cubit
+                      ..setTitle(_titleCtrl.text)
+                      ..setDescription(_descCtrl.text)
+                      ..setPhone(_phoneCtrl.text)
+                      ..setPrice(num.tryParse(_priceCtrl.text));
                     cubit.submit();
                   },
                 ),
@@ -589,7 +665,7 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
     );
   }
 
-  // أدوات واجهة
+  // UI helpers
 
   Widget _chip(String label, bool selected, ValueChanged<bool> onSelected) {
     return Padding(
@@ -779,9 +855,7 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
                               });
                             },
                             child: MySvg(
-                              image: isSelected
-                                  ? 'tick-square-check'
-                                  : 'tick-square',
+                              image: isSelected ? 'tick-square-check' : 'tick-square',
                             ),
                           )
                               : Radio<int>(
@@ -823,8 +897,7 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
                       onPressed: () => Navigator.pop(context, selected),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: ColorsManager.primaryColor,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
                         padding: EdgeInsets.symmetric(vertical: 14.h),
                       ),
@@ -845,7 +918,7 @@ class _OtherAdViewScreenState extends State<OtherAdViewScreen> {
     final list = <String>[];
     if (chat) list.add('chat');
     if (whatsapp) list.add('whatsapp');
-    if (phone) list.add('call'); // مهم: استخدم 'call' بدلاً من 'phone' حسب الباك
+    if (phone) list.add('call');
     cubit.setCommunicationMethods(list);
   }
 }

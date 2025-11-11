@@ -5,14 +5,16 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/widgets/primary/my_svg.dart';
-import '../../../../data/model/car_details_model.dart';
+import 'package:mushtary/features/product_details/ui/screens/product_details_screen.dart';
+import 'package:mushtary/features/user_profile_id/data/model/publisher_product_model.dart'; // 👈 تغيير إلى PublisherProductModel
+import '../../../../../../core/router/routes.dart'; // 👈 للـ routes العامة
 
 class CarSimilarStory extends StatefulWidget {
-  final List<SimilarCarAdModel> items;
+  final List<PublisherProductModel> items; // 👈 تغيير النوع
   final Duration segmentDuration;
   final int initialAdIndex;
   final bool useAllImagesOfEachAd;
-  final void Function(SimilarCarAdModel ad)? onOpenDetails;
+  final void Function(PublisherProductModel product)? onOpenDetails; // 👈 تغيير النوع
 
   const CarSimilarStory({
     super.key,
@@ -28,9 +30,9 @@ class CarSimilarStory extends StatefulWidget {
 }
 
 class _Frame {
-  final SimilarCarAdModel ad;
+  final PublisherProductModel product; // 👈 تغيير
   final String? url;
-  const _Frame({required this.ad, required this.url});
+  const _Frame({required this.product, required this.url});
 }
 
 class _CarSimilarStoryState extends State<CarSimilarStory> with SingleTickerProviderStateMixin {
@@ -61,17 +63,14 @@ class _CarSimilarStoryState extends State<CarSimilarStory> with SingleTickerProv
     super.dispose();
   }
 
-  List<_Frame> _buildFrames(List<SimilarCarAdModel> items, bool useAll) {
+  // 👈 تعديل لاستخدام PublisherProductModel
+  List<_Frame> _buildFrames(List<PublisherProductModel> items, bool useAll) {
     final frames = <_Frame>[];
-    for (final ad in items) {
+    for (final product in items) {
       // لو عندك قائمة صور للسيارة عدّل هذا الجزء لاستخدامها
-      final urls = <String?>[ad.image];
-      if (useAll) {
-        for (final u in urls) {
-          frames.add(_Frame(ad: ad, url: u));
-        }
-      } else {
-        frames.add(_Frame(ad: ad, url: urls.first));
+      final url = product.imageUrl;
+      if (url != null && url.isNotEmpty) {
+        frames.add(_Frame(product: product, url: url));
       }
     }
     return frames;
@@ -227,7 +226,7 @@ class _CarSimilarStoryState extends State<CarSimilarStory> with SingleTickerProv
                         SizedBox(width: 8.w),
                         Expanded(
                           child: Text(
-                            frame.ad.title,
+                            frame.product.title, // 👈 استخدام product.title
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyles.font12White500Weight,
@@ -260,8 +259,8 @@ class _CarSimilarStoryState extends State<CarSimilarStory> with SingleTickerProv
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _chip(text: 'السنة: ${frame.ad.year ?? '-'}'),
-                      _chip(text: 'السعر: ${frame.ad.price ?? '—'}'),
+                      _chip(text: frame.product.categoryLabel), // 👈 استخدام product.categoryLabel
+                      _chip(text: frame.product.priceText ?? '—'), // 👈 استخدام product.priceText
                     ],
                   ),
                   SizedBox(height: 12.h),
@@ -272,7 +271,19 @@ class _CarSimilarStoryState extends State<CarSimilarStory> with SingleTickerProv
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
                       padding: EdgeInsets.symmetric(vertical: 14.h),
                     ),
-                    onPressed: () => widget.onOpenDetails?.call(frame.ad),
+                    onPressed: () {
+                      // 👈 تنقل ذكي بناءً على نوع المنتج (للإعلانات فقط)
+                      if (frame.product.categoryId == 1 || frame.product.categoryId == 5) { // سيارة
+                        Navigator.of(context).pushNamed(
+                          Routes.carDetailsScreen,
+                          arguments: frame.product.id,
+                        );
+                      }
+                      // else {
+                      //   // افتراضي: إعلان عام
+                      //  Navigator.push(context, MaterialPageRoute(builder: (context)=>ProductDetailsScreen(auctionsModel: auctionsModel)));
+                      // }
+                    },
                     child: const Text('عرض التفاصيل'),
                   ),
                 ],

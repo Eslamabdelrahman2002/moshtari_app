@@ -4,13 +4,13 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/theme/colors.dart';
 import '../../../../../real_estate_details/ui/widgets/colored_dotted_story_ring.dart';
-import '../../../../data/model/car_details_model.dart';
-import 'car_similar_story.dart';
+import 'package:mushtary/features/user_profile_id/data/model/publisher_product_model.dart'; // 👈 تغيير إلى PublisherProductModel
+import 'car_similar_story.dart'; // 👈 محدث
 
 class CarStoryAndTitle extends StatelessWidget {
   final String title;
-  final List<SimilarCarAdModel> similarAds;
-  final void Function(SimilarCarAdModel ad)? onOpenDetails;
+  final List<PublisherProductModel> similarAds; // 👈 تغيير النوع
+  final void Function(PublisherProductModel product)? onOpenDetails; // 👈 تغيير النوع
 
   const CarStoryAndTitle({
     super.key,
@@ -56,9 +56,9 @@ class CarStoryAndTitle extends StatelessWidget {
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => CarSimilarStory(
-                    items: similarAds,
+                    items: similarAds, // 👈 تمرير PublisherProductModel
                     segmentDuration: const Duration(seconds: 4),
-                    useAllImagesOfEachAd: false, // صورة واحدة لكل إعلان مشابه
+                    useAllImagesOfEachAd: false, // صورة واحدة لكل إعلان
                     onOpenDetails: onOpenDetails,
                   ),
                 ),
@@ -79,10 +79,10 @@ class CarStoryAndTitle extends StatelessWidget {
     );
   }
 
-  String? _firstImage(List<SimilarCarAdModel> items) {
-    for (final ad in items) {
-      final img = ad.image;
-      if (img != null && img.isNotEmpty) return img;
+  // 👈 تعديل لاستخدام PublisherProductModel
+  String? _firstImage(List<PublisherProductModel> items) {
+    for (final product in items) {
+      if (product.imageUrl != null && product.imageUrl!.isNotEmpty) return product.imageUrl;
     }
     return null;
   }

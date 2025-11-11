@@ -13,6 +13,7 @@ class CommentItem extends StatelessWidget {
   final String comment;
   final DateTime? createdAt;
   final String? userImageUrl;
+  final String? offerPrice;
 
   const CommentItem({
     super.key,
@@ -20,6 +21,7 @@ class CommentItem extends StatelessWidget {
     required this.comment,
     this.createdAt,
     this.userImageUrl,
+    this.offerPrice,
   });
 
   @override
@@ -28,7 +30,20 @@ class CommentItem extends StatelessWidget {
     final timeString = createdAt == null
         ? ''
         : timeago.format(createdAt!.toLocal(), locale: 'ar');
-
+    Widget buildPriceTag() {
+      if (offerPrice == null || offerPrice!.isEmpty) return horizontalSpace(0);
+      return Container(
+        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+        decoration: BoxDecoration(
+          color: ColorsManager.primary50, // لون مميز للعرض
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        child: Text(
+          'عرض سعر: $offerPrice',
+          style: TextStyles.font12Primary400400Weight,
+        ),
+      );
+    }
     Widget buildUserAvatar() {
       const double radius = 16;
       final image = userImageUrl;
@@ -82,15 +97,18 @@ class CommentItem extends StatelessWidget {
             children: [
               SizedBox(
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     Text(userName.isEmpty ? 'مستخدم' : userName,
                         style: TextStyles.font14Black500Weight),
-                    const Spacer(),
-                    MySvg(
-                      image: 'more',
-                      width: 24.w,
-                      height: 24.h,
-                    ),
+                    horizontalSpace(8),
+                    buildPriceTag(),
+                    // const Spacer(),
+                    // MySvg(
+                    //   image: 'more',
+                    //   width: 24.w,
+                    //   height: 24.h,
+                    // ),
                   ],
                 ),
               ),

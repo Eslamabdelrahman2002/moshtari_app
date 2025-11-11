@@ -5,21 +5,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:image_picker/image_picker.dart'; // ✅ لـ pickMultiImage
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as p;
 
 import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
 import 'package:mushtary/core/widgets/primary/primary_button.dart';
-
-import 'package:mushtary/features/create_ad/ui/widgets/photo_picker.dart';
 import 'package:mushtary/features/create_ad/ui/widgets/media_grid_picker.dart';
 import 'package:mushtary/features/create_ad/ui/screens/car_parts/two_step_header.dart';
 
 import 'logic/cubit/car_part_ads_cubit.dart';
 import 'logic/cubit/car_part_ads_state.dart';
-
-import 'package:path/path.dart' as p;
 
 class CarPartCreateAdStep2Screen extends StatefulWidget {
   const CarPartCreateAdStep2Screen({super.key});
@@ -36,7 +33,7 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
   final _offerDescCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
 
-  final List<File> _picked = []; // ✅ قائمة للصور/الملفات المتعددة
+  final List<File> _picked = [];
 
   String priceType = 'fixed'; // fixed | negotiable
   bool allowComments = true;
@@ -50,9 +47,6 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
   @override
   void initState() {
     super.initState();
-    // تنظيف قائمة الملفات المؤقتة لمنع "الملف موجود مسبقاً"
-    PhotoPicker.clearSelectedFiles();
-
     final s = context.read<CarPartAdsCubit>().state;
 
     _titleCtrl.text = s.title ?? '';
@@ -65,12 +59,11 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
     allowMarketing = s.allowMarketing;
     allowNegotiationSwitch = priceType == 'negotiable';
 
-    final methods = s.communicationMethods ?? const <String>[];
+    final methods = s.communicationMethods;
     chat = methods.contains('chat');
     whatsapp = methods.contains('whatsapp');
     phone = methods.contains('call') || methods.contains('phone');
 
-    // ✅ تهيئة _picked من State (دعم متعدد)
     if (s.images.isNotEmpty) {
       _picked.addAll(s.images);
     }
@@ -91,7 +84,7 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
   }
 
   Future<File> _compressImageIfNeeded(File file) async {
-    // بدون ضغط (يمكن إضافة flutter_image_compress إذا مطلوب)
+    // بدون ضغط حالياً
     return file;
   }
 
@@ -99,67 +92,100 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
     if (!mounted) return;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: Colors.red.shade600,
-      ),
+      SnackBar(content: Text(msg), backgroundColor: Colors.red.shade600),
     );
   }
 
-  // ✅ اختيار صور/ملفات متعددة (حد أقصى 10)
-  Future<void> pickImages() async {
+  // اختيار صور متعددة مع احترام الحد الإجمالي (قديمة + جديدة <= 10)
+  Future<void> _pickImages() async {
     final cubit = context.read<CarPartAdsCubit>();
-    final picker = ImagePicker(); // ✅ استخدام ImagePicker بدلاً من PhotoPicker للدعم الأفضل
+    final existingCount = cubit.state.existingImageUrls.length;
+    final remaining = 10 - existingCount - _picked.length;
 
+    if (remaining <= 0) {
+      _showError('لا يمكنك إضافة المزيد من الصور. الحد الأقصى 10 صور.');
+      return;
+    }
+
+    final picker = ImagePicker();
     final images = await picker.pickMultiImage(
       imageQuality: 85,
       maxWidth: 1024,
       maxHeight: 1024,
-      limit: 10, // حد أقصى 10 ملفات
     );
-
     if (!mounted || images.isEmpty) return;
 
+    var added = 0;
     for (final x in images) {
+      if (added >= remaining) break;
       final file = File(x.path);
       if (!_isSupportedMedia(file)) {
         _showError('الملف ${p.basename(file.path)} ليس بصيغة مدعومة (png, jpg, mp4).');
         continue;
       }
-
       final finalFile = await _compressImageIfNeeded(file);
       _picked.add(finalFile);
-      cubit.addImage(finalFile); // ✅ إضافة إلى Cubit
-      print('>>> Added image: ${finalFile.path}'); // Debug
+      cubit.addImage(finalFile);
+      added++;
     }
 
-    setState(() {}); // تحديث UI
-    if (_picked.length >= 10) {
-      _showError('تم الوصول للحد الأقصى (10 ملفات)');
+    if (added == 0 && remaining <= 0) {
+      _showError('تم الوصول للحد الأقصى (10 صور)');
     }
+    if (mounted) setState(() {});
+  }
+
+  void _updateComms(CarPartAdsCubit cubit) {
+    final methods = <String>[];
+    if (chat) methods.add('chat');
+    if (whatsapp) methods.add('whatsapp');
+    if (phone) methods.add('call');
+    cubit.setCommunicationMethods(methods);
   }
 
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<CarPartAdsCubit>();
+    final s = context.watch<CarPartAdsCubit>().state;
 
     return BlocListener<CarPartAdsCubit, CarPartAdsState>(
-      listenWhen: (p, c) =>
-      p.submitting != c.submitting || p.success != c.success || p.error != c.error,
+      listenWhen: (p, c) => p.submitting != c.submitting || p.success != c.success || p.error != c.error,
       listener: (context, state) {
         if (state.submitting) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(const SnackBar(content: Text('جارٍ إنشاء الإعلان...')));
+          final msg = state.isEditing ? 'جارٍ حفظ التغييرات...' : 'جارٍ إنشاء الإعلان...';
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
         } else if (state.success) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(const SnackBar(content: Text('تم إنشاء الإعلان بنجاح')));
-          Navigator.pop(context);
-          Navigator.pop(context);
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          if (state.isEditing) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ التغييرات')));
+            Navigator.pop(context, true); // لإعادة تحميل التفاصيل
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إنشاء الإعلان بنجاح')));
+            Navigator.pop(context);
+            Navigator.pop(context);
+          }
         } else if (state.error != null) {
           _showError(state.error!);
         }
       },
       child: Scaffold(
+        // ✅ AppBar يظهر فقط في وضع التعديل
+        appBar: s.isEditing
+            ? AppBar(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          elevation: 0,
+          title:  Text(
+            'تعديل إعلان قطع غيار',
+            style: TextStyles.font18Black500Weight,
+          ),
+          leading: IconButton(
+            onPressed: () => Navigator.maybePop(context),
+            icon: Icon(Icons.arrow_back_ios_new, color: ColorsManager.darkGray300),
+            tooltip: 'رجوع',
+          ),
+        )
+            : null,
         backgroundColor: Colors.white,
         body: SafeArea(
           child: Column(
@@ -175,37 +201,74 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // ✅ قسم الوسائط (دعم متعدد)
+                      // صور الشبكة القديمة (إن وجدت)
+                      if (s.existingImageUrls.isNotEmpty) ...[
+                        Text('الصور الحالية', style: TextStyles.font14DarkGray400Weight),
+                        SizedBox(height: 8.h),
+                        SizedBox(
+                          height: 90.h,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: s.existingImageUrls.length,
+                            separatorBuilder: (_, __) => SizedBox(width: 8.w),
+                            itemBuilder: (_, i) {
+                              final url = s.existingImageUrls[i];
+                              return Stack(
+                                children: [
+                                  Container(
+                                    width: 110.w,
+                                    height: 82.h,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12.r),
+                                      border: Border.all(color: const Color(0xFFE6E6E6)),
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: Image.network(url, fit: BoxFit.cover),
+                                  ),
+                                  Positioned(
+                                    top: 6,
+                                    right: 6,
+                                    child: InkWell(
+                                      onTap: () => context.read<CarPartAdsCubit>().removeExistingImageAt(i),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.withOpacity(0.85),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        padding: const EdgeInsets.all(4),
+                                        child: const Icon(Icons.delete, size: 14, color: Colors.white),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                        verticalSpace(12),
+                      ],
+
+                      // قسم الوسائط (ملفات جديدة)
                       if (_picked.isEmpty)
-                        _addMediaBox(onTap: pickImages)
+                        _addMediaBox(onTap: _pickImages)
                       else
                         MediaGridPicker(
-                          files: _picked, // ✅ تمرير القائمة المتعددة
-                          onAdd: pickImages, // إضافة أكثر
+                          files: _picked,
+                          onAdd: _pickImages,
                           onRemove: (i) {
-                            cubit.removeImageAt(i); // ✅ حذف من Cubit
-                            setState(() => _picked.removeAt(i)); // تحديث UI
+                            cubit.removeImageAt(i);
+                            setState(() => _picked.removeAt(i));
                           },
-                          maxCount: 10, // حد أقصى
+                          maxCount: 10,
                           title: 'الصور ومقاطع الفيديو',
                         ),
                       verticalSpace(16),
 
-                      _field(
-                        'عنوان الاعلان',
-                        _titleCtrl,
-                        hint: 'مثال: فلتر زيت أصلي',
-                        onChanged: cubit.setTitle,
-                      ),
+                      _field('عنوان الاعلان', _titleCtrl, hint: 'مثال: فلتر زيت أصلي', onChanged: cubit.setTitle),
                       verticalSpace(12),
 
-                      _field(
-                        'وصف العرض',
-                        _offerDescCtrl,
-                        hint: 'اكتب وصفًا للمنتج...',
-                        maxLines: 3,
-                        onChanged: cubit.setDescription,
-                      ),
+                      _field('وصف العرض', _offerDescCtrl, hint: 'اكتب وصفًا للمنتج...', maxLines: 3, onChanged: cubit.setDescription),
                       verticalSpace(12),
 
                       // السعر
@@ -215,13 +278,10 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
                         inputFormatters: [
                           FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                         ],
-                        onChanged: (v) {
-                          final parsed = num.tryParse(v.replaceAll(',', '').trim());
-                          cubit.setPrice(parsed);
-                        },
+                        onChanged: (v) => cubit.setPrice(num.tryParse(v.replaceAll(',', '').trim())),
                         decoration: InputDecoration(
                           labelText: 'السعر',
-                          hintText: 'مثال: 250',
+                          hintText: priceType == 'negotiable' ? 'لن يتم إرسال السعر (على السوم)' : 'مثال: 250',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.r)),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12.r),
@@ -237,12 +297,7 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
                       ),
                       verticalSpace(12),
 
-                      _field(
-                        'رقم الهاتف',
-                        _phoneCtrl,
-                        keyboardType: TextInputType.phone,
-                        onChanged: cubit.setPhoneNumber,
-                      ),
+                      _field('رقم الهاتف', _phoneCtrl, keyboardType: TextInputType.phone, onChanged: cubit.setPhoneNumber),
                       verticalSpace(16),
 
                       Text('التواصل', style: TextStyles.font16Black500Weight),
@@ -317,23 +372,28 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
                       ),
                       verticalSpace(20),
 
-                      // زر النشر: نعطّل أثناء الإرسال
+                      // زر الحفظ/النشر
                       BlocBuilder<CarPartAdsCubit, CarPartAdsState>(
-                        buildWhen: (p, c) => p.submitting != c.submitting,
-                        builder: (context, s) {
+                        buildWhen: (p, c) => p.submitting != c.submitting || p.isEditing != c.isEditing,
+                        builder: (context, st) {
+                          final btnText = st.submitting
+                              ? (st.isEditing ? 'جارٍ الحفظ...' : 'جارٍ النشر...')
+                              : (st.isEditing ? 'حفظ التغييرات' : 'نشر الاعلان');
                           return AbsorbPointer(
-                            absorbing: s.submitting,
+                            absorbing: st.submitting,
                             child: PrimaryButton(
-                              text: s.submitting ? 'جارٍ النشر...' : 'نشر الاعلان',
+                              text: btnText,
                               onPressed: () {
-                                // ✅ تحديث نهائي للقيم قبل Submit
+                                if (st.submitting) return;
+
+                                // مزامنة نهائية قبل الإرسال
                                 cubit
                                   ..setTitle(_titleCtrl.text)
                                   ..setDescription(_offerDescCtrl.text)
                                   ..setPhoneNumber(_phoneCtrl.text)
                                   ..setPrice(num.tryParse(_priceCtrl.text));
 
-                                cubit.submit(); // ✅ Submit مع الصور المتعددة
+                                cubit.submit();
                               },
                             ),
                           );
@@ -373,7 +433,7 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
               Text('إضافة صورة أو مقطع فيديو', style: TextStyles.font14Blue500Weight),
               SizedBox(height: 6.h),
               Text(
-                'ندعم صيغ png, jpg, mp4 (حتى 10 ملفات)',
+                'ندعم صيغ png, jpg, mp4 (حتى 10 ملفات إجمالاً)',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey[600], fontSize: 11.sp),
               ),
@@ -382,14 +442,6 @@ class _CarPartCreateAdStep2ScreenState extends State<CarPartCreateAdStep2Screen>
         ),
       ),
     );
-  }
-
-  void _updateComms(CarPartAdsCubit cubit) {
-    final methods = <String>[];
-    if (chat) methods.add('chat');
-    if (whatsapp) methods.add('whatsapp');
-    if (phone) methods.add('call');
-    cubit.setCommunicationMethods(methods);
   }
 
   Widget _field(

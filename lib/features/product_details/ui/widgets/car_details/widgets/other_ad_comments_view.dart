@@ -5,28 +5,51 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
-// تم تغيير الاستيراد ليستخدم CommentWidget
-import 'package:mushtary/features/product_details/ui/widgets/full_view_widget/comment_widget.dart';
+// تم إزالة استيراد CommentWidget
+// import 'package:mushtary/features/product_details/ui/widgets/full_view_widget/comment_widget.dart';
 import 'package:mushtary/features/user_profile/logic/cubit/profile_cubit.dart';
 
+import '../../../../data/model/other_ad_details_model.dart';
+import '../../comment_item.dart'; // ✅ تأكد من استخدام CommentItem الذي يدعم offerPrice
+
+// ✅ كلاس مساعد لتوحيد بيانات التعليق/العرض قبل العرض
+class CommentOfferItem {
+  final String userName;
+  final String text;
+  final DateTime createdAt;
+  final String? userImageUrl;
+  final String? offerPrice;
+
+  CommentOfferItem({
+    required this.userName,
+    required this.text,
+    required this.createdAt,
+    this.userImageUrl,
+    this.offerPrice,
+  });
+}
+
+
 class OtherAdCommentsView extends StatelessWidget {
-  final List<dynamic> comments;
+  final List<dynamic> comments; // التعليقات
+  final List<dynamic> offers; // ✅ العروض: تم التأكيد على إضافته هنا
 
-  const OtherAdCommentsView({super.key, required this.comments});
+  const OtherAdCommentsView({
+    super.key,
+    required this.comments,
+    this.offers = const [], // ✅ هذا هو المكان الذي تم فيه إضافة الحقل
+  });
 
-  @override
-  Widget build(BuildContext context) {
-    final currentUsername =
-    context.select<ProfileCubit, String?>((cubit) => cubit.user?.username);
+  String? _safeString(dynamic v) => v?.toString().trim().isEmpty ?? true ? null : v.toString();
 
-    if (comments.isEmpty) {
-      return Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16.w),
-        child: Text('لا توجد تعليقات بعد 👀',
-            style: TextStyles.font14DarkGray400Weight),
-      );
-    }
+  // ✅ دالة لدمج العروض والتعليقات وفرزها
+  List<CommentOfferItem> _combineAndSortItems(String? currentUsername) {
+    List<CommentOfferItem> allItems = [];
 
+    // دمج التعليقات والعروض في قائمة واحدة
+    final rawItems = [...comments, ...offers]; // ✅ يتم دمج القائمتين هنا
+
+    // المنطق الموحد لاستخلاص البيانات من أي عنصر
     String _name(dynamic c) {
       try {
         final name = (c as dynamic).userName;
@@ -37,38 +60,43 @@ class OtherAdCommentsView extends StatelessWidget {
         final raw = map['user_name'] ??
             map['username'] ??
             (map['user'] is Map ? map['user']['username'] : null);
-        if (raw != null && raw.toString().trim().isNotEmpty) {
-          return raw.toString().trim();
-        }
+        if (raw != null && raw.toString().trim().isNotEmpty) return raw.toString().trim();
       } catch (_) {}
-      if ((currentUsername?.trim().isNotEmpty ?? false)) {
-        return currentUsername!.trim();
-      }
+      if ((currentUsername?.trim().isNotEmpty ?? false)) return currentUsername!.trim();
       return 'مستخدم';
     }
 
-    String _text(dynamic c) {
+    String _text(dynamic c, {required bool isOffer}) {
+      String? text;
       try {
-        final t = (c as dynamic).text ?? (c as dynamic).comment;
-        if (t is String) return t;
+        // جرب الوصول المباشر
+        final t = (c as dynamic).text ?? (c as dynamic).comment ?? (c as dynamic).offerComment;
+        if (t is String && t.isNotEmpty) text = t;
       } catch (_) {}
+
       try {
-        final map = c as Map<String, dynamic>;
-        return (map['comment_text'] ??
-            map['text'] ??
-            map['content'] ??
-            map['comment'] ??
-            '')
-            .toString();
+        // جرب الوصول كخريطة
+        if (text == null) {
+          final map = c as Map<String, dynamic>;
+          text = (map['comment_text'] ??
+              map['text'] ??
+              map['content'] ??
+              map['comment'] ??
+              map['offer_comment'] ??
+              '').toString();
+        }
       } catch (_) {}
-      return '';
+
+      if (text != null && text.isNotEmpty) return text;
+
+      // نص افتراضي إذا كان عرض سعر ولا يوجد تعليق
+      return isOffer ? 'عرض سعر' : '...';
     }
 
     DateTime? _createdAt(dynamic c) {
       try {
         final v = (c as dynamic).createdAt;
         if (v is DateTime) return v;
-        if (v is String && v.isNotEmpty) return DateTime.tryParse(v);
       } catch (_) {}
       try {
         final map = c as Map<String, dynamic>;
@@ -78,19 +106,71 @@ class OtherAdCommentsView extends StatelessWidget {
       return null;
     }
 
-    String? _price(dynamic c) {
+    String? _userPicture(dynamic c) {
       try {
-        final p = (c as dynamic).price;
-        if (p != null) return p.toString();
+        final v = (c as dynamic).userPicture ?? (c as dynamic).user_picture;
+        if (v is String) return _safeString(v);
       } catch (_) {}
       try {
         final map = c as Map<String, dynamic>;
-        final raw = map['price'] ?? map['amount'];
-        if (raw != null && raw.toString().trim().isNotEmpty) {
-          return raw.toString().trim();
-        }
+        final raw = map['user_picture'] ?? map['user_profile_image'] ?? map['user_image'] ?? map['user_avatar'];
+        return _safeString(raw);
       } catch (_) {}
       return null;
+    }
+
+    String? _offerPrice(dynamic c) {
+      try {
+        // جرب الوصول المباشر
+        final p = (c as dynamic).offerPrice ?? (c as dynamic).price ?? (c as dynamic).amount;
+        if (p != null) return _safeString(p);
+      } catch (_) {}
+
+      try {
+        // جرب الوصول كخريطة
+        final map = c as Map<String, dynamic>;
+        final raw = map['offer_price'] ?? map['price'] ?? map['amount'];
+        return _safeString(raw);
+      } catch (_) {}
+      return null;
+    }
+
+    // تعبئة قائمة العناصر الموحدة
+    for (final item in rawItems) {
+      final isOffer = _offerPrice(item) != null;
+      final createdAt = _createdAt(item);
+
+      // يجب أن يكون العنصر يملك تاريخ إنشاء لكي يتم فرزه وعرضه
+      if (createdAt != null) {
+        allItems.add(CommentOfferItem(
+          userName: _name(item),
+          text: _text(item, isOffer: isOffer),
+          createdAt: createdAt,
+          userImageUrl: _userPicture(item),
+          offerPrice: _offerPrice(item),
+        ));
+      }
+    }
+
+    // الفرز: الأحدث أولاً
+    allItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    return allItems;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentUsername =
+    context.select<ProfileCubit, String?>((cubit) => cubit.user?.username);
+
+    final allItems = _combineAndSortItems(currentUsername); // ✅ دمج وفرز القوائم
+
+    if (allItems.isEmpty) {
+      return Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16.w),
+        child: Text('لا توجد تعليقات أو عروض بعد 👀',
+            style: TextStyles.font14DarkGray400Weight),
+      );
     }
 
     return Padding(
@@ -98,22 +178,20 @@ class OtherAdCommentsView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('التعليقات', style: TextStyles.font16Dark300Grey400Weight),
+          Text('التعليقات والعروض', style: TextStyles.font16Dark300Grey400Weight),
           verticalSpace(8),
-          ...comments.map((c) {
-            final userName = _name(c);
-            final text = _text(c);
-            final createdAt = _createdAt(c);
-            final price = _price(c); // استخراج السعر
+          ...allItems.map((item) {
+            final userName = item.userName;
+            final text = item.text;
 
             return Padding(
               padding: EdgeInsets.only(bottom: 12.h),
-              // *** تم استبدال CommentItem بـ CommentWidget ***
-              child: CommentWidget(
+              child: CommentItem( // ✅ تم استخدام CommentItem
                 userName: userName,
                 comment: text.isEmpty ? '...' : text,
-                createdAt: createdAt,
-                price: price, // تمرير السعر
+                createdAt: item.createdAt,
+                userImageUrl: item.userImageUrl,
+                offerPrice: item.offerPrice, // ✅ تمرير سعر العرض
               ),
             );
           }).toList(),

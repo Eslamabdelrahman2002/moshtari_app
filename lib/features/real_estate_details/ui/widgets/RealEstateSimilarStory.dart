@@ -6,13 +6,14 @@ import 'package:mushtary/core/theme/colors.dart'; // ColorsManager
 import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/widgets/primary/my_svg.dart';
 
-// موديل العقارات (انتبه لمسار date أو data عندك)
-import 'package:mushtary/features/real_estate_details/date/model/real_estate_details_model.dart' as re;
+// 👈 تغيير إلى PublisherProductModel للـ story
+import 'package:mushtary/features/user_profile_id/data/model/publisher_product_model.dart';
 
+// 👈 استيراد شاشة تفاصيل الإعلان (للتنقل في الـ story)
 import '../screens/real_estate_details_screen.dart';
 
 class RealEstateSimilarStory extends StatefulWidget {
-  final List<re.SimilarAd> items;
+  final List<PublisherProductModel> items; // 👈 تغيير النوع للـ story
   final Duration segmentDuration;
   final int initialAdIndex;
   final bool useAllImagesOfEachAd;
@@ -30,9 +31,9 @@ class RealEstateSimilarStory extends StatefulWidget {
 }
 
 class _Frame {
-  final re.SimilarAd ad;
+  final PublisherProductModel product; // 👈 تغيير إلى PublisherProductModel
   final String? url;
-  const _Frame({required this.ad, required this.url});
+  const _Frame({required this.product, required this.url});
 }
 
 class _RealEstateSimilarStoryState extends State<RealEstateSimilarStory>
@@ -66,30 +67,20 @@ class _RealEstateSimilarStoryState extends State<RealEstateSimilarStory>
     super.dispose();
   }
 
-  List<_Frame> _buildFrames(List<re.SimilarAd> items, bool useAll) {
+  // 👈 تعديل لاستخدام PublisherProductModel (للـ story)
+  List<_Frame> _buildFrames(List<PublisherProductModel> items, bool useAll) {
     final frames = <_Frame>[];
-    for (final ad in items) {
-      final urls = ad.imageUrls.isEmpty ? <String?>[null] : ad.imageUrls;
-      if (useAll) {
-        for (final u in urls) {
-          frames.add(_Frame(ad: ad, url: u));
-        }
-      } else {
-        frames.add(_Frame(ad: ad, url: urls.first));
+    for (final product in items) {
+      final url = product.imageUrl; // 👈 imageUrl واحدة (للإعلانات)
+      if (url != null && url.isNotEmpty) {
+        frames.add(_Frame(product: product, url: url));
       }
     }
     return frames;
   }
 
   int _initialFrameIndex() {
-    if (!widget.useAllImagesOfEachAd) {
-      return widget.initialAdIndex.clamp(0, widget.items.length - 1);
-    }
-    int idx = 0;
-    for (int i = 0; i < widget.initialAdIndex && i < widget.items.length; i++) {
-      idx += widget.items[i].imageUrls.isEmpty ? 1 : widget.items[i].imageUrls.length;
-    }
-    return idx.clamp(0, _frames.length - 1);
+    return widget.initialAdIndex.clamp(0, widget.items.length - 1);
   }
 
   void _pause() {
@@ -162,11 +153,6 @@ class _RealEstateSimilarStoryState extends State<RealEstateSimilarStory>
             _resume(); // ✅ الاستئناف بعد رفع الإصبع
           },
 
-          // onLongPressEnd يستخدم لـ Vertical Drag End فقط، لكن كان يجب إزالته تماماً إذا لم يكن مستخدماً للإيقاف
-          // سنعيد فقط onVerticalDragEnd للـ resume
-
-          // **تم حذف onLongPressStart و onLongPressEnd المخصصين سابقاً**
-
           onVerticalDragUpdate: (d) {
             _dragDy += d.delta.dy;
             if (!_paused) _pause();
@@ -179,163 +165,164 @@ class _RealEstateSimilarStoryState extends State<RealEstateSimilarStory>
               _resume();
             }
           },
-      child: Scaffold(
-        backgroundColor: ColorsManager.blackBackground,
-        body: Stack(
-          children: [
-            // الصورة تغطي الشاشة بالكامل
-            Positioned.fill(
-              child: frame.url != null && frame.url!.isNotEmpty
-                  ? AnimatedBuilder(
-                animation: _controller,
-                builder: (context, _) {
-                  return Opacity(
-                    opacity: 0.98, // ثابت لحدة اللون؛ لو حاب تخليها ديناميكية غيّرها
-                    child: Image.network(
-                      frame.url!,
-                      width: double.infinity,
-                      height: double.infinity,
-                      fit: BoxFit.cover, // أهم سطر: تغطية كاملة
-                      errorBuilder: (_, __, ___) => _placeholder(),
-                      loadingBuilder: (ctx, child, progress) {
-                        if (progress == null) return child;
-                        return const Center(
-                          child: CircularProgressIndicator.adaptive(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation(Colors.white70),
-                          ),
-                        );
-                      },
-                    ),
-                  );
-                },
-              )
-                  : _placeholder(),
-            ),
-
-            // تدرّجات علوية/سفلية لقراءة أوضح
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: IgnorePointer(
-                child: Container(
-                  height: 180.h,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        ColorsManager.black.withOpacity(0.75),
-                        ColorsManager.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: IgnorePointer(
-                child: Container(
-                  height: 220.h,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      colors: [
-                        ColorsManager.black.withOpacity(0.75),
-                        ColorsManager.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            // أعلى: شريط التقدم + إغلاق + عنوان
-            SafeArea(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _progressBars(
-                      count: _frames.length,
-                      current: _index,
-                      animation: _controller,
-                    ),
-                    SizedBox(height: 10.h),
-                    Row(
-                      children: [
-                        _circleIcon(
-                          onTap: () => Navigator.of(context).pop(),
-                        ),
-                        SizedBox(width: 8.w),
-                        Expanded(
-                          child: Text(
-                            frame.ad.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyles.font12White500Weight,
-                          ),
-                        ),
-                        if (_paused)
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                            decoration: BoxDecoration(
-                              color: ColorsManager.white.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8.r),
-                            ),
-                            child: Text('موقوف', style: TextStyles.font12White400Weight),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // أسفل: شِبّات معلومات + زر التفاصيل
-            Positioned(
-              left: 16.w,
-              right: 16.w,
-              bottom: 28.h,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _chip(text: frame.ad.realEstateType),
-                      _chip(text: frame.ad.price != null ? '${frame.ad.price}' : '—'),
-                    ],
-                  ),
-                  SizedBox(height: 12.h),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: ColorsManager.primaryColor,
-                      foregroundColor: ColorsManager.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-                      padding: EdgeInsets.symmetric(vertical: 14.h),
-                    ),
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => RealEstateDetailsScreen(id: frame.ad.id),
+          child: Scaffold(
+            backgroundColor: ColorsManager.blackBackground,
+            body: Stack(
+              children: [
+                // الصورة تغطي الشاشة بالكامل
+                Positioned.fill(
+                  child: frame.url != null && frame.url!.isNotEmpty
+                      ? AnimatedBuilder(
+                    animation: _controller,
+                    builder: (context, _) {
+                      return Opacity(
+                        opacity: 0.98, // ثابت لحدة اللون؛ لو حاب تخليها ديناميكية غيّرها
+                        child: Image.network(
+                          frame.url!,
+                          width: double.infinity,
+                          height: double.infinity,
+                          fit: BoxFit.cover, // أهم سطر: تغطية كاملة
+                          errorBuilder: (_, __, ___) => _placeholder(),
+                          loadingBuilder: (ctx, child, progress) {
+                            if (progress == null) return child;
+                            return const Center(
+                              child: CircularProgressIndicator.adaptive(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation(Colors.white70),
+                              ),
+                            );
+                          },
                         ),
                       );
                     },
-                    child: const Text('عرض التفاصيل'),
+                  )
+                      : _placeholder(),
+                ),
+
+                // تدرّجات علوية/سفلية لقراءة أوضح
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: IgnorePointer(
+                    child: Container(
+                      height: 180.h,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            ColorsManager.black.withOpacity(0.75),
+                            ColorsManager.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ],
-              ),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: IgnorePointer(
+                    child: Container(
+                      height: 220.h,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [
+                            ColorsManager.black.withOpacity(0.75),
+                            ColorsManager.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // أعلى: شريط التقدم + إغلاق + عنوان
+                SafeArea(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _progressBars(
+                          count: _frames.length,
+                          current: _index,
+                          animation: _controller,
+                        ),
+                        SizedBox(height: 10.h),
+                        Row(
+                          children: [
+                            _circleIcon(
+                              onTap: () => Navigator.of(context).pop(),
+                            ),
+                            SizedBox(width: 8.w),
+                            Expanded(
+                              child: Text(
+                                frame.product.title, // 👈 استخدام product.title (للإعلانات)
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyles.font12White500Weight,
+                              ),
+                            ),
+                            if (_paused)
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                                decoration: BoxDecoration(
+                                  color: ColorsManager.white.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8.r),
+                                ),
+                                child: Text('موقوف', style: TextStyles.font12White400Weight),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // أسفل: شِبّات معلومات + زر التفاصيل
+                Positioned(
+                  left: 16.w,
+                  right: 16.w,
+                  bottom: 28.h,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _chip(text: frame.product.categoryLabel), // 👈 استخدام product.categoryLabel
+                          _chip(text: frame.product.priceText ?? '—'), // 👈 استخدام product.priceText
+                        ],
+                      ),
+                      SizedBox(height: 12.h),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: ColorsManager.primaryColor,
+                          foregroundColor: ColorsManager.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                          padding: EdgeInsets.symmetric(vertical: 14.h),
+                        ),
+                        onPressed: () {
+                          // 👈 تنقل إلى تفاصيل الإعلان (لأنها إعلانات owner فقط)
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => RealEstateDetailsScreen(id: frame.product.id),
+                            ),
+                          );
+                        },
+                        child: const Text('عرض التفاصيل'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),)
+          ),)
     );
   }
 

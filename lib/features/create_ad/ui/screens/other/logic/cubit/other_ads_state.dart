@@ -7,6 +7,11 @@ class OtherAdsState extends Equatable {
   final bool success;
   final String? error;
 
+  // وضع التعديل
+  final bool isEditing;
+  final int? editingAdId;
+  final List<String> existingImageUrls;
+
   final String? title;
   final String? description;
   final int? subCategoryId;
@@ -14,7 +19,7 @@ class OtherAdsState extends Equatable {
   final int? cityId;
   final num? price;
   final String? phone;
-  final String priceType; // default: 'fixed'
+  final String priceType;
 
   final bool allowComments;
   final bool allowMarketing;
@@ -26,6 +31,10 @@ class OtherAdsState extends Equatable {
     this.submitting = false,
     this.success = false,
     this.error,
+
+    this.isEditing = false,
+    this.editingAdId,
+    this.existingImageUrls = const [],
 
     this.title,
     this.description,
@@ -48,6 +57,10 @@ class OtherAdsState extends Equatable {
     bool? success,
     String? error,
 
+    bool? isEditing,
+    int? editingAdId,
+    List<String>? existingImageUrls,
+
     String? title,
     String? description,
     int? subCategoryId,
@@ -67,6 +80,10 @@ class OtherAdsState extends Equatable {
       submitting: submitting ?? this.submitting,
       success: success ?? this.success,
       error: error,
+
+      isEditing: isEditing ?? this.isEditing,
+      editingAdId: editingAdId ?? this.editingAdId,
+      existingImageUrls: existingImageUrls ?? this.existingImageUrls,
 
       title: title ?? this.title,
       description: description ?? this.description,
@@ -88,6 +105,7 @@ class OtherAdsState extends Equatable {
   @override
   List<Object?> get props => [
     submitting, success, error,
+    isEditing, editingAdId, existingImageUrls,
     title, description, subCategoryId, regionId, cityId,
     price, phone, priceType,
     allowComments, allowMarketing,

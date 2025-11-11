@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mushtary/features/home/ui/widgets/home_list_view_item.dart';
+import 'package:mushtary/features/home/ui/widgets/home_auction_list_view_item.dart';
 import '../../data/models/home_data_model.dart';
 
 class HomeListView extends StatelessWidget {
@@ -43,7 +44,15 @@ class HomeListView extends StatelessWidget {
 
     return SliverList(
       delegate: SliverChildBuilderDelegate(
-            (context, index) => HomeListViewItem(adModel: items[index]),
+            (context, index) {
+          final ad = items[index];
+          final isAuction = ad.auctionDisplayType != null ||
+              ((ad.sourceType ?? '').toLowerCase().contains('auction'));
+
+          return isAuction
+              ? HomeAuctionListViewItem(adModel: ad)
+              : HomeListViewItem(adModel: ad);
+        },
         childCount: items.length,
       ),
     );

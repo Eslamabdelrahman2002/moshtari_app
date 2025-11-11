@@ -33,15 +33,89 @@ class _RealEstateSelectCategoryDetailsScreenState
     extends State<RealEstateSelectCategoryDetailsScreen> {
   bool isForSell = true;
 
-  String? selectedType;                // نوع العقار
-  Region? selectedRegion;              // المنطقة (كيان)
-  City? selectedCity;                  // المدينة (كيان)
+  String? selectedType; // نوع العقار
+  Region? selectedRegion; // المنطقة (كيان)
+  City? selectedCity; // المدينة (كيان)
+
+  // فلاغات لتطبيق الـ prefill مرة واحدة فقط
+  bool _appliedRegionPrefill = false;
+  bool _appliedCityPrefill = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // تهيئة قيم أولية من الكيوبت (وضع التعديل)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final s = context.read<RealEstateAdsCubit>().state;
+      if (s.purpose != null) {
+        setState(() => isForSell = RealEstateMappers.purposeToIsForSell(s.purpose));
+      }
+      if (s.realEstateType != null) {
+        setState(() => selectedType = RealEstateMappers.typeToLabel(s.realEstateType!));
+      }
+    });
+  }
+
+  void _maybePrefill(LocationState locState) {
+    final adsCubit = context.read<RealEstateAdsCubit>();
+
+    // Prefill للمنطقة بالاسم بعد تحميل المناطق
+    if (!_appliedRegionPrefill) {
+      final preRegionName = adsCubit.state.preselectedRegionName;
+      if (preRegionName != null &&
+          preRegionName.trim().isNotEmpty &&
+          !locState.regionsLoading &&
+          locState.regions.isNotEmpty &&
+          selectedRegion == null) {
+        Region? match;
+        for (final r in locState.regions) {
+          if (r.nameAr.trim() == preRegionName.trim()) {
+            match = r;
+            break;
+          }
+        }
+        if (match != null) {
+          setState(() {
+            selectedRegion = match;
+            selectedCity = null;
+          });
+          adsCubit.setRegionId(match.id);
+          // حمّل مدن المنطقة المختارة
+          context.read<LocationCubit>().loadCities(match.id);
+        }
+        _appliedRegionPrefill = true;
+      }
+    }
+
+    // Prefill للمدينة بالاسم بعد تحميل مدن المنطقة
+    if (!_appliedCityPrefill) {
+      final preCityName = adsCubit.state.preselectedCityName;
+      if (preCityName != null &&
+          preCityName.trim().isNotEmpty &&
+          selectedRegion != null &&
+          !locState.citiesLoading &&
+          locState.cities.isNotEmpty &&
+          selectedCity == null) {
+        City? match;
+        for (final c in locState.cities) {
+          if (c.nameAr.trim() == preCityName.trim()) {
+            match = c;
+            break;
+          }
+        }
+        if (match != null) {
+          setState(() => selectedCity = match);
+          adsCubit.setCityId(match.id);
+        }
+        _appliedCityPrefill = true;
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final adsCubit = context.read<RealEstateAdsCubit>();
 
-    // بيانات "نوع العقار" (واجهة فقط)
     final propertyTypes = <_OptionItem>[
       _OptionItem('شقة', Icons.apartment_rounded),
       _OptionItem('فيلا', Icons.villa_rounded),
@@ -54,206 +128,215 @@ class _RealEstateSelectCategoryDetailsScreenState
       _OptionItem('شاليهات و استراحات', Icons.cabin_rounded),
     ];
 
-    // موفر LocationCubit هنا لضمان التحميل
     return BlocProvider<LocationCubit>(
       create: (_) => getIt<LocationCubit>()..loadRegions(),
-      child: Scaffold(
-        body: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w),
-            child: BlocBuilder<RealEstateAdsCubit, RealEstateAdsState>(
-              builder: (context, state) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    verticalSpace(12),
+      child: BlocListener<LocationCubit, LocationState>(
+        listener: (context, locState) {
+          // نفّذ الـ prefill بعد انتهاء البناء
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            _maybePrefill(locState);
+          });
+        },
+        child: Scaffold(
+          body: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: BlocBuilder<RealEstateAdsCubit, RealEstateAdsState>(
+                builder: (context, state) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      verticalSpace(12),
 
-                    // نوع الطلب (بيع/إيجار)
-                    Text('نوع الطلب', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                    verticalSpace(8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: CustomizedChip(
-                            title: 'إيجار',
-                            isSelected: !isForSell,
-                            onTap: () {
-                              setState(() => isForSell = false);
-                              adsCubit.setPurpose(false); // false = إيجار
-                            },
+                      // نوع الطلب (بيع/إيجار)
+                      Text('نوع الطلب', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                      verticalSpace(8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: CustomizedChip(
+                              title: 'إيجار',
+                              isSelected: !isForSell,
+                              onTap: () {
+                                setState(() => isForSell = false);
+                                adsCubit.setPurpose(false);
+                              },
+                            ),
                           ),
-                        ),
-                        horizontalSpace(12),
-                        Expanded(
-                          child: CustomizedChip(
-                            title: 'بيع',
-                            isSelected: isForSell,
-                            onTap: () {
-                              setState(() => isForSell = true);
-                              adsCubit.setPurpose(true); // true = بيع
-                            },
+                          horizontalSpace(12),
+                          Expanded(
+                            child: CustomizedChip(
+                              title: 'بيع',
+                              isSelected: isForSell,
+                              onTap: () {
+                                setState(() => isForSell = true);
+                                adsCubit.setPurpose(true);
+                              },
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    verticalSpace(16),
+                        ],
+                      ),
+                      verticalSpace(16),
 
-                    // نوع العقار
-                    DetailSelector(
-                      title: '',
-                      widget: selectedType == null
-                          ? InkWell(
-                        onTap: () async {
-                          final res = await _openSingleSelectDialog(
-                            context: context,
-                            title: 'التصنيف',
-                            hint: 'ابحث عن التصنيف...',
-                            items: propertyTypes,
-                            selected: selectedType,
+                      // نوع العقار
+                      DetailSelector(
+                        title: '',
+                        widget: selectedType == null
+                            ? InkWell(
+                          onTap: () async {
+                            final res = await _openSingleSelectDialog(
+                              context: context,
+                              title: 'التصنيف',
+                              hint: 'ابحث عن التصنيف...',
+                              items: propertyTypes,
+                              selected: selectedType,
+                            );
+                            if (res != null) {
+                              setState(() => selectedType = res);
+                              adsCubit.setRealEstateType(RealEstateMappers.type(res));
+                            }
+                          },
+                          child: SecondaryTextFormField(
+                            label: 'نوع العقار',
+                            hint: 'اختر نوع العقار',
+                            maxheight: 56.h,
+                            minHeight: 56.h,
+                            suffexIcon: 'arrow-left',
+                            isEnabled: false,
+                          ),
+                        )
+                            : SecondaryTextFormFieldHasValue(
+                          title: selectedType!,
+                          onTap: () {
+                            setState(() => selectedType = null);
+                            adsCubit.setRealEstateType(null);
+                          },
+                        ),
+                      ),
+                      verticalSpace(12),
+
+                      // المنطقة
+                      BlocBuilder<LocationCubit, LocationState>(
+                        builder: (context, locState) {
+                          final isLoading = locState.regionsLoading;
+                          return DetailSelector(
+                            title: '',
+                            widget: selectedRegion == null
+                                ? InkWell(
+                              onTap: isLoading
+                                  ? null
+                                  : () async {
+                                FocusScope.of(context).unfocus();
+                                if (locState.regions.isEmpty && !locState.regionsLoading) {
+                                  await context.read<LocationCubit>().loadRegions();
+                                }
+                                final res = await _openRegionDialog(context);
+                                if (res != null) {
+                                  setState(() {
+                                    selectedRegion = res;
+                                    selectedCity = null;
+                                  });
+                                  adsCubit.setRegionId(res.id);
+                                }
+                              },
+                              child: SecondaryTextFormField(
+                                label: 'المنطقة',
+                                hint: isLoading ? 'جاري تحميل المناطق...' : 'اختر المنطقة',
+                                maxheight: 56.h,
+                                minHeight: 56.h,
+                                suffexIcon: 'arrow-left',
+                                isEnabled: false,
+                              ),
+                            )
+                                : SecondaryTextFormFieldHasValue(
+                              title: selectedRegion!.nameAr,
+                              onTap: () {
+                                setState(() {
+                                  selectedRegion = null;
+                                  selectedCity = null;
+                                });
+                                adsCubit.setRegionId(null);
+                                adsCubit.setCityId(null);
+                              },
+                            ),
                           );
-                          if (res != null) {
-                            setState(() => selectedType = res);
-                            adsCubit.setRealEstateType(RealEstateMappers.type(res));
-                          }
-                        },
-                        child: SecondaryTextFormField(
-                          label: 'نوع العقار',
-                          hint: 'اختر نوع العقار',
-                          maxheight: 56.h,
-                          minHeight: 56.h,
-                          suffexIcon: 'arrow-left',
-                          isEnabled: false,
-                        ),
-                      )
-                          : SecondaryTextFormFieldHasValue(
-                        title: selectedType!,
-                        onTap: () {
-                          setState(() => selectedType = null);
-                          adsCubit.setRealEstateType(null);
                         },
                       ),
-                    ),
-                    verticalSpace(12),
+                      verticalSpace(12),
 
-                    // المنطقة (من LocationCubit)
-                    BlocBuilder<LocationCubit, LocationState>(
-                      builder: (context, locState) {
-                        final isLoading = locState.regionsLoading;
-                        return DetailSelector(
-                          title: '',
-                          widget: selectedRegion == null
-                              ? InkWell(
-                            onTap: isLoading
-                                ? null
-                                : () async {
-                              FocusScope.of(context).unfocus();
-                              if (locState.regions.isEmpty && !locState.regionsLoading) {
-                                await context.read<LocationCubit>().loadRegions();
-                              }
-                              final res = await _openRegionDialog(context);
-                              if (res != null) {
-                                setState(() {
-                                  selectedRegion = res;
-                                  selectedCity = null; // إعادة اختيار المدينة
-                                });
-                                adsCubit.setRegionId(res.id);
-                              }
-                            },
-                            child: SecondaryTextFormField(
-                              label: 'المنطقة',
-                              hint: isLoading ? 'جاري تحميل المناطق...' : 'اختر المنطقة',
-                              maxheight: 56.h,
-                              minHeight: 56.h,
-                              suffexIcon: 'arrow-left',
-                              isEnabled: false,
+                      // المدينة
+                      BlocBuilder<LocationCubit, LocationState>(
+                        builder: (context, locState) {
+                          final citiesLoading = locState.citiesLoading;
+                          final cannotPickCity = selectedRegion == null;
+
+                          return DetailSelector(
+                            title: '',
+                            widget: selectedCity == null
+                                ? InkWell(
+                              onTap: cannotPickCity
+                                  ? null
+                                  : () async {
+                                FocusScope.of(context).unfocus();
+
+                                // فحص آمن قبل الوصول إلى id
+                                final regionId = selectedRegion?.id;
+                                if (regionId == null) return;
+
+                                await context.read<LocationCubit>().loadCities(regionId);
+
+                                if (context.read<LocationCubit>().state.cities.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('لا توجد مدن متاحة للمنطقة المحددة')),
+                                  );
+                                  return;
+                                }
+
+                                final res = await _openCityDialog(context, selectedRegion!);
+                                if (res != null) {
+                                  setState(() => selectedCity = res);
+                                  adsCubit.setCityId(res.id);
+                                }
+                              },
+                              child: SecondaryTextFormField(
+                                label: 'المدينة',
+                                hint: cannotPickCity
+                                    ? 'اختر المنطقة أولًا'
+                                    : (citiesLoading ? 'جاري تحميل المدن...' : 'اختر المدينة'),
+                                maxheight: 56.h,
+                                minHeight: 56.h,
+                                suffexIcon: 'arrow-left',
+                                isEnabled: false,
+                              ),
+                            )
+                                : SecondaryTextFormFieldHasValue(
+                              title: selectedCity!.nameAr,
+                              onTap: () {
+                                setState(() => selectedCity = null);
+                                adsCubit.setCityId(null);
+                              },
                             ),
-                          )
-                              : SecondaryTextFormFieldHasValue(
-                            title: selectedRegion!.nameAr,
-                            onTap: () {
-                              setState(() {
-                                selectedRegion = null;
-                                selectedCity = null;
-                              });
-                              adsCubit.setRegionId(null);
-                              adsCubit.setCityId(null);
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                    verticalSpace(12),
+                          );
+                        },
+                      ),
 
-                    // المدينة (تعتمد على المنطقة)
-                    BlocBuilder<LocationCubit, LocationState>(
-                      builder: (context, locState) {
-                        final citiesLoading = locState.citiesLoading;
-                        final cannotPickCity = selectedRegion == null;
-
-                        return DetailSelector(
-                          title: '',
-                          widget: selectedCity == null
-                              ? InkWell(
-                            onTap: cannotPickCity
-                                ? null
-                                : () async {
-                              FocusScope.of(context).unfocus();
-                              // تحميل المدن للمنطقة الحالية
-                              await context
-                                  .read<LocationCubit>()
-                                  .loadCities(selectedRegion!.id);
-
-                              if (context.read<LocationCubit>().state.cities.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('لا توجد مدن متاحة للمنطقة المحددة')),
-                                );
-                                return;
-                              }
-
-                              final res = await _openCityDialog(context, selectedRegion!);
-                              if (res != null) {
-                                setState(() => selectedCity = res);
-                                adsCubit.setCityId(res.id);
-                              }
-                            },
-                            child: SecondaryTextFormField(
-                              label: 'المدينة',
-                              hint: cannotPickCity
-                                  ? 'اختر المنطقة أولًا'
-                                  : (citiesLoading ? 'جاري تحميل المدن...' : 'اختر المدينة'),
-                              maxheight: 56.h,
-                              minHeight: 56.h,
-                              suffexIcon: 'arrow-left',
-                              isEnabled: false,
-                            ),
-                          )
-                              : SecondaryTextFormFieldHasValue(
-                            title: selectedCity!.nameAr,
-                            onTap: () {
-                              setState(() => selectedCity = null);
-                              adsCubit.setCityId(null);
-                            },
-                          ),
-                        );
-                      },
-                    ),
-
-                    verticalSpace(16),
-                  ],
-                );
-              },
+                      verticalSpace(16),
+                    ],
+                  );
+                },
+              ),
             ),
           ),
-        ),
-        bottomNavigationBar: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16),
-          child: NextButtonBar(
-            // الانتقال مفعّل فقط عند اختيار النوع والمنطقة والمدينة
-            onPressed: (selectedType != null && selectedRegion != null && selectedCity != null)
-                ? widget.onNext
-                : null,
-            title: 'التالي',
+          bottomNavigationBar: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16),
+            child: NextButtonBar(
+              onPressed: (selectedType != null && selectedRegion != null && selectedCity != null)
+                  ? widget.onNext
+                  : null,
+              title: 'التالي',
+            ),
           ),
         ),
       ),

@@ -1,6 +1,11 @@
 import 'dart:io';
 
 class CarPartAdsState {
+  // وضع التعديل
+  final bool isEditing;
+  final int? editingAdId;
+
+  // حقول الطلب
   final String? title;
   final String? partName;
   final String condition; // new | used
@@ -13,7 +18,7 @@ class CarPartAdsState {
 
   final int? cityId;
   final int? neighborhoodId;
-  final int? regionId; // 🟢 تمت الإضافة
+  final int? regionId;
   final String? phoneNumber;
   final List<String> communicationMethods;
   final bool allowMarketing;
@@ -22,13 +27,18 @@ class CarPartAdsState {
   final double? latitude;
   final double? longitude;
 
-  final List<File> images;
+  // الوسائط
+  final List<File> images;             // صور جديدة (ملفات)
+  final List<String> existingImageUrls; // صور قديمة (روابط)
 
+  // حالة الإرسال
   final bool submitting;
   final bool success;
   final String? error;
 
   CarPartAdsState({
+    this.isEditing = false,
+    this.editingAdId,
     this.title,
     this.partName,
     this.condition = 'used',
@@ -39,7 +49,7 @@ class CarPartAdsState {
     this.priceType = 'fixed',
     this.cityId,
     this.neighborhoodId,
-    this.regionId, // 🟢 تمت الإضافة
+    this.regionId,
     this.phoneNumber,
     this.communicationMethods = const ['chat', 'call'],
     this.allowMarketing = true,
@@ -48,12 +58,15 @@ class CarPartAdsState {
     this.latitude,
     this.longitude,
     this.images = const [],
+    this.existingImageUrls = const [],
     this.submitting = false,
     this.success = false,
     this.error,
   });
 
   CarPartAdsState copyWith({
+    bool? isEditing,
+    int? editingAdId,
     String? title,
     String? partName,
     String? condition,
@@ -64,7 +77,7 @@ class CarPartAdsState {
     String? priceType,
     int? cityId,
     int? neighborhoodId,
-    int? regionId, // 🟢 تمت الإضافة
+    int? regionId,
     String? phoneNumber,
     List<String>? communicationMethods,
     bool? allowMarketing,
@@ -73,11 +86,14 @@ class CarPartAdsState {
     double? latitude,
     double? longitude,
     List<File>? images,
+    List<String>? existingImageUrls,
     bool? submitting,
     bool? success,
     String? error,
   }) {
     return CarPartAdsState(
+      isEditing: isEditing ?? this.isEditing,
+      editingAdId: editingAdId ?? this.editingAdId,
       title: title ?? this.title,
       partName: partName ?? this.partName,
       condition: condition ?? this.condition,
@@ -88,7 +104,7 @@ class CarPartAdsState {
       priceType: priceType ?? this.priceType,
       cityId: cityId ?? this.cityId,
       neighborhoodId: neighborhoodId ?? this.neighborhoodId,
-      regionId: regionId ?? this.regionId, // 🟢 تمت الإضافة
+      regionId: regionId ?? this.regionId,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       communicationMethods: communicationMethods ?? this.communicationMethods,
       allowMarketing: allowMarketing ?? this.allowMarketing,
@@ -97,6 +113,7 @@ class CarPartAdsState {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       images: images ?? this.images,
+      existingImageUrls: existingImageUrls ?? this.existingImageUrls,
       submitting: submitting ?? this.submitting,
       success: success ?? this.success,
       error: error,

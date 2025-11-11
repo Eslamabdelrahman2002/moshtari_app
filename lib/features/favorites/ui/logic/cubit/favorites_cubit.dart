@@ -15,9 +15,11 @@ class FavoritesCubit extends Cubit<FavoritesState> {
       _favoriteIds
         ..clear()
         ..addAll(ids);
+      if (isClosed) return;
       emit(FavoritesLoaded(Set.from(_favoriteIds)));
     } catch (_) {
       emit(FavoritesLoaded(Set.from(_favoriteIds)));
+      if (isClosed) return;
     }
   }
 

@@ -10,13 +10,52 @@ class CarPartAdsCreateRepo {
 
   Future<CarPartAdResponse> createCarPartAd(CarPartAdRequest req) async {
     final formData = await req.toFormData();
-
     final map = await _api.postForm(
       ApiConstants.carPartAdsCreate,
       formData,
-      requireAuth: true, // ✅ هنا صح لأنها ضمن ApiService
+      requireAuth: true,
     );
+    return CarPartAdResponse.fromJson(map);
+  }
 
+  // لو عندك هذه الدالة، تأكد من استخدامها بالمسار الصحيح:
+  Future<CarPartAdResponse> updateCarPartAd(
+      int id, {
+        required String title,
+        required String description,
+        required String priceType,
+        num? price,
+        required int cityId,
+        required int regionId,
+        bool? allowComments,
+        bool? allowMarketingOffers,
+        String? phoneNumber,
+        List<String>? communicationMethods,
+        List<String>? imageUrls,
+        double? latitude,
+        double? longitude,
+      }) async {
+    final body = <String, dynamic>{
+      'title': title,
+      'description': description,
+      'price_type': priceType,
+      if (priceType == 'fixed' && price != null) 'price': price,
+      'city_id': cityId,
+      'region_id': regionId,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
+      if (allowComments != null) 'allow_comments': allowComments,
+      if (allowMarketingOffers != null) 'allow_marketing_offers': allowMarketingOffers,
+      if (phoneNumber != null) 'phone_number': phoneNumber,
+      if (communicationMethods != null) 'communication_methods': communicationMethods,
+      if (imageUrls != null) 'image_urls': imageUrls,
+    }..removeWhere((k, v) => v == null);
+
+    final map = await _api.put(
+      ApiConstants.carPartAdsUpdate(id), // ✅ مسار الباك كما هو
+      data: body,
+      requireAuth: true,
+    );
     return CarPartAdResponse.fromJson(map);
   }
 }

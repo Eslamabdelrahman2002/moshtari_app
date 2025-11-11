@@ -14,12 +14,16 @@ class InfoDescription extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
           child: Align(
             alignment: Alignment.centerRight,
-            child: Text('الوصف', style: TextStyles.font16Dark300Grey400Weight),
+            child: Text('الوصف',
+              style: TextStyles.font16Dark300Grey400Weight,
+              maxLines: 10,
+              overflow: TextOverflow.ellipsis,),
           ),
         ),
         Align(
@@ -32,10 +36,7 @@ class InfoDescription extends StatelessWidget {
             ),
           ),
         ),
-        verticalSpace(16),
-        ShowMore(
-          onTap: () {},
-        ),
+
       ],
     );
   }

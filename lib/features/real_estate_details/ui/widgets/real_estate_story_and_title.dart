@@ -2,16 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
 
-import 'package:mushtary/features/real_estate_details/date/model/real_estate_details_model.dart' as re;
+import 'package:mushtary/features/user_profile_id/data/model/publisher_product_model.dart'; // 👈 تغيير إلى PublisherProductModel للـ story
 import 'package:mushtary/features/real_estate_details/ui/widgets/colored_dotted_story_ring.dart';
 
-
 import '../../../../core/theme/colors.dart';
-import 'RealEstateSimilarStory.dart';
+import 'RealEstateSimilarStory.dart'; // 👈 محدث لـ PublisherProductModel
 
 class RealEstateStoryAndTitleWidget extends StatelessWidget {
   final String? title;
-  final List<re.SimilarAd> similarAds;
+  final List<PublisherProductModel> similarAds; // 👈 تغيير النوع للـ story (إعلانات الـ owner)
 
   const RealEstateStoryAndTitleWidget({
     super.key,
@@ -30,31 +29,32 @@ class RealEstateStoryAndTitleWidget extends StatelessWidget {
     final segmentColors = _buildSegmentColors(similarAds.length);
 
     return Padding(
-      padding: const EdgeInsets.only(top: 8.0,bottom: 8.0),
+      padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          ColoredDottedStoryRing(
-            radius: 28.r,
-            image: imageProvider,
-            segmentColors: segmentColors,
-            strokeWidth: 2.5,
-            borderPadding: 3,
-            gapAngleDeg: 12,     // مسافة صغيرة بين القطاعات
-            startAngleDeg: -90,  // يبدأ من أعلى مثل ستوريات إنستغرام
-            onTap: () {
-              if (similarAds.isEmpty) return;
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => RealEstateSimilarStory(
-                    items: similarAds,
-                    segmentDuration: const Duration(seconds: 4),
-                    useAllImagesOfEachAd: true,
+          if (similarAds.isNotEmpty) // 👈 عرض الـ ring فقط إذا كانت القائمة غير فارغة
+            ColoredDottedStoryRing(
+              radius: 28.r,
+              image: imageProvider,
+              segmentColors: segmentColors,
+              strokeWidth: 2.5,
+              borderPadding: 3,
+              gapAngleDeg: 12,     // مسافة صغيرة بين القطاعات
+              startAngleDeg: -90,  // يبدأ من أعلى مثل ستوريات إنستغرام
+              onTap: () {
+                if (similarAds.isEmpty) return;
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => RealEstateSimilarStory(
+                      items: similarAds, // 👈 تمرير PublisherProductModel (إعلانات الـ owner)
+                      segmentDuration: const Duration(seconds: 4),
+                      useAllImagesOfEachAd: false, // 👈 بسيط، لأن imageUrl واحدة فقط
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
+                );
+              },
+            ),
           SizedBox(width: 12.w),
           Expanded(
             child: Text(
@@ -69,11 +69,11 @@ class RealEstateStoryAndTitleWidget extends StatelessWidget {
     );
   }
 
-  // اختار أول صورة متاحة كغلاف
-  String? _firstAvailableImage(List<re.SimilarAd> items) {
-    for (final ad in items) {
-      if (ad.imageUrls.isNotEmpty && ad.imageUrls.first.isNotEmpty) {
-        return ad.imageUrls.first;
+  // 👈 تعديل لاستخدام PublisherProductModel (للـ story)
+  String? _firstAvailableImage(List<PublisherProductModel> items) {
+    for (final product in items) {
+      if (product.imageUrl != null && product.imageUrl!.isNotEmpty) {
+        return product.imageUrl;
       }
     }
     return null;
@@ -85,7 +85,6 @@ class RealEstateStoryAndTitleWidget extends StatelessWidget {
     final palette = <Color>[
       ColorsManager.primary500,
       ColorsManager.blueGradient2,
-
     ];
     return List<Color>.generate(count, (i) => palette[i % palette.length]);
   }

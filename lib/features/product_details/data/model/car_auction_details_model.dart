@@ -1,4 +1,3 @@
-// lib/features/car_auctions/data/models/car_auction_details_model.dart
 class CarAuctionDetailsModel {
   final int id;
   final String type;
@@ -37,24 +36,41 @@ class CarAuctionDetailsModel {
   factory CarAuctionDetailsModel.fromJson(dynamic json) {
     if (json is! Map) throw const FormatException('Expected Map');
     final root = (json as Map).cast<String, dynamic>();
-    final data = (root['data'] as Map).cast<String, dynamic>();
+
+    // يدعم الردين: { data: {...} } أو {...} مباشرة
+    final Map<String, dynamic> data =
+    (root['data'] is Map) ? (root['data'] as Map).cast<String, dynamic>() : root;
+
+    DateTime _parseDate(dynamic v) {
+      if (v == null) return DateTime.now();
+      return DateTime.tryParse(v.toString()) ?? DateTime.now();
+    }
+
+    int? _toInt(dynamic v) {
+      if (v is num) return v.toInt();
+      return int.tryParse(v?.toString() ?? '');
+    }
+
+    final dynamic ai = data['active_item'];
+    final Map<String, dynamic> aiMap =
+    (ai is Map) ? ai.cast<String, dynamic>() : <String, dynamic>{};
 
     return CarAuctionDetailsModel(
-      id: (data['id'] as num?)?.toInt() ?? 0,
+      id: _toInt(data['id']) ?? 0,
       type: data['type']?.toString() ?? '',
       title: data['title']?.toString() ?? '',
       description: data['description']?.toString() ?? '',
       thumbnail: data['thumbnail']?.toString(),
       isAutoApproval: data['is_auto_approval'] == true,
-      startDate: DateTime.tryParse(data['start_date']?.toString() ?? '') ?? DateTime.now(),
-      endDate: DateTime.tryParse(data['end_date']?.toString() ?? '') ?? DateTime.now(),
+      startDate: _parseDate(data['start_date']),
+      endDate: _parseDate(data['end_date']),
       minBidValue: data['min_bid_value']?.toString() ?? '0',
       status: data['status']?.toString() ?? '',
-      createdAt: DateTime.tryParse(data['created_at']?.toString() ?? '') ?? DateTime.now(),
+      createdAt: _parseDate(data['created_at']),
       ownerName: data['owner_name']?.toString() ?? '',
       ownerPicture: data['owner_picture']?.toString(),
-      maxBid: (data['max_bid'] is num) ? (data['max_bid'] as num).toInt() : int.tryParse(data['max_bid']?.toString() ?? ''),
-      activeItem: CarAuctionActiveItem.fromJson((data['active_item'] as Map).cast<String, dynamic>()),
+      maxBid: _toInt(data['max_bid']),
+      activeItem: CarAuctionActiveItem.fromJson(aiMap),
     );
   }
 }
@@ -103,22 +119,32 @@ class CarAuctionActiveItem {
   });
 
   factory CarAuctionActiveItem.fromJson(Map<String, dynamic> json) {
+    DateTime _parseDate(dynamic v) {
+      if (v == null) return DateTime.now();
+      return DateTime.tryParse(v.toString()) ?? DateTime.now();
+    }
+
+    int? _toInt(dynamic v) {
+      if (v is num) return v.toInt();
+      return int.tryParse(v?.toString() ?? '');
+    }
+
     return CarAuctionActiveItem(
-      id: (json['id'] as num?)?.toInt() ?? 0,
+      id: _toInt(json['id']) ?? 0,
       title: json['title']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
-      startDate: DateTime.tryParse(json['start_date']?.toString() ?? '') ?? DateTime.now(),
-      endDate: DateTime.tryParse(json['end_date']?.toString() ?? '') ?? DateTime.now(),
+      startDate: _parseDate(json['start_date']),
+      endDate: _parseDate(json['end_date']),
       images: (json['images'] as List? ?? const []).map((e) => e.toString()).toList(),
       pdfFiles: (json['pdf_files'] as List? ?? const []).map((e) => e.toString()).toList(),
       brand: json['brand'] is Map ? Brand.fromJson((json['brand'] as Map).cast<String, dynamic>()) : null,
       model: json['model'] is Map ? CarModel.fromJson((json['model'] as Map).cast<String, dynamic>()) : null,
       color: json['color']?.toString(),
       bodyType: json['body_type']?.toString(),
-      year: (json['year'] as num?)?.toInt(),
+      year: _toInt(json['year']),
       kilometers: json['kilometers']?.toString(),
       engineCapacity: json['engine_capacity']?.toString(),
-      cylinders: (json['cylinders'] as num?)?.toInt(),
+      cylinders: _toInt(json['cylinders']),
       drivetrain: json['drivetrain']?.toString(),
       specs: json['specs']?.toString(),
       startingPrice: json['starting_price']?.toString(),
@@ -132,8 +158,13 @@ class Brand {
   final String name;
   Brand({required this.id, required this.name});
   factory Brand.fromJson(Map<String, dynamic> json) {
+    int? _toInt(dynamic v) {
+      if (v is num) return v.toInt();
+      return int.tryParse(v?.toString() ?? '');
+    }
+
     return Brand(
-      id: (json['id'] as num?)?.toInt() ?? 0,
+      id: _toInt(json['id']) ?? 0,
       name: json['name']?.toString() ?? '',
     );
   }
@@ -145,8 +176,13 @@ class CarModel {
   final String nameEn;
   CarModel({required this.id, required this.nameAr, required this.nameEn});
   factory CarModel.fromJson(Map<String, dynamic> json) {
+    int? _toInt(dynamic v) {
+      if (v is num) return v.toInt();
+      return int.tryParse(v?.toString() ?? '');
+    }
+
     return CarModel(
-      id: (json['id'] as num?)?.toInt() ?? 0,
+      id: _toInt(json['id']) ?? 0,
       nameAr: json['name_ar']?.toString() ?? '',
       nameEn: json['name_en']?.toString() ?? '',
     );

@@ -10,28 +10,60 @@ class OtherAdsCreateRepo {
   Future<Response> createOtherAd(OtherAdRequest req) async {
     final formData = await req.toFormData();
 
-    // Debug - طباعة البيانات قبل الإرسال
-    print('--- OtherAd FormData (outgoing) ---');
-    for (var f in formData.fields) {
-      print('${f.key} = ${f.value}');
-    }
-    for (var f in formData.files) {
-      print('${f.key} -> ${f.value.filename}');
-    }
-
-    // 🔹 نستخدم ApiService.postForm مع requireAuth: true عشان يفتح البوتمشيت عند غياب التوكن
     final data = await _api.postForm(
       ApiConstants.otherAds,
       formData,
-      requireAuth: true, // ✅ هنا المفتاح
+      requireAuth: true,
     );
 
-    // Debug بعد الاستجابة
-    print('Create OtherAd -> data: $data');
-
-    // بنلفها في Response عشان الكولر يتعامل مع نفس الشكل القديم لو لازم
     return Response(
       requestOptions: RequestOptions(path: ApiConstants.otherAds),
+      data: data,
+      statusCode: 200,
+    );
+  }
+
+  // ✅ تحديث كـ JSON (بدون ملفات)
+  Future<Response> updateOtherAd({
+    required int id,
+    required String title,
+    required String description,
+    required String priceType,           // fixed | negotiable | auction
+    num? price,                          // يُرسل فقط مع fixed
+    required int cityId,
+    required int regionId,
+    bool? allowComments,
+    bool? allowMarketingOffers,
+    String? phoneNumber,
+    List<String>? communicationMethods,  // Array
+    List<String>? imageUrls,             // Array من الروابط (اختياري للحفاظ على الصور القديمة)
+    double? latitude,
+    double? longitude,
+  }) async {
+    final body = <String, dynamic>{
+      'title': title,
+      'description': description,
+      'price_type': priceType,
+      if (priceType == 'fixed' && price != null) 'price': price,
+      'city_id': cityId,
+      'region_id': regionId,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
+      if (allowComments != null) 'allow_comments': allowComments,
+      if (allowMarketingOffers != null) 'allow_marketing_offers': allowMarketingOffers,
+      if (phoneNumber != null) 'phone_number': phoneNumber,
+      if (communicationMethods != null) 'communication_methods': communicationMethods,
+      if (imageUrls != null) 'image_urls': imageUrls,
+    }..removeWhere((k, v) => v == null);
+
+    final data = await _api.put(
+      ApiConstants.updateOtherAd(id),
+      data: body,
+      requireAuth: true,
+    );
+
+    return Response(
+      requestOptions: RequestOptions(path: ApiConstants.updateOtherAd(id)),
       data: data,
       statusCode: 200,
     );

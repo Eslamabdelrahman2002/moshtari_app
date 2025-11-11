@@ -223,13 +223,15 @@ class ServiceBottomSheetContent extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
         child: LayoutBuilder(
           builder: (ctx, c) {
-            final iconSize = c.maxHeight * 0.55;
+            final iconSize = c.maxHeight * 0.66;
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 MySvg(image: iconName, width: iconSize, height: iconSize),
                 verticalSpace(10),
-                Text(title, style: TextStyles.font16Black500Weight, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis),
+                Text(title, style: TextStyles.font16Black500Weight.copyWith(
+                  color: ColorsManager.darkGray600
+                ), textAlign: TextAlign.center, overflow: TextOverflow.ellipsis),
               ],
             );
           },
@@ -267,13 +269,13 @@ class ServiceBottomSheetContent extends StatelessWidget {
                 _tile(
                   context: context,
                   title: 'دينات',
-                  iconName: 'tanker',
+                  iconName: 'dinah',
                   type: ServiceType.dinat,
                   onTapOverride: () => _onDinatTap(context), // يعرض الديالوج
                 ),
-                _tile(context: context, title: 'أجير', iconName: 'labour', type: ServiceType.worker),
-                _tile(context: context, title: 'صهريج ماء', iconName: 'flatbed', type: ServiceType.tanker),
-                _tile(context: context, title: 'سطحة', iconName:'dyna', type: ServiceType.satha),
+                _tile(context: context, title: 'أجير', iconName: 'employee', type: ServiceType.worker),
+                _tile(context: context, title: 'صهريج ماء', iconName: 'waterTank', type: ServiceType.tanker),
+                _tile(context: context, title: 'سطحة', iconName:'flatbed', type: ServiceType.satha),
               ],
             ),
           ],

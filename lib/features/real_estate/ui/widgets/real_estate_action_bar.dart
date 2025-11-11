@@ -27,7 +27,7 @@ class RealEstateActionBar extends StatelessWidget {
     required this.isGridView,
     required this.isMapView,
     required this.isApplications,
-    required this.onCityTap, // ✅ إضافة دالة اختيار المدينة
+    required this.onCityTap,
   });
 
   Widget _modeIcon({required bool active, required String image, required VoidCallback onTap}) {
@@ -74,7 +74,11 @@ class RealEstateActionBar extends StatelessWidget {
                     onTap: onListViewTap,
                   ),
                   horizontalSpace(8),
-
+                  _modeIcon(
+                    active: isMapView,
+                    image: 'mapView',
+                    onTap: onMapViewTap,
+                  ),
 
                 ],
               ),

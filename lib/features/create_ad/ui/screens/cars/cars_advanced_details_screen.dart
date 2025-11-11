@@ -1,4 +1,3 @@
-// lib/features/create_ad/ui/screens/cars/cars_advanced_details_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -10,7 +9,6 @@ import '../../../data/car/utils/car_mappers.dart';
 import '../../widgets/customized_chip.dart';
 import 'logic/cubit/car_ads_cubit.dart';
 import 'logic/cubit/car_ads_state.dart';
-
 
 class CarsAdvancedDetailsScreen extends StatefulWidget {
   final VoidCallback? onPressed;

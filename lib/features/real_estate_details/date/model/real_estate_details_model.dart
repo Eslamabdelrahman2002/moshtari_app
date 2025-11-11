@@ -1,3 +1,5 @@
+import '../../../product_details/data/model/offer_model.dart';
+
 class RealEstateResponse {
   final bool success;
   final String message;
@@ -31,6 +33,7 @@ class RealEstateResponse {
 class RealEstateDetailsModel {
   final int id;
   final String title;
+  final List<OfferModel> offers;
   final String description;
   final num? price; // 👈 كرقم بدل String
   final String priceType;
@@ -48,6 +51,7 @@ class RealEstateDetailsModel {
   final List<SimilarAd> similarAds;
 
   RealEstateDetailsModel({
+    required this.offers,
     required this.id,
     required this.title,
     required this.description,
@@ -69,6 +73,10 @@ class RealEstateDetailsModel {
 
   factory RealEstateDetailsModel.fromJson(Map<String, dynamic> json) {
     return RealEstateDetailsModel(
+      offers: (json['offers'] as List? ?? const [])
+          .whereType<Map>()
+          .map((e) => OfferModel.fromJson(e.cast<String, dynamic>()))
+          .toList(),
       id: json['id'] ?? 0,
       title: json['title'] ?? '',
       description: json['description'] ?? '',

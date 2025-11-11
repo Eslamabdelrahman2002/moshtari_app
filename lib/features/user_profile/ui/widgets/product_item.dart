@@ -18,6 +18,7 @@ import '../../data/model/my_auctions_model.dart';
 import '../../data/repo/ads_repo.dart';
 import '../../data/repo/my_auctions_repo.dart';
 import 'auction_review_card.dart';
+
 class ProductItem extends StatelessWidget {
   final Object model; // MyAdsModel أو MyAuctionModel
   const ProductItem({super.key, required this.model});
@@ -69,7 +70,7 @@ class ProductItem extends StatelessWidget {
     return '';
   }
 
-  // NEW: نوع الإعلان للحذف حسب categoryId
+  // نوع الإعلان للحذف حسب categoryId
   String? _adTypeForDelete(MyAdsModel ad) {
     switch (ad.categoryId) {
       case 5:
@@ -223,7 +224,7 @@ class ProductItem extends StatelessWidget {
     );
   }
 
-  // NEW: BottomSheet حذف الإعلان (من دون رقم جوال)
+  // UPDATED: BottomSheet حذف الإعلان (مع سبب الحذف)
   void _showDeleteAdSheet(BuildContext context, MyAdsModel ad) {
     final adsRepo = getIt<AdsRepo>();
     final adType = _adTypeForDelete(ad);
@@ -235,6 +236,13 @@ class ProductItem extends StatelessWidget {
       return;
     }
 
+    final List<String> reasons = [
+      'تم البيع في المنصة',
+      'تم البيع خارج المنصة',
+      'لم تحقق السلعة المبلغ المطلوب',
+      'غير ذلك',
+    ];
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -245,6 +253,7 @@ class ProductItem extends StatelessWidget {
       builder: (ctx) {
         final bottom = MediaQuery.of(ctx).viewInsets.bottom;
         bool submitting = false;
+        String? selectedReason;
 
         return StatefulBuilder(
           builder: (ctx, setSB) => Padding(
@@ -259,7 +268,7 @@ class ProductItem extends StatelessWidget {
                     Container(
                       width: 40.w, height: 40.w,
                       decoration: BoxDecoration(color: ColorsManager.errorColor.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                      child: const Icon(Icons.delete_outline, color: ColorsManager.errorColor),
+                      child: const Icon(Icons.delete_outline, color: ColorsManager.errorColor), // أيقونة الحذف
                     ),
                     horizontalSpace(10),
                     Expanded(child: Text('حذف الإعلان', style: TextStyles.font18Black500Weight)),
@@ -267,9 +276,30 @@ class ProductItem extends StatelessWidget {
                 ),
                 verticalSpace(8),
                 Text(
-                  'هل أنت متأكد من حذف هذا الإعلان؟ لا يمكن التراجع عن هذه العملية.',
+                  'هل أنت متأكد من حذف هذا الإعلان؟ اختر السبب للحذف. لا يمكن التراجع عن هذه العملية.',
                   style: TextStyles.font12DarkGray400Weight,
                   textAlign: TextAlign.center,
+                ),
+                verticalSpace(16),
+                // قائمة منسدلة لاختيار السبب
+                DropdownButtonFormField<String>(
+                  value: selectedReason,
+                  decoration: InputDecoration(
+                    labelText: 'سبب الحذف',
+                    labelStyle: TextStyles.font12DarkGray400Weight,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.r),
+                      borderSide: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+                  ),
+                  items: reasons.map((reason) {
+                    return DropdownMenuItem<String>(
+                      value: reason,
+                      child: Text(reason, style: TextStyles.font14Black500Weight),
+                    );
+                  }).toList(),
+                  onChanged: submitting ? null : (value) => setSB(() => selectedReason = value),
                 ),
                 verticalSpace(16),
                 Row(
@@ -287,12 +317,23 @@ class ProductItem extends StatelessWidget {
                     horizontalSpace(12),
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: submitting
+                        onPressed: submitting || selectedReason == null
                             ? null
                             : () async {
                           setSB(() => submitting = true);
                           try {
-                            await adsRepo.deleteAd(adType: adType, id: ad.id);
+                            // إذا كان السبب "تم البيع في المنصة"، انتقل إلى صفحة دفع العمولة (بدون حذف فوري)
+                            if (selectedReason == reasons[0]) {
+                              if (Navigator.of(ctx).canPop()) Navigator.pop(ctx); // أغلق الـ BottomSheet
+                              NavX(context).pushNamed(Routes.commissionCalculatorScreen, arguments: ad); // مرر الإعلان كـ argument
+                              // ملاحظة: في صفحة العمولة، قم بالحذف بعد "الدفع" الناجح
+                              return;
+                            }
+                            // للأسباب الأخرى، قم بالحذف مع السبب
+                            await adsRepo.deleteAd(
+                              adType: adType,
+                              id: ad.id, // NEW: مرر السبب
+                            );
                             if (context.mounted) {
                               Navigator.pop(ctx);
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -313,7 +354,7 @@ class ProductItem extends StatelessWidget {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           minimumSize: Size(double.infinity, 46.h),
                         ),
-                        icon: const Icon(Icons.delete_rounded),
+                        icon: const Icon(Icons.delete_rounded), // أيقونة الحذف
                         label: Text(submitting ? 'جاري الحذف...' : 'حذف'),
                       ),
                     ),
@@ -414,7 +455,7 @@ class ProductItem extends StatelessWidget {
                             shape: BoxShape.circle,
                             boxShadow: [BoxShadow(color: ColorsManager.errorColor.withOpacity(0.25), blurRadius: 8)],
                           ),
-                          child: const Icon(Icons.delete_outline, color: Colors.white, size: 18),
+                          child: const Icon(Icons.delete_outline, color: Colors.white, size: 18), // أيقونة الحذف
                         ),
                       ),
                     ),

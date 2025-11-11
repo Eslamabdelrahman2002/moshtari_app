@@ -1,4 +1,6 @@
 // lib/features/other_ads/data/models/other_ad_details_model.dart
+import 'offer_model.dart';
+
 class OtherAdDetailsModel {
   final int id;
   final String title;
@@ -13,6 +15,7 @@ class OtherAdDetailsModel {
   final bool allowComments;
   final List<String> imageUrls;
   final List<String> communicationMethods;
+  final List<OfferModel> offers;
 
   final int? userId; // ✅ الحقل الجديد
   final String username;
@@ -31,6 +34,7 @@ class OtherAdDetailsModel {
   final List<SimilarOtherAdModel> similarAds;
 
   OtherAdDetailsModel({
+    required this.offers,
     required this.id,
     required this.title,
     required this.description,
@@ -68,6 +72,10 @@ class OtherAdDetailsModel {
         : root;
 
     return OtherAdDetailsModel(
+      offers: (data['offers'] as List? ?? const [])
+          .whereType<Map>()
+          .map((e) => OfferModel.fromJson(e.cast<String, dynamic>()))
+          .toList(),
       id: (data['id'] as num?)?.toInt() ?? 0,
       title: data['title']?.toString() ?? '',
       description: data['description']?.toString() ?? '',
@@ -114,12 +122,14 @@ class OtherCommentModel {
   final String text;
   final String userName;
   final String? userPicture;
+  final String? offerPrice; // ✅ الحقل الجديد لدعم offer_price
 
   OtherCommentModel({
     required this.id,
     required this.text,
     required this.userName,
     this.userPicture,
+    this.offerPrice, // ✅ إضافته للـ constructor
   });
 
   factory OtherCommentModel.fromJson(Map<String, dynamic> json) {
@@ -128,6 +138,10 @@ class OtherCommentModel {
       text: (json['comment_text'] ?? json['text'] ?? '').toString(),
       userName: (json['user_name'] ?? json['username'] ?? '').toString(),
       userPicture: json['user_picture']?.toString(),
+      // ✅ استخراج offer_price كأولوية أولى
+      offerPrice: json['offer_price']?.toString() ??
+          json['price']?.toString() ??
+          json['amount']?.toString(),
     );
   }
 }

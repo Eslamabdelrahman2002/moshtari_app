@@ -38,7 +38,7 @@ class RegisterServiceBottomSheet extends StatelessWidget {
               crossAxisSpacing: 16.w,
               children: [
                 BottomSheetItem(
-                  image: 'worker',
+                  image: 'employee',
                   title: 'اجير',
                   onTap: () {
                     // navigate to the General/Worker flow
@@ -46,7 +46,7 @@ class RegisterServiceBottomSheet extends StatelessWidget {
                   },
                 ),
                 BottomSheetItem(
-                  image: 'dinat',
+                  image: 'dinah',
                   title: 'دينات',
                   onTap: () {
                     // navigate to the Transport flow
@@ -62,7 +62,7 @@ class RegisterServiceBottomSheet extends StatelessWidget {
                   },
                 ),
                 BottomSheetItem(
-                  image: 'shrej',
+                  image: 'waterTank',
                   title: 'صهريج',
                   onTap: () {
                     // navigate to the Tanker flow

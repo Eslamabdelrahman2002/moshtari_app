@@ -1,18 +1,15 @@
 // lib/features/create_ad/ui/screens/real_estate/logic/cubit/real_estate_ads_cubit.dart
-
 import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-// مابرز النص العربي <-> قيم API
 import '../../../../../../../core/api/post_defaults.dart';
-import '../../../../../../../core/api/top_level_categories.dart';
 import '../../../../../data/car/data/model/real_estate_ad_request.dart';
 import '../../../../../data/car/data/repo/real_estate_ads_repo.dart';
 import '../../real_estate_mappers.dart';
-
-// حالة الكيوبت
 import 'real_estate_ads_state.dart';
+import 'package:mushtary/features/real_estate_details/date/model/real_estate_details_model.dart' as re;
 
 class RealEstateAdsCubit extends Cubit<RealEstateAdsState> {
   final RealEstateAdsRepo _repo;
@@ -59,17 +56,66 @@ class RealEstateAdsCubit extends Cubit<RealEstateAdsState> {
   void setAllowComments(bool v) => emit(state.copyWith(allowComments: v));
   void setAllowMarketing(bool v) => emit(state.copyWith(allowMarketing: v));
 
-  // الإرسال
+  // تعبئة الحالة من تفاصيل إعلان موجود (وضع التعديل)
+  void startEditingFromDetails(re.RealEstateDetailsModel d) {
+    // قراءات مرنة لحقول قد تكون غير موجودة في الموديل
+    String? priceTypeApi;
+    double? lat;
+    double? lng;
+    String? realEstateTypeApi;
+
+    try {
+      priceTypeApi = (d as dynamic).priceType as String?;
+    } catch (_) {}
+
+    try {
+      final latRaw = (d as dynamic).latitude;
+      final lngRaw = (d as dynamic).longitude;
+      lat = latRaw is double ? latRaw : double.tryParse(latRaw?.toString() ?? '');
+      lng = lngRaw is double ? lngRaw : double.tryParse(lngRaw?.toString() ?? '');
+    } catch (_) {}
+
+    try {
+      realEstateTypeApi = (d as dynamic).realEstateType as String?;
+    } catch (_) {}
+
+    final det = d.realEstateDetails;
+    emit(state.copyWith(
+      isEditing: true,
+      editingAdId: d.id,
+      title: d.title,
+      description: d.description,
+      price: d.price,
+      priceType: RealEstateMappers.priceTypeFromApi(priceTypeApi),
+      preselectedRegionName: d.region,
+      preselectedCityName: d.city,
+      latitude: lat ?? state.latitude,
+      longitude: lng ?? state.longitude,
+      realEstateType: realEstateTypeApi,
+      areaM2: det?.areaM2,
+      streetCount: det?.streetCount,
+      floorCount: det?.floorCount,
+      roomCount: det?.roomCount,
+      bathroomCount: det?.bathroomCount,
+      livingroomCount: det?.livingroomCount,
+      streetWidth: det?.streetWidth,
+      facade: det?.facade,
+      buildingAge: det?.buildingAge,
+      isFurnished: det?.isFurnished,
+      licenseNumber: det?.licenseNumber,
+      existingImageUrls: d.imageUrls?.join(',') ?? '',
+    ));
+  }
+
+  // الإرسال (إنشاء/تحديث)
   Future<void> submit({
     required bool allowComments,
     required bool allowMarketing,
   }) async {
     debugPrint('[RealEstate] submit tapped. Allow Comments: $allowComments, Allow Marketing: $allowMarketing');
-
-    // تحدّيث الحالة بقيم السويتشات القادمة من الواجهة
     emit(state.copyWith(allowComments: allowComments, allowMarketing: allowMarketing));
 
-    // التحقّق من الحقول الأساسية
+    // تحقق الحقول الأساسية
     if (state.title == null ||
         state.description == null ||
         state.price == null ||
@@ -80,6 +126,24 @@ class RealEstateAdsCubit extends Cubit<RealEstateAdsState> {
       return;
     }
 
+    // تحقق إضافي: purpose يجب أن يكون غير فارغ
+    final purpose = state.purpose ?? 'sell'; // قيمة افتراضية
+    if (purpose.isEmpty) {
+      emit(state.copyWith(error: 'يرجى تحديد غرض العقار (بيع أو إيجار)'));
+      emit(state.copyWith(error: null));
+      return;
+    }
+
+    // تحقق شديد: السعر لا يتجاوز الحد الأقصى (لمنع numeric overflow)
+    const maxPrice = 100000000.0; // حد أقصى مؤقت (100 مليون)
+    if (state.price! > maxPrice) {
+      emit(state.copyWith(
+        error: 'السعر كبير جداً (الحد الأقصى: ${(maxPrice / 1000000).toStringAsFixed(0)} مليون). يرجى تقليل السعر أو الاتصال بالدعم.',
+      ));
+      emit(state.copyWith(error: null));
+      return;
+    }
+
     emit(state.copyWith(submitting: true, error: null));
     try {
       final req = RealEstateAdRequest(
@@ -87,13 +151,12 @@ class RealEstateAdsCubit extends Cubit<RealEstateAdsState> {
         description: state.description!,
         price: state.price!,
         priceType: state.priceType,
-        // categoryId ثابت = 2 داخل الموديل
         cityId: state.cityId ?? PostDefaults.realEstateCityId,
         regionId: state.regionId ?? PostDefaults.realEstateRegionId,
         latitude: state.latitude ?? PostDefaults.realEstateLat,
         longitude: state.longitude ?? PostDefaults.realEstateLng,
-        realEstateType: state.realEstateType!, // يجب اختياره
-        purpose: state.purpose,
+        realEstateType: state.realEstateType!,
+        purpose: purpose ?? '',
         areaM2: state.areaM2,
         streetCount: state.streetCount,
         floorCount: state.floorCount,
@@ -107,16 +170,24 @@ class RealEstateAdsCubit extends Cubit<RealEstateAdsState> {
         licenseNumber: state.licenseNumber,
         services: state.services,
         exhibitionId: state.exhibitionId,
-        images: state.images,
-        // ملاحظة: allowComments/allowMarketing غير موجودة في الطلب الحالي (حسب Postman).
-        // إن أردت إرسالهم، أضف حقول اختيارية في RealEstateAdRequest ومرّرهم هنا.
+        images: state.images, // فقط الصور الجديدة
       );
 
-      await _repo.createRealEstateAd(req);
+      debugPrint('[RealEstateCubit] Submitting ${state.isEditing ? 'update' : 'create'} with ID: ${state.editingAdId}');
+
+      if (state.isEditing && state.editingAdId != null) {
+        // UPDATE: استخدم PUT مع JSON (بدون صور)
+        await _repo.updateRealEstateAd(state.editingAdId!, req);
+      } else {
+        // CREATE: استخدم POST مع FormData (مع صور)
+        await _repo.createRealEstateAd(req);
+      }
+
       emit(state.copyWith(submitting: false, success: true));
     } catch (e) {
+      debugPrint('[RealEstateCubit] Error: $e');
       emit(state.copyWith(submitting: false, error: e.toString()));
-      emit(state.copyWith(error: null));
+      emit(state.copyWith(error: null)); // مسح الخطأ بعد ثواني
     }
   }
 }
