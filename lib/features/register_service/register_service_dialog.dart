@@ -156,7 +156,7 @@ class _RegisterServiceDialogState extends State<RegisterServiceDialog> {
             ),
             children: [
               _buildServiceOption(ServiceType.worker, 'أجير', 'employee'),
-              _buildServiceOption(ServiceType.satha, 'سطحة', 'flat'),
+              _buildServiceOption(ServiceType.satha, 'سطحة', 'flatbed'),
               _buildServiceOption(ServiceType.dinat, 'دينة', 'dinah'),
               _buildServiceOption(ServiceType.tanker, 'صهريج مياه', 'waterTank'),
             ],
