@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -67,6 +68,17 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
   String? _selectedCategoryKey;
   bool _showAuctions = false;
 
+  // سحب للتحديث
+  Future<void> _onRefresh() async {
+    final homeCubit = context.read<HomeCubit>();
+    final favsCubit = context.read<FavoritesCubit>();
+
+    await Future.wait([
+      homeCubit.fetchHomeData(),
+      favsCubit.fetchFavorites(),
+    ] as Iterable<Future>);
+  }
+
   int? _selectedCategoryId() {
     switch (_selectedCategoryKey) {
       case 'car_ads': return 1;
@@ -91,8 +103,8 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
     final f = await showModalBottomSheet<AdsFilter>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => HomeFilterSheet(
-        initial: const AdsFilter(), // ممكن تمرر categoryId لو حابب
+      builder: (_) => const HomeFilterSheet(
+        initial: AdsFilter(),
       ),
     );
     if (f != null) {
@@ -102,6 +114,7 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
       );
     }
   }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -113,36 +126,57 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
             if (state is HomeLoading || state is HomeInitial) {
               return _buildLoadingSkeleton(context);
             }
+
             if (state is HomeFailure) {
-              return Center(child: Text(state.error));
+              // عرض شاشة فشل مع قدرة السحب للتحديث
+              return CustomScrollView(
+                physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                slivers: [
+                  CupertinoSliverRefreshControl(onRefresh: _onRefresh),
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(child: Text(state.error)),
+                  ),
+                ],
+              );
             }
+
             if (state is HomeSuccess) {
               final homeData = state.homeData;
+
+              // حوّل المزادات إلى HomeAdModel
+              final auctionsAsAds = homeData.auctions.map(HomeAdModel.fromAuction).toList();
 
               List<HomeAdModel> displayedItems;
               final catId = _selectedCategoryId();
 
               if (_showAuctions) {
-                final allAuctionsAsAds = homeData.auctions.map(HomeAdModel.fromAuction).toList();
+                // السويتش ON => اعرض المزادات فقط
                 displayedItems = (catId == null)
-                    ? allAuctionsAsAds
-                    : allAuctionsAsAds.where((ad) => ad.categoryId == catId).toList();
+                    ? auctionsAsAds
+                    : auctionsAsAds.where((ad) => ad.categoryId == catId).toList();
               } else {
+                // السويتش OFF => اعرض "الكل": إعلانات + مزادات
                 if (catId == null) {
                   displayedItems = [
                     ...homeData.carAds,
                     ...homeData.realEstateAds,
                     ...homeData.carPartsAds,
                     ...homeData.otherAds,
+                    ...auctionsAsAds, // أضف المزادات مع الكل
                   ]..sort(_compareCreated);
                 } else {
-                  displayedItems = homeData.adsByCategory(catId)..sort(_compareCreated);
+                  displayedItems = [
+                    ...homeData.adsByCategory(catId),
+                    ...auctionsAsAds.where((ad) => ad.categoryId == catId), // أضف مزادات نفس الكاتيجري
+                  ]..sort(_compareCreated);
                 }
               }
 
               final content = NestedScrollView(
                 headerSliverBuilder: (context, innerBoxIsScrolled) {
                   return [
+                    CupertinoSliverRefreshControl(onRefresh: _onRefresh),
                     SliverAppBar(
                       pinned: true,
                       floating: true,
@@ -160,6 +194,7 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
                     SliverToBoxAdapter(
                       child: HomeCategoriesListView(
                         categoriesToShow: _showAuctions
+                        // لو حاب تقصر الكاتيجري عند المزادات على نوعين فقط
                             ? const {'car_ads': 'سيارات', 'real_estate_ads': 'عقارات'}
                             : const {
                           'car_ads': 'سيارات',
@@ -180,11 +215,13 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
                         onGridViewTap: () => setState(() => isListView = false),
                         onListViewTap: () => setState(() => isListView = true),
                         onReelsViewTap: () {
+                          // الريلز: خذ الكل (إعلانات + مزادات) بغض النظر عن السويتش
                           final all = [
                             ...homeData.carAds,
                             ...homeData.realEstateAds,
                             ...homeData.carPartsAds,
                             ...homeData.otherAds,
+                            ...auctionsAsAds,
                           ]..sort(_compareCreated);
                           NavX(context).pushNamed(Routes.reelsScreen, arguments: all);
                         },
@@ -193,7 +230,9 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
                         onAuctionsViewChanged: (value) {
                           setState(() {
                             _showAuctions = value;
-                            _selectedCategoryKey = null;
+                            // ممكن تسيب الكاتيجري كما هي
+                            // أو تفكها عند تشغيل/إطفاء السويتش (حسب رغبتك)
+                            // _selectedCategoryKey = null;
                           });
                         },
                       ),
@@ -201,6 +240,7 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
                   ];
                 },
                 body: CustomScrollView(
+                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                   slivers: [
                     SliverPadding(
                       padding: EdgeInsets.fromLTRB(8.w, 8.h, 8.w, 100.h),
@@ -220,21 +260,20 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
                     left: 0,
                     right: 0,
                     child: Center(
-                      child: Container(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _CircleAction( onTap: _openFilter, icon: 'filter_icon',),
-                            SizedBox(width: 12.w),
-                            _CircleAction(icon: 'search-normal', onTap: _openSearch),
-                          ],
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _CircleAction(onTap: _openFilter, icon: 'filter_icon'),
+                          SizedBox(width: 12.w),
+                          _CircleAction(icon: 'search-normal', onTap: _openSearch),
+                        ],
                       ),
                     ),
                   ),
                 ],
               );
             }
+
             return const SizedBox.shrink();
           },
         ),
@@ -248,6 +287,9 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
       child: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
+            // Refresh أثناء اللودينج برضه
+            CupertinoSliverRefreshControl(onRefresh: _onRefresh),
+
             SliverAppBar(
               pinned: true,
               floating: true,
@@ -271,6 +313,7 @@ class _HomeViewState extends State<HomeView> with AutomaticKeepAliveClientMixin 
           ];
         },
         body: CustomScrollView(
+          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
           slivers: [
             SliverPadding(
               padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 100.h),
@@ -305,7 +348,7 @@ class _CircleAction extends StatelessWidget {
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(12.0),
-          child: MySvg(image: icon,height: 18,width: 18,color: ColorsManager.primaryColor,)
+          child: MySvg(image: icon, height: 18, width: 18, color: ColorsManager.primaryColor),
         ),
       ),
     );

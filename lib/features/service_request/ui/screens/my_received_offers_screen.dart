@@ -4,53 +4,68 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mushtary/core/dependency_injection/injection_container.dart';
 import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
-import 'package:mushtary/features/service_request/ui/widgets/received_offer_card.dart';
+import 'package:mushtary/features/service_request/ui/widgets/provider_request_card.dart';
 
-import '../logic/cubit/received_offers_cubit.dart';
-import '../logic/cubit/received_offers_state.dart';
+import '../../../service_profile/ui/logic/cubit/provider_cubit.dart';
+import '../../../service_profile/ui/logic/cubit/provider_state.dart';
+import 'package:mushtary/features/service_profile/data/model/service_request_models.dart';
 
 class MyReceivedOffersScreen extends StatelessWidget {
   const MyReceivedOffersScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<ReceivedOffersCubit>(
-      create: (_) => getIt<ReceivedOffersCubit>()..load(),
+    return BlocProvider<ProviderCubit>(
+      create: (_) => getIt<ProviderCubit>()..loadRequests(),
       child: Scaffold(
         appBar: AppBar(
-          title: Text('العروض المستلمة', style: TextStyles.font20Black500Weight),
+          title:
+          Text('الطلبات المستلمة', style: TextStyles.font20Black500Weight),
           centerTitle: true,
           backgroundColor: Colors.white,
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios, color: ColorsManager.darkGray300),
+            icon:
+            Icon(Icons.arrow_back_ios, color: ColorsManager.darkGray300),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
-        body: BlocConsumer<ReceivedOffersCubit, ReceivedOffersState>(
+        body: BlocConsumer<ProviderCubit, ProviderState>(
           listener: (context, state) {
-            // لو فيه خطأ بعد محاولة قبول
-            if (state.error != null && !(state.loading)) {
+            if (state.requestsError != null &&
+                !state.requestsLoading &&
+                state.requests.isNotEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.error!)),
+                SnackBar(content: Text(state.requestsError!)),
               );
             }
           },
           builder: (context, state) {
-            if (state.loading && state.offers.isEmpty) {
-              return const Center(child: CircularProgressIndicator.adaptive());
+            // تحميل أولي
+            if (state.requestsLoading && state.requests.isEmpty) {
+              return const Center(
+                child: CircularProgressIndicator.adaptive(),
+              );
             }
-            if (state.error != null && state.offers.isEmpty) {
+
+            // خطأ ولم يأتِ أي بيانات
+            if (state.requestsError != null && state.requests.isEmpty) {
               return Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('تعذّر جلب العروض', style: TextStyles.font14Black500Weight),
+                    Text('تعذّر جلب الطلبات',
+                        style: TextStyles.font14Black500Weight),
                     SizedBox(height: 6.h),
-                    Text(state.error!, style: TextStyles.font12DarkGray400Weight),
+                    Text(
+                      state.requestsError!,
+                      style: TextStyles.font12DarkGray400Weight,
+                      textAlign: TextAlign.center,
+                    ),
                     SizedBox(height: 12.h),
                     ElevatedButton(
-                      onPressed: () => context.read<ReceivedOffersCubit>().load(),
+                      onPressed: () =>
+                          context.read<ProviderCubit>().loadRequests(),
                       child: const Text('إعادة المحاولة'),
                     ),
                   ],
@@ -58,25 +73,44 @@ class MyReceivedOffersScreen extends StatelessWidget {
               );
             }
 
-            if (state.offers.isEmpty) {
-              return const Center(child: Text('لا توجد عروض مستلمة'));
+            // ✅ فلترة الطلبات إلى pending فقط
+            final List<ServiceRequest> pendingRequests = state.requests
+                .where((r) => r.status == 'pending')
+                .toList();
+
+            if (pendingRequests.isEmpty) {
+              return const Center(
+                child: Text('لا توجد طلبات بانتظار العروض حالياً'),
+              );
             }
 
             return RefreshIndicator(
-              onRefresh: () => context.read<ReceivedOffersCubit>().load(),
+              onRefresh: () =>
+                  context.read<ProviderCubit>().loadRequests(),
               child: ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 16.h),
-                itemCount: state.offers.length,
-                itemBuilder: (_, i) {
-                  final offer = state.offers[i];
-                  return ReceivedOfferCard(
-                    offer: offer,
-                    isAccepting: state.actingOfferId == offer.offerId,
-                    onAccept: () async {
-                      final ok = await context.read<ReceivedOffersCubit>().accept(offer.offerId);
-                      if (ok && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('تم قبول العرض بنجاح')),
+                itemCount: pendingRequests.length,
+                itemBuilder: (ctx, i) {
+                  final ServiceRequest r = pendingRequests[i];
+                  final bool busy =
+                      state.isUpdating && state.actingRequestId == r.id;
+
+                  return ProviderRequestCard(
+                    request: r,
+                    isBusy: busy,
+                    onSubmit: (price, message) async {
+                      final cubit = ctx.read<ProviderCubit>();
+                      final ok = await cubit.submitOffer(
+                        requestId: r.id,
+                        price: price,
+                        message: message,
+                      );
+                      if (ok && ctx.mounted) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(
+                            content: Text('تم إرسال العرض بنجاح'),
+                          ),
                         );
                       }
                     },

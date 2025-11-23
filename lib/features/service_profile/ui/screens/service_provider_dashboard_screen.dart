@@ -8,12 +8,15 @@ import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
 import 'package:mushtary/core/widgets/primary/my_svg.dart';
+import 'package:mushtary/features/service_profile/data/model/received_offer.dart';
+import 'package:mushtary/features/service_request/ui/logic/cubit/received_offers_state.dart';
 
+import '../../../service_request/ui/logic/cubit/received_offers_cubit.dart';
+import '../../../service_request/ui/widgets/received_offer_card.dart';
 import '../logic/cubit/provider_cubit.dart';
 import '../logic/cubit/provider_state.dart';
 import '../widgets/provider_header_card.dart';
 import '../widgets/service_request_card.dart';
-
 
 class ServiceProviderDashboardScreen extends StatefulWidget {
   final int providerId;
@@ -46,26 +49,26 @@ class _ServiceProviderDashboardScreenState extends State<ServiceProviderDashboar
       create: (_) => getIt<ProviderCubit>()..loadAll(widget.providerId),
       child: Scaffold(
         appBar: AppBar(
-            title: Text("الملف الشخصي",style: TextStyles.font20Black500Weight,),
-            leading:
-            IconButton(onPressed: ()=>Navigator.pop(context),
-                icon: Icon(Icons.arrow_back_ios_new,
-                  color: ColorsManager.darkGray300,))
+          title: Text("الملف الشخصي", style: TextStyles.font20Black500Weight),
+          leading: IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: Icon(Icons.arrow_back_ios_new, color: ColorsManager.darkGray300),
+          ),
         ),
         body: BlocListener<ProviderCubit, ProviderState>(
           listener: (context, state) {
-            // استخدام الخصائص المحدثة
+            final cubit = context.read<ProviderCubit>();
+
             if (state.updateSuccess) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('تم تحديث حالة الطلب بنجاح.')),
               );
-              context.read<ProviderCubit>().emit(state.copyWith(updateSuccess: false));
-
+              cubit.ackUpdateSuccess();
             } else if (state.requestsError != null) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('خطأ في تحديث الحالة: ${state.requestsError}')),
               );
-              context.read<ProviderCubit>().emit(state.copyWith(clearRequestsError: true));
+              cubit.clearRequestsError();
             }
           },
           child: BlocBuilder<ProviderCubit, ProviderState>(
@@ -84,7 +87,7 @@ class _ServiceProviderDashboardScreenState extends State<ServiceProviderDashboar
               return SafeArea(
                 child: Column(
                   children: [
-                    SizedBox(height: 10.h,),
+                    SizedBox(height: 10.h),
                     ProviderHeaderCard(
                       provider: provider,
                       favoritesCount: favoritesCount,
@@ -103,16 +106,17 @@ class _ServiceProviderDashboardScreenState extends State<ServiceProviderDashboar
                         controller: _tab,
                         children: [
                           _PendingReviewsTab(comments: provider.comments),
-                          _EarningsTab(
-                            items: state.requests.where((r) => r.status == 'completed').toList(),
-                            df: DateFormat('dd/MM/yyyy'),
+
+                          // 🔁 هنا بدل أرباحي القديمة بـ MyReceivedOffersTab
+                          BlocProvider<ReceivedOffersCubit>(
+                            create: (_) => getIt<ReceivedOffersCubit>()..load(),
+                            child: const _MyReceivedOffersTab(),
                           ),
+
                           _WorksTab(
                             state: state,
-                            // الأزرار مربوطة باستدعاء دالة updateRequestStatus في Cubit
-                            onAccept: (id) => context.read<ProviderCubit>().updateRequestStatus(id, 'in_progress'),
-                            onReject: (id) => context.read<ProviderCubit>().updateRequestStatus(id, 'rejected'),
-                            onComplete: (id) => context.read<ProviderCubit>().updateRequestStatus(id, 'completed'),
+                            onAccept: (id) => context.read<ProviderCubit>().acceptRequest(id),
+                            onReject: (id) => context.read<ProviderCubit>().rejectRequest(id),
                           ),
                         ],
                       ),
@@ -156,7 +160,6 @@ class SegmentedTabs extends StatelessWidget {
                     alignment: Alignment.center,
                     margin: EdgeInsets.symmetric(horizontal: 2.w),
                     decoration: BoxDecoration(
-                      // 💡 استخدام الألوان الأساسية للمطابقة
                       color: selected ? ColorsManager.primaryColor : Colors.white,
                       borderRadius: BorderRadius.circular(10.r),
                       border: selected ? null : Border.all(color: ColorsManager.dark200),
@@ -180,7 +183,7 @@ class SegmentedTabs extends StatelessWidget {
 }
 
 class _EarningsTab extends StatelessWidget {
-  final List items; // completed requests
+  final List<ReceivedOffer> items; // عروض مستلمة من الـ API
   final DateFormat df;
   const _EarningsTab({required this.items, required this.df});
 
@@ -189,11 +192,36 @@ class _EarningsTab extends StatelessWidget {
     if (items.isEmpty) {
       return const Center(child: Text('لا توجد أرباح حتى الآن'));
     }
+
+    final total = items.fold<double>(0.0, (sum, o) => sum + o.price);
+
     return ListView.builder(
       padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 16.h),
-      itemCount: items.length,
+      itemCount: items.length + 1,
       itemBuilder: (_, i) {
-        final r = items[i];
+        if (i == 0) {
+          return Container(
+            padding: EdgeInsets.all(12.w),
+            margin: EdgeInsets.only(bottom: 12.h),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12.r),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('إجمالي الأرباح', style: TextStyles.font14Black500Weight),
+                Text(
+                  '+${total.toStringAsFixed(0)} رس',
+                  style: TextStyle(color: ColorsManager.success500, fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final r = items[i - 1];
         return Container(
           padding: EdgeInsets.all(12.w),
           margin: EdgeInsets.only(bottom: 10.h),
@@ -203,29 +231,38 @@ class _EarningsTab extends StatelessWidget {
             boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: EdgeInsets.all(10),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                    color: ColorsManager.whiteGray.withOpacity(.5),
-                    borderRadius: BorderRadius.circular(50)
+                  color: ColorsManager.whiteGray.withOpacity(.5),
+                  borderRadius: BorderRadius.circular(50),
                 ),
-
-                child: MySvg(image: "money-recive",height: 30,width: 30,),
+                child: MySvg(image: "money-recive", height: 30, width: 30),
               ),
-              SizedBox(width: 8.w,),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('خدمات مشترك', style: TextStyles.font14Black500Weight),
-                  SizedBox(height: 4.h),
-                  Text(df.format(r.createdAt ?? DateTime.now()), style: TextStyles.font12DarkGray400Weight),
-                ],
+              SizedBox(width: 8.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      r.serviceType.isEmpty ? 'خدمة' : r.serviceType,
+                      style: TextStyles.font14Black500Weight,
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      '${df.format(r.createdAt ?? DateTime.now())} • ${r.fullName}',
+                      style: TextStyles.font12DarkGray400Weight,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
-              Spacer(),
-              Text('+350 رس', style: TextStyle(color: ColorsManager.success500, fontWeight: FontWeight.w700)),
-
+              const Spacer(),
+              Text(
+                '+${r.price.toStringAsFixed(0)} رس',
+                style: TextStyle(color: ColorsManager.success500, fontWeight: FontWeight.w700),
+              ),
             ],
           ),
         );
@@ -278,16 +315,6 @@ class _PendingReviewsTab extends StatelessWidget {
                 ),
               ),
               SizedBox(width: 10.w),
-              OutlinedButton(
-                onPressed: () {
-                  // TODO: نشر التقييم
-                },
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: ColorsManager.primaryColor),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-                ),
-                child: Text('نشر', style: TextStyle(color: ColorsManager.primaryColor, fontWeight: FontWeight.w500)),
-              ),
             ],
           ),
         );
@@ -300,13 +327,11 @@ class _WorksTab extends StatelessWidget {
   final ProviderState state;
   final Function(int id) onAccept;
   final Function(int id) onReject;
-  final Function(int id) onComplete;
 
   const _WorksTab({
     required this.state,
     required this.onAccept,
     required this.onReject,
-    required this.onComplete,
   });
 
   @override
@@ -325,16 +350,94 @@ class _WorksTab extends StatelessWidget {
       itemCount: state.requests.length,
       itemBuilder: (_, i) {
         final r = state.requests[i];
-
-        // 💡 NEW: تحديد ما إذا كان هذا الطلب بالذات في حالة تحديث (تحميل)
         final isUpdating = state.isUpdating && state.actingRequestId == r.id;
 
         return ServiceRequestCard(
           req: r,
-          isLoading: isUpdating, // 💡 تمرير حالة التحميل
+          isLoading: isUpdating,
           onAccept: () => onAccept(r.id),
           onReject: () => onReject(r.id),
-          onComplete: () => onComplete(r.id),
+        );
+      },
+    );
+  }
+}
+class _MyReceivedOffersTab extends StatelessWidget {
+  const _MyReceivedOffersTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<ReceivedOffersCubit, ReceivedOffersState>(
+      listener: (context, state) {
+        if (state.error != null && !state.loading) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.error!)),
+          );
+        }
+      },
+      builder: (context, state) {
+        if (state.loading && state.offers.isEmpty) {
+          return const Center(child: CircularProgressIndicator.adaptive());
+        }
+
+        if (state.error != null && state.offers.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('تعذّر جلب العروض', style: TextStyles.font14Black500Weight),
+                SizedBox(height: 6.h),
+                Text(
+                  state.error!,
+                  style: TextStyles.font12DarkGray400Weight,
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 12.h),
+                ElevatedButton(
+                  onPressed: () => context.read<ReceivedOffersCubit>().load(),
+                  child: const Text('إعادة المحاولة'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        if (state.offers.isEmpty) {
+          return const Center(child: Text('لا توجد عروض مستلمة'));
+        }
+
+        return RefreshIndicator(
+          onRefresh: () => context.read<ReceivedOffersCubit>().load(),
+          child: ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 16.h),
+            itemCount: state.offers.length,
+            itemBuilder: (_, i) {
+              final offer = state.offers[i];
+              final isBusy = state.actingOfferId == offer.offerId;
+
+              return ReceivedOfferCard(
+                offer: offer,
+                isBusy: isBusy,
+                onAccept: () async {
+                  final ok = await context.read<ReceivedOffersCubit>().accept(offer.offerId);
+                  if (ok && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('تم قبول العرض بنجاح')),
+                    );
+                  }
+                },
+                onReject: () async {
+                  final ok = await context.read<ReceivedOffersCubit>().reject(offer.offerId);
+                  if (ok && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('تم رفض العرض')),
+                    );
+                  }
+                },
+              );
+            },
+          ),
         );
       },
     );

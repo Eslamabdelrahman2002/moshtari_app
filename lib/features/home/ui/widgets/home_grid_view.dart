@@ -44,11 +44,9 @@ import 'auction_grid_item.dart';
         delegate: SliverChildBuilderDelegate(
               (context, index) {
             final ad = ads[index];
-            final isAuction = ad.auctionDisplayType != null;
-            if (isAuction) {
-              return AuctionGridItem(adModel: ad); // 👈 الكارت الجديد
-            }
-            return GridViewItem(adModel: ad); // الكارت العادي
+            return ad.isAuction
+                ? AuctionGridItem(adModel: ad)
+                : GridViewItem(adModel: ad);
           },
           childCount: ads.length,
         ),

@@ -6,6 +6,8 @@ import 'package:mushtary/core/theme/fonts.dart';
 class TextStyles {
   static var font12Gray400Weight;
 
+  static var font14Dark500400Weight;
+
   static TextStyle get font12DarkGray400Weight => TextStyle(
     fontSize: fontSize(12),
     fontWeight: FontWeight.w400,

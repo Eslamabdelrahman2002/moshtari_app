@@ -9,6 +9,7 @@ import 'package:mushtary/core/widgets/reminder.dart';
 import 'package:mushtary/core/utils/helpers/navigation.dart';
 import 'package:mushtary/core/utils/helpers/launcher.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
+import 'package:mushtary/features/product_details/ui/logic/cubit/car_auction_details_cubit.dart';
 
 import 'package:mushtary/features/product_details/ui/widgets/app_bar.dart';
 import 'package:mushtary/features/product_details/ui/widgets/car_details/widgets/car_bottom_actions.dart';
@@ -172,117 +173,122 @@ class CarPartDetailsScreen extends StatelessWidget {
                     }
                   } catch (_) {}
 
-                  return SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    child: Column(
-                      children: [
-                        const ProductScreenAppBar(),
-                        CarPartDetailsImages(
-                          images: part.imageUrls,
-                          adId: id,
-                          favoriteType: 'ad',
-                        ),
-                        BlocBuilder<UserAdsCubit, UserAdsState>(
-                          builder: (context, adsState) {
-                            List<HomeAdModel> ownerHomeAds = [];
-                            if (adsState is UserAdsSuccess) {
-                              final publisherProducts =
-                              adsState.ads.map((ad) => ad.toPublisherProduct()).toList();
-                              ownerHomeAds = publisherProducts
-                                  .where((p) => p.categoryId == 2)
-                                  .map((p) => HomeAdModel.fromJson({
-                                "id": p.id,
-                                "title": p.title,
-                                "price": p.priceText ?? '',
-                                "name_ar": p.categoryLabel,
-                                "created_at": p.createdAt ??
-                                    DateTime.now().toIso8601String(),
-                                "username": "",
-                                "image_urls": p.imageUrl != null
-                                    ? [p.imageUrl]
-                                    : <String>[],
-                              }))
-                                  .toList();
-                            }
-                            return StoryAndTitleWidget(
-                              title: part.title,
-                              similarAds: ownerHomeAds,
-                            );
-                          },
-                        ),
-                        CarDetailsPanel(
-                          city: part.city,
-                          region: part.region,
-                          createdAt: part.createdAt,
-                        ),
-                        SizedBox(height: 16.h),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16.w),
-                          child: CarPartPrice(priceText: part.price),
-                        ),
-                        const MyDivider(),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: CurrentUserInfo(
-                            ownerName: ownerName,
-                            ownerPicture: ownerPicture,
-                            isVerified: isVerified,
-                            rating: rating,
-                            reviewsCount: reviewsCount,
-                            onTap: () {
-                              NavX(context)
-                                  .pushNamed(Routes.userProfileScreenId, arguments: ownerId);
-                            },
-                            onFollow: () {},
-                          ),
-                        ),
-                        const MyDivider(),
-                        CarPartSpecsCardElevated(
-                          condition: part.carPartDetail.condition,
-                          brand: part.carPartDetail.brandName,
-                          supportedModels: part.carPartDetail.supportedModels,
-                          elevation: 5,
-                        ),
-                        InfoDescription(description: part.description),
-                        const MyDivider(),
-                        const Reminder(),
-                        const MyDivider(),
-                        CarPartCommentsView(comments: part.comments, offers:part.offers,),
-                        const SizedBox(height: 12),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: CarPartAddCommentField(
+                  return RefreshIndicator.adaptive(
+                    onRefresh: ()async{
+                      await context.read<CarPartsDetailsCubit>().fetchCarPartDetails(id);
+                    },
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        children: [
+                          const ProductScreenAppBar(),
+                          CarPartDetailsImages(
+                            images: part.imageUrls,
                             adId: id,
-                            onSuccessRefresh: () {
-                              context
-                                  .read<CarPartsDetailsCubit>()
-                                  .fetchCarPartDetails(id);
+                            favoriteType: 'ad',
+                          ),
+                          BlocBuilder<UserAdsCubit, UserAdsState>(
+                            builder: (context, adsState) {
+                              List<HomeAdModel> ownerHomeAds = [];
+                              if (adsState is UserAdsSuccess) {
+                                final publisherProducts =
+                                adsState.ads.map((ad) => ad.toPublisherProduct()).toList();
+                                ownerHomeAds = publisherProducts
+                                    .where((p) => p.categoryId == 2)
+                                    .map((p) => HomeAdModel.fromJson({
+                                  "id": p.id,
+                                  "title": p.title,
+                                  "price": p.priceText ?? '',
+                                  "name_ar": p.categoryLabel,
+                                  "created_at": p.createdAt ??
+                                      DateTime.now().toIso8601String(),
+                                  "username": "",
+                                  "image_urls": p.imageUrl != null
+                                      ? [p.imageUrl]
+                                      : <String>[],
+                                }))
+                                    .toList();
+                              }
+                              return StoryAndTitleWidget(
+                                title: part.title,
+                                similarAds: ownerHomeAds,
+                              );
                             },
                           ),
-                        ),
-                        const MyDivider(),
-                        PromoButton(
-                          onPressed: () async {
-                            final myId =
-                                context.read<ProfileCubit>().user?.userId;
-                            final isOwner =
-                            (myId != null && part.user.id == myId);
-                            if (isOwner) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content:
-                                    Text('لا يمكنك طلب تسويق لإعلانك.')),
-                              );
-                              return;
-                            }
-                            await showMarketingRequestSheet(context, adId: id);
-                          },
-                        ),
-                        if (similarHomeAds.isNotEmpty) ...[
-                          SimilarAds(similarAds: similarHomeAds),
+                          CarDetailsPanel(
+                            city: part.city,
+                            region: part.region,
+                            createdAt: part.createdAt,
+                          ),
+                          SizedBox(height: 16.h),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16.w),
+                            child: CarPartPrice(priceText: part.price),
+                          ),
                           const MyDivider(),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: CurrentUserInfo(
+                              ownerName: ownerName,
+                              ownerPicture: ownerPicture,
+                              isVerified: isVerified,
+                              rating: rating,
+                              reviewsCount: reviewsCount,
+                              onTap: () {
+                                NavX(context)
+                                    .pushNamed(Routes.userProfileScreenId, arguments: ownerId);
+                              },
+                              onFollow: () {},
+                            ),
+                          ),
+                          const MyDivider(),
+                          CarPartSpecsCardElevated(
+                            condition: part.carPartDetail.condition,
+                            brand: part.carPartDetail.brandName,
+                            supportedModels: part.carPartDetail.supportedModels,
+                            elevation: 5,
+                          ),
+                          InfoDescription(description: part.description),
+                          const MyDivider(),
+                          const Reminder(),
+                          const MyDivider(),
+                          CarPartCommentsView(comments: part.comments, offers:part.offers,),
+                          const SizedBox(height: 12),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: CarPartAddCommentField(
+                              adId: id,
+                              onSuccessRefresh: () {
+                                context
+                                    .read<CarPartsDetailsCubit>()
+                                    .fetchCarPartDetails(id);
+                              },
+                            ),
+                          ),
+                          const MyDivider(),
+                          PromoButton(
+                            onPressed: () async {
+                              final myId =
+                                  context.read<ProfileCubit>().user?.userId;
+                              final isOwner =
+                              (myId != null && part.user.id == myId);
+                              if (isOwner) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content:
+                                      Text('لا يمكنك طلب تسويق لإعلانك.')),
+                                );
+                                return;
+                              }
+                              await showMarketingRequestSheet(context, adId: id);
+                            },
+                          ),
+                          if (similarHomeAds.isNotEmpty) ...[
+                            SimilarAds(similarAds: similarHomeAds),
+                            const MyDivider(),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   );
                 }

@@ -213,17 +213,15 @@ class _UserProfileScreenIdState extends State<UserProfileScreenId> {
                                                         child: GridView
                                                             .builder(
                                                           shrinkWrap: true,
+
                                                           physics:
                                                           const NeverScrollableScrollPhysics(),
                                                           gridDelegate:
                                                           const SliverGridDelegateWithFixedCrossAxisCount(
                                                             crossAxisCount: 2,
-                                                            crossAxisSpacing:
-                                                            12,
-                                                            mainAxisSpacing:
-                                                            12,
-                                                            childAspectRatio:
-                                                            0.78,
+                                                            crossAxisSpacing: 12,
+                                                            mainAxisSpacing: 12,
+                                                            childAspectRatio: 0.78,
                                                           ),
                                                           itemCount:
                                                           myAds.length,

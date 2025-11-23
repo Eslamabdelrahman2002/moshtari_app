@@ -16,9 +16,10 @@ class DetailSelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Align(
-        //     alignment: Alignment.centerRight,
-        //     child: Text(title, style: TextStyles.font16Dark500400Weight)),
+        Align(
+            alignment: Alignment.centerRight,
+            // **تعديل: استخدام خط أقوى لعنوان الـ Selector**
+            child: Text(title, style: TextStyles.font16Black500Weight)),
         verticalSpace(8),
         widget
       ],

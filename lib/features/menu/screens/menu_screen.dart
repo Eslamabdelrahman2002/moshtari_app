@@ -30,6 +30,7 @@ import '../../register_service/flatbed/ui/screens/delivery_service_steps.dart';
 import '../../register_service/labour/ui/screens/complete_profile_screen_steps.dart';
 import '../../register_service/register_service_dialog.dart';
 import '../../register_service/tanker/ui/screens/tanker_service_steps.dart';
+import '../../user_profile/logic/cubit/profile_state.dart';
 
 class MenuScreen extends StatefulWidget {
   final MenuScreenArgs menuScreenArgs;
@@ -110,7 +111,10 @@ class _MenuScreenState extends State<MenuScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       widget.menuScreenArgs.isAuthenticated
-                          ? ProfileBox(profileCubit: _profileCubit)
+                          ? ProfileBox(
+                        profileCubit: _profileCubit,
+                        onProfileTap: widget.menuScreenArgs.onProfileTap, // يروح لملف المستخدم فقط
+                      )
                           : const RegisterBox(),
                       verticalSpace(16),
                       ...(_isServiceMode
@@ -128,30 +132,38 @@ class _MenuScreenState extends State<MenuScreen> {
   }
 
   Widget _profileMenuItem(BuildContext context) {
-    return MenuItem(
-      icon: 'profile',
-      title: 'الملف الشخصي',
-      onTap: () {
-        if (_isServiceMode) {
-          final providerId = _profileCubit.providerId ?? 0;
-          if (providerId <= 0) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('يرجى اعتمادك كمقدم خدمة أولاً')),
-            );
-            return;
-          }
-          Navigator.of(context).pushNamed(
-            Routes.serviceProviderDashboard,
-            arguments: providerId,
-          );
-        } else {
-          widget.menuScreenArgs.isAuthenticated
-              ? widget.menuScreenArgs.onProfileTap()
-              : widget.menuScreenArgs.onLoginTap();
-        }
+    return BlocBuilder<ProfileCubit, ProfileState>(
+      bloc: _profileCubit,
+      builder: (context, state) {
+        final bool isApprovedProvider =
+            widget.menuScreenArgs.isAuthenticated && (_profileCubit.providerId ?? 0) > 0;
+
+        return MenuItem(
+          icon: 'profile',
+          title: 'الملف الشخصي',
+          onTap: () {
+            if (_isServiceMode) {
+              final providerId = _profileCubit.providerId ?? 0;
+              if (providerId <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('يرجى اعتمادك كمقدم خدمة أولاً')),
+                );
+                return;
+              }
+              Navigator.of(context).pushNamed(
+                Routes.serviceProviderDashboard,
+                arguments: providerId,
+              );
+            } else {
+              widget.menuScreenArgs.isAuthenticated
+                  ? widget.menuScreenArgs.onProfileTap()
+                  : widget.menuScreenArgs.onLoginTap();
+            }
+          },
+          isHasTrailing: isApprovedProvider, // اظهار/إخفاء الترايلنج
+          trailing: isApprovedProvider ? _buildServiceSwitchTrailing() : null,
+        );
       },
-      isHasTrailing: true,
-      trailing: _buildServiceSwitchTrailing(),
     );
   }
 
@@ -172,7 +184,8 @@ class _MenuScreenState extends State<MenuScreen> {
           horizontalSpace(8),
           Transform.scale(
             scale: 0.9,
-            child: CupertinoSwitch(
+            child: CupertinoSwitch
+              (
               value: _isServiceMode,
               inactiveTrackColor: ColorsManager.lightGrey,
               activeColor: ColorsManager.secondary500,
@@ -191,12 +204,10 @@ class _MenuScreenState extends State<MenuScreen> {
       verticalSpace(20),
 
       _profileMenuItem(context),
-      verticalSpace(16),
-
       MenuItem(
-        icon: 'document-cloud',
-        title: 'العروض المستلمة',
-        onTap: () => Navigator.of(context).pushNamed(Routes.myReceivedOffersScreen),
+        icon: 'wallet',
+        title: 'طلباتي',
+        onTap: () => Navigator.of(context).pushNamed(Routes.myRequest),
       ),
       verticalSpace(16),
 
@@ -284,6 +295,13 @@ class _MenuScreenState extends State<MenuScreen> {
       _profileMenuItem(context),
       verticalSpace(16),
 
+
+      MenuItem(
+        icon: 'document-cloud',
+        title: 'العروض المستلمة',
+        onTap: () => Navigator.of(context).pushNamed(Routes.myReceivedOffersScreen),
+      ),
+      verticalSpace(16),
       MenuItem(
         icon: 'chart',
         title: 'إدارة رحلاتي',

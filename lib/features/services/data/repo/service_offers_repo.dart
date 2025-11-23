@@ -1,24 +1,61 @@
-// lib/features/services/data/repo/service_offers_repo.dart
 import 'package:mushtary/core/api/api_constants.dart';
 import 'package:mushtary/core/api/api_service.dart';
+import 'package:mushtary/features/service_profile/data/model/received_offer.dart';
 
 class ServiceOffersRepo {
   final ApiService _api;
   ServiceOffersRepo(this._api);
 
-  Future<Map<String, dynamic>> sendOffer({
+  /// إنشاء عرض (Submit offer)
+  /// POST /api/service-offers/offers
+  /// body: { "request_id": ..., "price": ..., "message": ...? }
+  Future<ReceivedOffer?> submitOffer({
     required int requestId,
     required num price,
     String? message,
   }) async {
-    final data = {
+    final body = {
       'request_id': requestId,
       'price': price,
-      if (message != null && message.trim().isNotEmpty) 'message': message.trim(),
+      if (message != null && message.trim().isNotEmpty) 'message': message,
     };
 
-    // مهم: ApiService.post يستقبل البودي كـ positional parameter
-    final res = await _api.post(ApiConstants.serviceOffers, data,requireAuth: true);
-    return res is Map<String, dynamic> ? res : {'success': true, 'data': res};
+    final res = await _api.post(
+      ApiConstants.serviceOffers,
+      body,
+      requireAuth: true,
+    );
+
+    try {
+      final data = res['data'];
+      if (data is Map<String, dynamic>) {
+        return ReceivedOffer.fromJson(data);
+      } else if (data is List && data.isNotEmpty) {
+        return ReceivedOffer.fromJson(
+          (data.first as Map).cast<String, dynamic>(),
+        );
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// قبول عرض
+  /// POST /api/service-offers/offers/{offerId}/accept
+  Future<void> acceptOffer(int offerId) async {
+    await _api.post(
+      ApiConstants.serviceOfferAccept(offerId),
+      const {},
+      requireAuth: true,
+    );
+  }
+
+  /// رفض عرض
+  /// POST /api/service-offers/offers/{offerId}/reject
+  Future<void> rejectOffer(int offerId) async {
+    await _api.post(
+      ApiConstants.serviceOfferReject(offerId),
+      const {},
+      requireAuth: true,
+    );
   }
 }

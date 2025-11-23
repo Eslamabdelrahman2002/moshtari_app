@@ -1,3 +1,5 @@
+// lib/features/product_details/ui/screens/real_estate_auction_details_screen.dart
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -19,10 +21,6 @@ import '../../../../core/widgets/reminder.dart';
 import 'package:mushtary/features/product_details/ui/logic/cubit/comment_send_cubit.dart';
 import 'package:mushtary/features/user_profile/logic/cubit/profile_cubit.dart';
 
-import 'package:mushtary/features/product_details/ui/widgets/auction_comments_view.dart';
-import 'package:mushtary/features/product_details/ui/widgets/full_view_widget/auction_add_comment_field.dart';
-import 'package:mushtary/features/product_details/ui/widgets/marketing_request_sheet.dart';
-
 import '../logic/cubit/real_estate_auction_details_cubit.dart';
 import '../logic/cubit/real_estate_auction_details_state.dart';
 
@@ -34,7 +32,6 @@ import 'package:mushtary/features/product_details/ui/logic/cubit/auction_bid_cub
 import 'package:mushtary/features/home/data/models/home_data_model.dart';
 import 'package:mushtary/features/product_details/ui/widgets/full_view_widget/advertising_market_dialog.dart';
 import 'package:mushtary/features/favorites/ui/logic/cubit/favorites_cubit.dart';
-import 'package:mushtary/features/favorites/ui/logic/cubit/favorites_state.dart';
 
 // Chat models
 import 'package:mushtary/features/messages/data/models/chat_model.dart';
@@ -52,7 +49,13 @@ import 'package:mushtary/features/real_estate_details/ui/widgets/real_estate_cur
 
 class RealEstateAuctionDetailsScreen extends StatefulWidget {
   final int id;
-  const RealEstateAuctionDetailsScreen({super.key, required this.id});
+  final int? initialItemId; // ✅ عنصر افتراضي مفعّل (للمزاد المتعدد)
+
+  const RealEstateAuctionDetailsScreen({
+    super.key,
+    required this.id,
+    this.initialItemId, // ✅ اختياري
+  });
 
   @override
   State<RealEstateAuctionDetailsScreen> createState() => _RealEstateAuctionDetailsScreenState();
@@ -62,21 +65,71 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
   final NumberFormat _nf = NumberFormat.decimalPattern('ar');
   String _fmt(num? v) => v == null ? '0' : _nf.format(v);
 
-  // بدء محادثة
+  // Helpers
+  int? _asInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    if (v is String) return int.tryParse(v);
+    return null;
+  }
+
+  T? _safe<T>(T Function() f) {
+    try { return f(); } catch (_) { return null; }
+  }
+
+  int? _resolveReceiverId(dynamic details) {
+    final cands = <dynamic>[
+      _safe(() => details.ownerId),
+      _safe(() => details.userId),
+      _safe(() => details.user_id),
+      _safe(() => details.owner_id),
+      _safe(() => details.user?.id),
+      _safe(() => details.owner?.id),
+      _safe(() => details.publisher?.id),
+      _safe(() => details.activeItem?.userId),
+      _safe(() => details.activeItem?.user_id),
+      _safe(() => details.activeItem?.user?.id),
+    ];
+    for (final c in cands) {
+      final id = _asInt(c);
+      if (id != null && id > 0) return id;
+    }
+    return null;
+  }
+
+  String? _extractOwnerPhone(dynamic d) {
+    final candidates = <dynamic>[
+      _safe(() => d.ownerPhone), _safe(() => d.phone),
+      _safe(() => d.user?.phone_number),
+      _safe(() => d.owner?.phone), _safe(() => d.publisher?.phone),
+      _safe(() => d.advertiser?.phone), _safe(() => d.seller?.phone),
+      _safe(() => d.activeItem?.phone), _safe(() => d.activeItem?.ownerPhone),
+    ];
+    for (final c in candidates) {
+      final s = c?.toString();
+      if (s != null && s.trim().isNotEmpty) return s;
+    }
+    return null;
+  }
+
+  // بدء محادثة (مع إدخال أول رسالة)
   void _startChat(BuildContext context, int receiverId, String receiverName, dynamic auctionDetails) {
     showChatInitiationSheet(
       context,
       receiverName: receiverName,
       onInitiate: (initialMessage) async {
-        final repo = getIt<MessagesRepo>();
-        final conversationId = await repo.initiateChat(receiverId);
+        try {
+          final repo = getIt<MessagesRepo>();
+          final conversationId = await repo.initiateChat(receiverId);
+          debugPrint('[REALESTATE CHAT] conversationId=$conversationId');
 
-        if (conversationId != null) {
-          final chatModel = MessagesModel(
-            conversationId: conversationId,
-            partnerUser: UserModel(id: receiverId, name: receiverName),
-            lastMessage: initialMessage,
-          );
+          if (conversationId == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('تعذر بدء المحادثة الآن.')),
+            );
+            return;
+          }
 
           final adInfo = AdInfo(
             id: auctionDetails.id,
@@ -87,77 +140,31 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
             price: (auctionDetails.maxBid ?? num.tryParse(auctionDetails.startPrice ?? '') ?? 0).toString(),
           );
 
+          final chatModel = MessagesModel(
+            conversationId: conversationId,
+            partnerUser: UserModel(id: receiverId, name: receiverName),
+            lastMessage: initialMessage,
+          );
+
           NavX(context).pushNamed(
             Routes.chatScreen,
             arguments: ChatScreenArgs(chatModel: chatModel, adInfo: adInfo),
           );
 
-          await Future.delayed(const Duration(milliseconds: 500));
+          // أرسل الرسالة الأولى
+          await Future.delayed(const Duration(milliseconds: 400));
           final body = SendMessageRequestBody(
             receiverId: receiverId,
             messageContent: initialMessage,
             listingId: auctionDetails.id,
           );
           await repo.sendMessage(body, conversationId);
-        } else {
+        } catch (e, st) {
+          debugPrint('[REALESTATE CHAT] error: $e\n$st');
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('تعذر بدء المحادثة الآن.')),
+            SnackBar(content: Text('تعذر بدء المحادثة: $e')),
           );
         }
-      },
-    );
-  }
-
-  // نافذة المشاركة (تُستخدم إذا رغبت باستبدال ShareDialog لاحقًا)
-  void _showShareDialog(BuildContext context, dynamic auctionDetails, String location, String? phone) {
-    final int auctionId = auctionDetails.id;
-    final String auctionTitle = auctionDetails.title;
-    final String price = _fmt(auctionDetails.maxBid ?? num.tryParse(auctionDetails.startPrice ?? '') ?? 0);
-    final List<String> images = (auctionDetails.activeItem?.images is List && auctionDetails.activeItem.images.isNotEmpty)
-        ? auctionDetails.activeItem.images.cast<String>()
-        : (auctionDetails.thumbnail != null ? [auctionDetails.thumbnail] : []);
-
-    final adModelForDialog = HomeAdModel(
-      id: auctionId,
-      title: auctionTitle,
-      price: price,
-      location: location,
-      imageUrls: images,
-      createdAt: auctionDetails.createdAt?.toIso8601String() ?? '',
-      username: '',
-    );
-
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (context) {
-        final size = MediaQuery.of(context).size;
-        return Dialog(
-          backgroundColor: ColorsManager.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24.r),
-          ),
-          insetPadding: EdgeInsets.symmetric(
-            horizontal: 16.w,
-            vertical: 24.h,
-          ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: 380.w,
-              maxHeight: size.height * 0.85,
-            ),
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: 16.w,
-                vertical: 16.h,
-              ),
-              child: AdvertisingMarketDialog(
-                adModel: adModelForDialog,
-                phone: phone,
-              ),
-            ),
-          ),
-        );
       },
     );
   }
@@ -211,14 +218,11 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
                       }
                       if (bidState is AuctionBidSuccess) {
                         await Future.delayed(const Duration(milliseconds: 200));
-                        if (Navigator.of(listenerCtx).canPop()) {
-                          Navigator.pop(listenerCtx);
-                        }
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('تم إرسال المزايدة بنجاح')),
-                        );
+                        if (Navigator.of(listenerCtx).canPop()) Navigator.pop(listenerCtx);
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال المزايدة بنجاح')));
                         if (mounted) {
-                          context.read<RealEstateAuctionDetailsCubit>().fetch(widget.id);
+                          // ✅ أعد الجلب مع نفس العنصر النشط
+                          context.read<RealEstateAuctionDetailsCubit>().fetch(widget.id, activeItemId: itemId);
                         }
                       }
                     },
@@ -229,8 +233,7 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
                       void addInc(int inc) {
                         final curText = controller.text.trim();
                         final base = num.tryParse(curText.isEmpty ? currentMaxBid.toString() : curText) ?? currentMaxBid;
-                        final next = base + inc;
-                        controller.text = next.toString();
+                        controller.text = (base + inc).toString();
                       }
 
                       return Column(
@@ -249,7 +252,6 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
                             ],
                           ),
                           verticalSpace(8),
-
                           Container(
                             width: double.infinity,
                             padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
@@ -268,7 +270,6 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
                             ),
                           ),
                           verticalSpace(12),
-
                           TextField(
                             controller: controller,
                             keyboardType: TextInputType.number,
@@ -288,7 +289,6 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
                             ),
                           ),
                           verticalSpace(12),
-
                           Wrap(
                             spacing: 8.w,
                             children: incs.map((e) {
@@ -306,7 +306,6 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
                             }).toList(),
                           ),
                           verticalSpace(16),
-
                           SizedBox(
                             width: double.infinity,
                             height: 48.h,
@@ -370,7 +369,8 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
     return MultiBlocProvider(
       providers: [
         BlocProvider<RealEstateAuctionDetailsCubit>(
-          create: (_) => getIt<RealEstateAuctionDetailsCubit>()..fetch(widget.id),
+          create: (_) => getIt<RealEstateAuctionDetailsCubit>()
+            ..fetch(widget.id, activeItemId: widget.initialItemId), // ✅ تمرير العنصر الافتراضي إن وجد
         ),
         BlocProvider<CommentSendCubit>(create: (_) => getIt<CommentSendCubit>()),
         BlocProvider<ProfileCubit>(create: (_) => getIt<ProfileCubit>()..loadProfile()),
@@ -399,33 +399,19 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
                 final step    = num.tryParse(d.bidStep) ?? 1;
                 final itemId = item?.id ?? 0;
 
-                // معلومات المالك
-                String? phone;
-                int? ownerId;
-                String ownerName = d.ownerName;
-                String? ownerPicture = d.ownerPicture;
-                String location = '${item?.cityNameAr ?? '-'} - ${item?.district ?? '-'}';
-                List<dynamic> comments = const [];
-                int bidsCount = 0;
-                int participants = 0;
+                final receiverId = _resolveReceiverId(d) ?? _resolveReceiverId(d as dynamic);
+                final ownerName = d.ownerName;
+                final ownerPicture = d.ownerPicture;
 
-                try {
-                  final dyn = d as dynamic;
-                  ownerId = dyn.ownerId as int? ?? dyn.user_id as int? ?? dyn.user?.id as int?;
-                  phone = (dyn.ownerPhone ?? dyn.phone ?? dyn.user?.phone_number)?.toString();
-
-                  final list = dyn.comments;
-                  if (list is List) comments = list;
-                  bidsCount = (dyn.bidsCount ?? dyn.bids_count ?? dyn.bids?.length ?? 0) as int;
-                  participants = (dyn.participantsCount ?? dyn.participants_count ?? dyn.participants ?? 0) as int;
-                } catch (_) {}
+                final dyn = d as dynamic;
+                final bidsCount = _asInt(_safe(() => dyn.bidsCount) ?? _safe(() => dyn.bids_count) ?? _safe(() => dyn.bids?.length)) ?? 0;
+                final participants = _asInt(_safe(() => dyn.participantsCount) ?? _safe(() => dyn.participants_count) ?? _safe(() => dyn.participants)) ?? 0;
 
                 final myId = context.select<ProfileCubit, int?>((c) => c.user?.userId);
                 final myUsername = context.select<ProfileCubit, String?>((c) => c.user?.username);
-                final isOwner = (myId != null && ownerId != null && myId == ownerId) ||
+                final isOwner = (myId != null && receiverId != null && myId == receiverId) ||
                     ((myUsername?.trim().isNotEmpty ?? false) && (ownerName.trim() == myUsername?.trim()));
 
-                // إنشاء/جلب الكيوبت المشترك للمزايدة
                 final key = 'real_estate-$auctionId';
                 AuctionBidCubit auctionBidCubit;
                 if (getIt.isRegistered<AuctionBidCubit>(instanceName: key)) {
@@ -442,113 +428,115 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
                   auctionBidCubit.joinAuction();
                 }
 
+                final location = '${item?.cityNameAr ?? '-'} - ${item?.district ?? '-'}';
+
                 return MultiBlocProvider(
-                  providers: [
-                    BlocProvider<AuctionBidCubit>.value(value: auctionBidCubit),
-                  ],
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.only(bottom: 90.h),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        product_appbar.ProductScreenAppBar(),
+                  providers: [BlocProvider<AuctionBidCubit>.value(value: auctionBidCubit)],
+                  child: RefreshIndicator.adaptive(
+                    onRefresh: () async => context.read<RealEstateAuctionDetailsCubit>().fetch(
+                      widget.id,
+                      activeItemId: itemId > 0 ? itemId : null, // ✅ حدّث مع العنصر الحالي
+                    ),
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.only(bottom: 90.h),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          product_appbar.ProductScreenAppBar(),
 
-                        // الصور بنفس نمط بقية الشاشات (المشاركة + المفضلة داخل الودجت)
-                        RealEstateDetailsProductImages(
-                          images: images,
-                          adId: auctionId,
-                          favoriteType: 'auction',
-                        ),
-
-                        // العنوان
-                        Padding(
-                          padding: EdgeInsets.all(16.w),
-                          child: Text(d.title, style: TextStyles.font20Black500Weight),
-                        ),
-
-                        // الموقع + التاريخ
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16.w),
-                          child: Row(
-                            children: [
-                              RealEstateItemDatails(
-                                text: location,
-                                image: 'location-yellow', width: 20.w, height: 20.h,
-                              ),
-                              const Spacer(),
-                              RealEstateItemDatails(
-                                text: '${d.createdAt.year}-${d.createdAt.month}-${d.createdAt.day}',
-                                image: 'clock-yellow', width: 20.w, height: 20.h,
-                              ),
-                            ],
+                          RealEstateDetailsProductImages(
+                            images: images,
+                            adId: auctionId,
+                            favoriteType: 'auction',
                           ),
-                        ),
-                        verticalSpace(12),
-                        const MyDivider(),
 
-                        // وصف
-                        RealEstateInfoDescription(description: d.description),
-
-                        // شبكة معلومات العقار
-                        if (item != null)
                           Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                            child: RealEstateProductInfoGridView(
-                              area: int.tryParse(item.area ?? ''),
-                              rooms: item.numRooms,
-                              bathrooms: item.numBathrooms,
-                              windDirection: item.facade,
-                              numberOfStreetFrontages: item.numStreets,
-                              streetWidth: item.streetWidth,
+                            padding: EdgeInsets.all(16.w),
+                            child: Text(d.title, style: TextStyles.font20Black500Weight),
+                          ),
+
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16.w),
+                            child: Row(
+                              children: [
+                                RealEstateItemDatails(
+                                  text: location,
+                                  image: 'location-yellow', width: 20.w, height: 20.h,
+                                ),
+                                const Spacer(),
+                                RealEstateItemDatails(
+                                  text: '${d.createdAt.year}-${d.createdAt.month}-${d.createdAt.day}',
+                                  image: 'clock-yellow', width: 20.w, height: 20.h,
+                                ),
+                              ],
+                            ),
+                          ),
+                          verticalSpace(12),
+                          const MyDivider(),
+
+                          RealEstateInfoDescription(description: d.description),
+
+                          if (item != null)
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                              child: RealEstateProductInfoGridView(
+                                area: int.tryParse(item.area ?? ''),
+                                rooms: item.numRooms,
+                                bathrooms: item.numBathrooms,
+                                windDirection: item.facade,
+                                numberOfStreetFrontages: item.numStreets,
+                                streetWidth: item.streetWidth,
+                              ),
+                            ),
+
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16.w),
+                            child: RealEstateCurrentUserInfo(
+                              ownerName: ownerName,
+                              ownerPicture: ownerPicture,
+                              userTitle: 'وسيط عقاري',
+                              onTap: () {
+                                if (receiverId == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('تعذر تحديد معرف الناشر')),
+                                  );
+                                  return;
+                                }
+                                NavX(context).pushNamed(
+                                  Routes.userProfileScreenId,
+                                  arguments: receiverId,
+                                );
+                              },
+                            ),
+                          ),
+                          verticalSpace(8),
+                          const MyDivider(),
+
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16.w),
+                            child: BlocBuilder<AuctionBidCubit, AuctionBidState>(
+                              builder: (context, bidState) {
+                                return _AuctionStatusCard(
+                                  highest: _fmt(bidState.currentMaxBid),
+                                  bidsCount: bidsCount,
+                                  participants: participants,
+                                  endTime: d.endTime,
+                                );
+                              },
                             ),
                           ),
 
-                        // صاحب الإعلان
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16.w),
-                          child: RealEstateCurrentUserInfo(
-                            ownerName: ownerName,
-                            ownerPicture: ownerPicture,
-                            userTitle: 'وسيط عقاري',
-                            onTap: () { // ✅ تم إضافة onTap
-                              // ✅ ownerId مستخلص في بداية حالة النجاح
-                              if (ownerId != null) {
-                                NavX(context).pushNamed( // ✅ استخدام NavX
-                                  Routes.userProfileScreenId,
-                                  arguments: ownerId,
-                                );
-                              }
-                            },
+                          const MyDivider(),
+                          verticalSpace(12),
+
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16.w),
+                            child: const Reminder(),
                           ),
-                        ),
-                        verticalSpace(8),
-                        const MyDivider(),
-
-                        // كرت حالة المزاد
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16.w),
-                          child: BlocBuilder<AuctionBidCubit, AuctionBidState>(
-                            builder: (context, bidState) {
-                              return _AuctionStatusCard(
-                                highest: _fmt(bidState.currentMaxBid),
-                                bidsCount: bidsCount,
-                                participants: participants,
-                                endTime: d.endTime,
-                              );
-                            },
-                          ),
-                        ),
-
-                        const MyDivider(),
-                        verticalSpace(12),
-
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16.w),
-                          child: const Reminder(),
-                        ),
-                        verticalSpace(12),
-                      ],
+                          verticalSpace(12),
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -558,7 +546,6 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
           ),
         ),
 
-        // الشريط السفلي
         bottomNavigationBar: BlocBuilder<RealEstateAuctionDetailsCubit, RealEstateAuctionDetailsState>(
           builder: (context, state) {
             if (state is RealEstateAuctionDetailsSuccess) {
@@ -569,49 +556,30 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
               final ended   = DateTime.now().isAfter(d.endTime);
               final itemId = d.activeItem?.id ?? 0;
 
-              String? phone;
-              int? ownerId;
-              String ownerName = d.ownerName;
-
-              try {
-                final dyn = d as dynamic;
-                ownerId = dyn.ownerId as int? ?? dyn.user_id as int? ?? dyn.user?.id as int?;
-                phone = (dyn.ownerPhone ?? dyn.phone ?? dyn.user?.phone_number)?.toString();
-              } catch (_) {}
+              final receiverId = _resolveReceiverId(d) ?? _resolveReceiverId(d as dynamic);
+              final ownerName = d.ownerName;
+              final phone   = _extractOwnerPhone(d as dynamic);
 
               final myId = context.select<ProfileCubit, int?>((c) => c.user?.userId);
               final myUsername = context.select<ProfileCubit, String?>((c) => c.user?.username);
-              final isOwner = (myId != null && ownerId != null && myId == ownerId) ||
+              final isOwner = (myId != null && receiverId != null && myId == receiverId) ||
                   ((myUsername?.trim().isNotEmpty ?? false) && (ownerName.trim() == myUsername?.trim()));
 
               return Container(
                 padding: EdgeInsets.only(left: 16.w, right: 16.w, bottom: 24.h, top: 12.w),
                 decoration: const BoxDecoration(
                   color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x0F000000),
-                      blurRadius: 10,
-                      offset: Offset(0, -5),
-                    ),
-                  ],
+                  boxShadow: [BoxShadow(color: Color(0x0F000000), blurRadius: 10, offset: Offset(0, -5))],
                 ),
                 child: Row(
                   children: [
-                    // زر قم بالمزايدة
                     Expanded(
                       child: SizedBox(
                         height: 48.h,
                         child: ElevatedButton(
-                          onPressed: ended
-                              ? null
-                              : () => _showBidDialog(
-                            currentHighest: highest,
-                            minBid: minBid,
-                            step: step,
-                            end: d.endTime,
-                            auctionId: d.id,
-                            itemId: itemId,
+                          onPressed: ended ? null : () => _showBidDialog(
+                            currentHighest: highest, minBid: minBid, step: step,
+                            end: d.endTime, auctionId: d.id, itemId: itemId,
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: ColorsManager.primaryColor,
@@ -623,49 +591,63 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
                     ),
                     horizontalSpace(12),
 
-                    // أيقونات التواصل
+                    // الشات: متاح دائمًا (حتى بعد انتهاء المزاد)
                     _squareIconBtn(
                       icon: MySvg(image: 'message_icon'),
                       bg: ColorsManager.primary50,
                       borderColor: const Color(0xFFEAEAEA),
-                      onTap: ended
-                          ? null
-                          : () {
+                      onTap: () {
                         final myId = context.read<ProfileCubit>().user?.userId;
                         if (myId == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('يجب تسجيل الدخول أولاً لبدء المحادثة.')),
-                          );
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يجب تسجيل الدخول أولاً لبدء المحادثة.')));
+                          return;
+                        }
+                        if (receiverId == null || ownerName.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر تحديد هوية الطرف الآخر.')));
+                          debugPrint('[REALESTATE CHAT] receiverId resolve failed. myId=$myId ownerName="$ownerName"');
                           return;
                         }
                         if (isOwner) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('لا يمكنك المحادثة مع نفسك.')),
-                          );
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا يمكنك المحادثة مع نفسك.')));
                           return;
                         }
-                        if (ownerId == null || ownerName.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('تعذر تحديد معلومات المالك لبدء المحادثة.')),
-                          );
-                          return;
-                        }
-                        _startChat(context, ownerId, ownerName, d);
+                        _startChat(context, receiverId, ownerName, d);
                       },
                     ),
-
                     horizontalSpace(8),
+
+                    // الاتصال: متاح دائمًا، يعرض SnackBar إذا لا يوجد رقم
                     _squareIconBtn(
-                      icon:  MySvg(image: 'callCalling'),
+                      icon: MySvg(image: 'callCalling'),
                       bg: ColorsManager.primary50,
                       borderColor: const Color(0xFFEAEAEA),
-                      onTap: ended ? null : (phone?.isNotEmpty ?? false) ? () => launchCaller(context, phone!) : null,
+                      onTap: () {
+                        final p = phone;
+                        if (p?.isNotEmpty ?? false) {
+                          launchCaller(context, p!);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('لا يتوفر رقم هاتف للناشر.')),
+                          );
+                        }
+                      },
                     ),
                     horizontalSpace(8),
+
+                    // واتساب: متاح دائمًا، يعرض SnackBar إذا لا يوجد رقم
                     _squareIconBtn(
-                      icon: MySvg(image: 'logos_whatsapp'), // ضع أيقونة واتساب الخاصة بك هنا
+                      icon: MySvg(image: 'logos_whatsapp'),
                       bg: ColorsManager.success200,
-                      onTap: ended ? null : (phone?.isNotEmpty ?? false) ? () => launchWhatsApp(context, phone!, message: 'مرحباً 👋 بخصوص مزاد: ${d.title}') : null,
+                      onTap: () {
+                        final p = phone;
+                        if (p?.isNotEmpty ?? false) {
+                          launchWhatsApp(context, p!, message: 'مرحباً 👋 بخصوص مزاد: ${d.title}');
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('لا يتوفر رقم واتساب للناشر.')),
+                          );
+                        }
+                      },
                     ),
                   ],
                 ),
@@ -680,7 +662,6 @@ class _RealEstateAuctionDetailsScreenState extends State<RealEstateAuctionDetail
 
   Widget _squareIconBtn({required Widget icon, required Color bg, Color? borderColor, VoidCallback? onTap}) {
     final bgColor = onTap == null ? Colors.grey.shade300 : bg;
-
     return Material(
       color: bgColor,
       borderRadius: BorderRadius.circular(12.r),
@@ -722,51 +703,58 @@ class _AuctionStatusCard extends StatefulWidget {
 }
 
 class _AuctionStatusCardState extends State<_AuctionStatusCard> {
-  late Timer _timer;
-  late Duration _left;
-  late String _lastHighestText;
+  Timer? _timer;
+  Duration _left = Duration.zero;
 
   @override
   void initState() {
     super.initState();
-    _left = widget.endTime.difference(DateTime.now());
-    _lastHighestText = widget.highest;
-    _start();
+    _calcRemaining();
+    _startTimer(); // ← بدأ العداد على الفور
   }
 
   @override
   void didUpdateWidget(covariant _AuctionStatusCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.endTime != widget.endTime) {
-      _left = widget.endTime.difference(DateTime.now());
-      _timer.cancel();
-      _start();
+      _calcRemaining();
+      _restartTimer();
     }
-    _lastHighestText = widget.highest;
   }
 
-  void _start() {
+  void _calcRemaining() {
+    final d = widget.endTime.difference(DateTime.now());
+    setState(() => _left = d.isNegative ? Duration.zero : d);
+  }
+
+  void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      final d = widget.endTime.difference(DateTime.now());
+      final diff = widget.endTime.difference(DateTime.now());
       if (!mounted) return;
-      setState(() => _left = d.isNegative ? Duration.zero : d);
-      if (d.isNegative) _timer.cancel();
+      setState(() {
+        _left = diff.isNegative ? Duration.zero : diff;
+      });
+      if (diff.isNegative) _timer?.cancel();
     });
+  }
+
+  void _restartTimer() {
+    _timer?.cancel();
+    _startTimer();
   }
 
   @override
   void dispose() {
-    _timer.cancel();
+    _timer?.cancel();
     super.dispose();
   }
 
   String _fmt2(int v) => v.toString().padLeft(2, '0');
+  String _fmt(num? v) =>
+      v == null ? '0' : v.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
 
   String _fmtEnd(DateTime dt) {
-    const months = [
-      'يناير','فبراير','مارس','أبريل','مايو','يونيو',
-      'يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'
-    ];
+    const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
     final m = months[dt.month - 1];
     final hh = _fmt2(dt.hour);
     final mm = _fmt2(dt.minute);
@@ -775,12 +763,11 @@ class _AuctionStatusCardState extends State<_AuctionStatusCard> {
 
   @override
   Widget build(BuildContext context) {
-    final days = _left.inDays;
+    final days  = _left.inDays;
     final hours = _left.inHours % 24;
-    final mins = _left.inMinutes % 60;
-    final secs = _left.inSeconds % 60;
-
-    final highestTextDisplay = widget.highest;
+    final mins  = _left.inMinutes % 60;
+    final secs  = _left.inSeconds % 60;
+    final highestTextDisplay = _fmt(num.tryParse(widget.highest));
 
     return Container(
       width: double.infinity,
@@ -795,64 +782,57 @@ class _AuctionStatusCardState extends State<_AuctionStatusCard> {
         children: [
           Row(
             children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('${widget.participants}', style: TextStyle(color: Colors.black, fontSize: 16.sp, fontWeight: FontWeight.w700)),
-                  horizontalSpace(4),
-                  Text('عدد المشاركين', style: TextStyle(color: ColorsManager.darkGray, fontSize: 12.sp, fontWeight: FontWeight.w400)),
-                ],
-              ),
+              Text('${widget.participants}',
+                  style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w700)),
+              horizontalSpace(4),
+              Text('عدد المشاركين',
+                  style: TextStyle(color: ColorsManager.darkGray, fontSize: 12.sp)),
               const Spacer(),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF7F7F7),
-                  borderRadius: BorderRadius.circular(10.r),
-                ),
+                decoration: BoxDecoration(color: const Color(0xFFF7F7F7),
+                    borderRadius: BorderRadius.circular(10.r)),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('أعلى مزايدة', style: TextStyle(color: ColorsManager.darkGray, fontSize: 12.sp, fontWeight: FontWeight.w500)),
+                    Text('أعلى مزايدة',
+                        style: TextStyle(color: ColorsManager.darkGray, fontSize: 12.sp)),
                     horizontalSpace(6),
-                    Text(highestTextDisplay, style: TextStyle(color: const Color(0xFF14457F), fontSize: 16.sp, fontWeight: FontWeight.w700)),
+                    Text(highestTextDisplay,
+                        style: TextStyle(color: const Color(0xFF14457F),
+                            fontSize: 16.sp, fontWeight: FontWeight.w700)),
                   ],
                 ),
               ),
             ],
           ),
           verticalSpace(10),
-
           const MyDivider(),
           verticalSpace(10),
-
           Row(
             children: [
-              _timeBox(label: 'يوم',   value: _fmt2(days)),
+              _timeBox('يوم', _fmt2(days)),
               horizontalSpace(8),
-              _timeBox(label: 'ساعة',  value: _fmt2(hours)),
+              _timeBox('ساعة', _fmt2(hours)),
               horizontalSpace(8),
-              _timeBox(label: 'دقيقة', value: _fmt2(mins)),
+              _timeBox('دقيقة', _fmt2(mins)),
               horizontalSpace(8),
-              _timeBox(label: 'ثانية', value: _fmt2(secs)),
+              _timeBox('ثانية', _fmt2(secs)),
             ],
           ),
           verticalSpace(10),
-
           Row(
             children: [
               Expanded(
-                child: Row(
-                  children: [
-                    Text('مزايدة ${widget.bidsCount}', style: TextStyle(color: ColorsManager.darkGray, fontSize: 12.sp, fontWeight: FontWeight.w500)),
-                  ],
-                ),
+                child: Text('مزايدة ${widget.bidsCount}',
+                    style: TextStyle(color: ColorsManager.darkGray, fontSize: 12.sp)),
               ),
               Row(
                 children: [
                   const Icon(Icons.hourglass_bottom_rounded, size: 16, color: ColorsManager.darkGray),
                   horizontalSpace(6),
-                  Text('تاريخ الإنتهاء: ${_fmtEnd(widget.endTime)}', style: TextStyles.font12Dark500400Weight),
+                  Text('تاريخ الإنتهاء: ${_fmtEnd(widget.endTime)}',
+                      style: TextStyles.font12Dark500400Weight),
                 ],
               ),
             ],
@@ -862,20 +842,24 @@ class _AuctionStatusCardState extends State<_AuctionStatusCard> {
     );
   }
 
-  Widget _timeBox({required String label, required String value}) {
+  Widget _timeBox(String label, String value) {
     return Expanded(
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 8.h),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFFFFF),
+          color: Colors.white,
           borderRadius: BorderRadius.circular(10.r),
           border: Border.all(color: const Color(0xFFF7F7F7)),
         ),
         child: Column(
           children: [
-            Text(value, style: TextStyle(color: const Color(0xFF14457F), fontSize: 14.sp, fontWeight: FontWeight.w700)),
+            Text(value,
+                style: TextStyle(color: const Color(0xFF14457F),
+                    fontSize: 14.sp, fontWeight: FontWeight.w700)),
             verticalSpace(2),
-            Text(label, style: TextStyle(color: ColorsManager.darkGray, fontSize: 12.sp, fontWeight: FontWeight.w400)),
+            Text(label,
+                style: TextStyle(color: ColorsManager.darkGray,
+                    fontSize: 12.sp)),
           ],
         ),
       ),

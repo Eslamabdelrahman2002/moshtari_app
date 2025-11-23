@@ -1,8 +1,7 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter/services.dart'; // 💡 استيراد هام للـ Clipboard
+import 'package:flutter/services.dart';
 import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
@@ -12,24 +11,23 @@ import '../../../core/widgets/safe_cached_image.dart';
 import '../../user_profile/logic/cubit/profile_cubit.dart';
 import '../../user_profile/logic/cubit/profile_state.dart';
 
-
 class ProfileBox extends StatelessWidget {
   final ProfileCubit profileCubit;
+  final VoidCallback? onProfileTap; // 🔹 جديد
 
-  const ProfileBox({super.key, required this.profileCubit});
+  const ProfileBox({
+    super.key,
+    required this.profileCubit,
+    this.onProfileTap,
+  });
 
-  // 🆕 دالة النسخ التي تضيف رسالة تأكيد
   void _copyToClipboard(BuildContext context, String? text) {
     if (text == null || text.isEmpty) return;
-
-    // 1. نسخ النص إلى الحافظة
     Clipboard.setData(ClipboardData(text: text));
-
-    // 2. إظهار رسالة تأكيد
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'تم نسخ رابط الإحالة بنجاح!',
+          'تم نسخ رمز الإحالة بنجاح!',
           style: TextStyles.font14Black500Weight.copyWith(color: Colors.white),
         ),
         backgroundColor: ColorsManager.primaryColor,
@@ -54,38 +52,44 @@ class ProfileBox extends StatelessWidget {
         if (state is ProfileSuccess) {
           final user = state.user;
 
-          return InkWell(
-            onTap: () {
-              debugPrint("ProfileBox tapped");
-            },
-            child: Container(
-              padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 12.w),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.07),
-                    offset: Offset(0, 2.h),
-                    blurRadius: 16.r,
-                  ),
-                ],
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-              child: Row(
-                children: [
-                  // 👇 آمن على الروابط الفاضية/غير الصالحة
-                  SafeCircleAvatar(
-                    url: user.profilePictureUrl,
-                    radius: 20.w,
-                    bg: ColorsManager.secondary50,
-                  ),
-                  horizontalSpace(8),
-                  Column(
+          return Container(
+            padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 12.w),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.07),
+                  offset: Offset(0, 2.h),
+                  blurRadius: 16.r,
+                ),
+              ],
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SafeCircleAvatar(
+                  url: user.profilePictureUrl,
+                  radius: 20.w,
+                  bg: ColorsManager.secondary50,
+                ),
+                horizontalSpace(8),
+                // الاسم + رمز الإحالة تحت الاسم
+                Expanded(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // الاسم + توثيق
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(user.username ?? 'مستخدم', style: TextStyles.font14Black500Weight),
+                          Flexible(
+                            child: Text(
+                              user.username ?? 'مستخدم',
+                              style: TextStyles.font14Black500Weight,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                           horizontalSpace(4),
                           if (user.isVerified ?? false)
                             Container(
@@ -95,6 +99,7 @@ class ProfileBox extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(8.r),
                               ),
                               child: Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: const [
                                   Text('موثق', style: TextStyle(fontSize: 12, color: ColorsManager.teal)),
                                   SizedBox(width: 4),
@@ -104,31 +109,45 @@ class ProfileBox extends StatelessWidget {
                             ),
                         ],
                       ),
-                      verticalSpace(8),
+                      verticalSpace(6),
+                      // رمز الإحالة تحت الاسم وقابل للنسخ
+                      if ((user.referralCode ?? '').isNotEmpty)
+                        InkWell(
+                          onTap: () => _copyToClipboard(context, user.referralCode),
+                          borderRadius: BorderRadius.circular(6.r),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('رمز الإحالة: ', style: TextStyles.font10Dark400Grey400Weight),
+                              Flexible(
+                                child: Text(
+                                  user.referralCode!,
+                                  style: TextStyles.font10Dark400Grey400Weight.copyWith(color: ColorsManager.black),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              horizontalSpace(4),
+                              const MySvg(image: 'copy_icon'),
+                            ],
+                          ),
+                        ),
                     ],
                   ),
-                  const Spacer(),
-                  // 💡 تطبيق وظيفة النسخ على هذا الـ InkWell
-                  InkWell(
-                    onTap: () => _copyToClipboard(context, user.referralCode),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(vertical: 6.h, horizontal: 8.w),
-                      decoration: BoxDecoration(
-                        color: ColorsManager.dark50,
-                        borderRadius: BorderRadius.circular(8.r),
-                      ),
-                      child: Row(
-                        children: [
-                          Text('رابط الاحالة:', style: TextStyles.font10Dark400Grey400Weight),
-                          Text(user.referralCode ?? '', style: TextStyles.font10Dark400Grey400Weight.copyWith(color: ColorsManager.black)),
-                          horizontalSpace(4),
-                          const MySvg(image: 'copy_icon'),
-                        ],
-                      ),
+                ),
+                // سهم يروح لملف المستخدم فقط (مش مقدم الخدمة)
+                InkWell(
+                  onTap: onProfileTap,
+                  borderRadius: BorderRadius.circular(20.r),
+                  child: Padding(
+                    padding: EdgeInsets.all(6.w),
+                    child: Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16.sp,
+                      color: ColorsManager.dark500,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           );
         }

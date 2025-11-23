@@ -20,7 +20,6 @@ import 'package:mushtary/features/services/data/model/service_request_payload.da
 import 'package:mushtary/features/services/logic/cubit/service_request_cubit.dart';
 import 'package:mushtary/features/services/logic/cubit/service_request_state.dart';
 
-import '../../../../core/router/routes.dart';
 import '../widgets/map_picker_screen.dart'; // PickedLocation
 
 class SathaScreen extends StatefulWidget {
@@ -37,21 +36,25 @@ class _SathaScreenState extends State<SathaScreen> {
   final _descCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
-  final _locationCtrl = TextEditingController();
+  final _pickupCtrl = TextEditingController();
+  final _dropoffCtrl = TextEditingController();
 
   // Dropdown sources
-  final List<String> flatbedSizes = ['صغر', 'متوسط', 'كبير']; // حجم السطحة
-  final List<String> serviceTypes = ['نقل', 'سحب', 'طوارئ'];   // نوع خدمة السطحة
+  final List<String> flatbedSizes = ['صغيرة', 'متوسطة', 'كبيرة']; // حجم السطحة
+  final List<String> flatbedServiceTypes = ['عادية', 'ونش', 'تريلة']; // نوع خدمة السطحة
 
   // Selected values
-  String? selectedFlatbedSize = 'متوسط';
+  String? selectedFlatbedSize = 'متوسطة';
   String? selectedServiceType;
 
   Region? selectedRegion;
   City? selectedCity;
 
-  // Map result
-  LatLng? _pickedLatLng;
+  // Map results
+  LatLng? _pickupLatLng;
+  LatLng? _dropoffLatLng;
+  String? _pickupAddressAr;
+  String? _dropoffAddressAr;
 
   // Schedule
   bool nowSelected = true;
@@ -76,16 +79,31 @@ class _SathaScreenState extends State<SathaScreen> {
     fillColor: ColorsManager.white,
   );
 
-  Future<void> _pickLocation() async {
+  Future<void> _pickPickup() async {
     final picked = await Navigator.of(context).push<PickedLocation>(
       MaterialPageRoute(builder: (_) => const MapPickerScreen()),
     );
     if (picked != null) {
       setState(() {
-        _pickedLatLng = picked.latLng;
-        _locationCtrl.text = picked.addressAr ?? 'تم اختيار الموقع';
+        _pickupLatLng = picked.latLng;
+        _pickupAddressAr = picked.addressAr;
+        _pickupCtrl.text = picked.addressAr ?? 'تم اختيار موقع التحميل';
       });
-      debugPrint('Picked location -> lat: ${picked.latLng.latitude}, lng: ${picked.latLng.longitude}');
+      debugPrint('Pickup -> lat: ${picked.latLng.latitude}, lng: ${picked.latLng.longitude}');
+    }
+  }
+
+  Future<void> _pickDropoff() async {
+    final picked = await Navigator.of(context).push<PickedLocation>(
+      MaterialPageRoute(builder: (_) => const MapPickerScreen()),
+    );
+    if (picked != null) {
+      setState(() {
+        _dropoffLatLng = picked.latLng;
+        _dropoffAddressAr = picked.addressAr;
+        _dropoffCtrl.text = picked.addressAr ?? 'تم اختيار موقع الإنزال';
+      });
+      debugPrint('Dropoff -> lat: ${picked.latLng.latitude}, lng: ${picked.latLng.longitude}');
     }
   }
 
@@ -94,7 +112,8 @@ class _SathaScreenState extends State<SathaScreen> {
     _descCtrl.dispose();
     _phoneCtrl.dispose();
     _notesCtrl.dispose();
-    _locationCtrl.dispose();
+    _pickupCtrl.dispose();
+    _dropoffCtrl.dispose();
     super.dispose();
   }
 
@@ -118,8 +137,7 @@ class _SathaScreenState extends State<SathaScreen> {
           child: BlocConsumer<ServiceRequestCubit, ServiceRequestState>(
             listenWhen: (p, c) => c is ServiceRequestSuccess || c is ServiceRequestFailure,
             listener: (context, state) {
-              final m = ScaffoldMessenger.of(context);
-              m.hideCurrentSnackBar();
+              final m = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
               if (state is ServiceRequestSuccess) {
                 m.showSnackBar(SnackBar(content: Text(state.message)));
                 Navigator.of(context).maybePop();
@@ -142,7 +160,7 @@ class _SathaScreenState extends State<SathaScreen> {
                         children: [
                           // وصف
                           SecondaryTextFormField(
-                            label: 'وصف الخدمة *',
+                            label: 'وصف الخدمة ',
                             hint: 'أدخل وصف الخدمة المطلوبة',
                             maxheight: 110.w,
                             minHeight: 96.w,
@@ -152,12 +170,42 @@ class _SathaScreenState extends State<SathaScreen> {
                           ),
                           verticalSpace(16),
 
+                          // مواقع التحميل والإنزال
+                          DetailSelector(
+                            title: 'موقع تحميل المركبة ',
+                            widget: SecondaryTextFormField(
+                              label: 'موقع التحميل',
+                              hint: 'اختر موقع التحميل على الخريطة',
+                              maxheight: 56.w,
+                              minHeight: 56.w,
+                              controller: _pickupCtrl,
+                              onTap: _pickPickup,
+                              suffexIcon: 'location-primary',
+                            ),
+                          ),
+                          verticalSpace(12),
+                          DetailSelector(
+                            title: 'موقع إنزال المركبة ',
+                            widget: SecondaryTextFormField(
+                              label: 'موقع الإنزال',
+                              hint: 'اختر موقع الإنزال على الخريطة',
+                              maxheight: 56.w,
+                              minHeight: 56.w,
+                              controller: _dropoffCtrl,
+                              onTap: _pickDropoff,
+                              suffexIcon: 'location-primary',
+                            ),
+                          ),
+                          verticalSpace(16),
+
                           // حجم السطحة
                           DetailSelector(
-                            title: 'حجم السطحة *',
+                            title: 'حجم السطحة ',
                             widget: DropdownButtonFormField<String>(
                               value: selectedFlatbedSize,
-                              items: flatbedSizes.map((e) => DropdownMenuItem(value: e, child: Text(e, style: TextStyles.font16Black500Weight))).toList(),
+                              items: flatbedSizes
+                                  .map((e) => DropdownMenuItem(value: e, child: Text(e, style: TextStyles.font16Black500Weight)))
+                                  .toList(),
                               onChanged: (v) => setState(() => selectedFlatbedSize = v),
                               decoration: _dec('حدد حجم السطحة'),
                               validator: (v) => v == null ? 'الحقل مطلوب' : null,
@@ -167,10 +215,12 @@ class _SathaScreenState extends State<SathaScreen> {
 
                           // نوع خدمة السطحة
                           DetailSelector(
-                            title: 'نوع خدمة السطحة *',
+                            title: 'نوع خدمة السطحة',
                             widget: DropdownButtonFormField<String>(
                               value: selectedServiceType,
-                              items: serviceTypes.map((e) => DropdownMenuItem(value: e, child: Text(e, style: TextStyles.font16Black500Weight))).toList(),
+                              items: flatbedServiceTypes
+                                  .map((e) => DropdownMenuItem(value: e, child: Text(e, style: TextStyles.font16Black500Weight)))
+                                  .toList(),
                               onChanged: (v) => setState(() => selectedServiceType = v),
                               decoration: _dec('حدد نوع الخدمة'),
                               validator: (v) => v == null ? 'الحقل مطلوب' : null,
@@ -180,12 +230,14 @@ class _SathaScreenState extends State<SathaScreen> {
 
                           // المنطقة
                           DetailSelector(
-                            title: 'المنطقة *',
+                            title: 'المنطقة',
                             widget: state.regionsLoading
                                 ? const Center(child: CircularProgressIndicator.adaptive())
                                 : DropdownButtonFormField<Region>(
                               value: selectedRegion,
-                              items: state.regions.map((r) => DropdownMenuItem(value: r, child: Text(r.nameAr, style: TextStyles.font16Black500Weight))).toList(),
+                              items: state.regions
+                                  .map((r) => DropdownMenuItem(value: r, child: Text(r.nameAr, style: TextStyles.font16Black500Weight)))
+                                  .toList(),
                               onChanged: (r) {
                                 setState(() {
                                   selectedRegion = r;
@@ -199,18 +251,23 @@ class _SathaScreenState extends State<SathaScreen> {
                           ),
                           if (state.regionsError != null) ...[
                             verticalSpace(8),
-                            Align(alignment: Alignment.centerRight, child: Text(state.regionsError!, style: TextStyles.font14Red500Weight)),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: Text(state.regionsError!, style: TextStyles.font14Red500Weight),
+                            ),
                           ],
                           verticalSpace(16),
 
                           // المدينة
                           DetailSelector(
-                            title: 'المدينة *',
+                            title: 'المدينة',
                             widget: state.citiesLoading
                                 ? const Center(child: CircularProgressIndicator.adaptive())
                                 : DropdownButtonFormField<City>(
                               value: selectedCity,
-                              items: state.cities.map((c) => DropdownMenuItem(value: c, child: Text(c.nameAr, style: TextStyles.font16Black500Weight))).toList(),
+                              items: state.cities
+                                  .map((c) => DropdownMenuItem(value: c, child: Text(c.nameAr, style: TextStyles.font16Black500Weight)))
+                                  .toList(),
                               onChanged: (c) => setState(() => selectedCity = c),
                               decoration: _dec('حدد المدينة'),
                               validator: (v) => v == null ? 'الحقل مطلوب' : null,
@@ -218,13 +275,16 @@ class _SathaScreenState extends State<SathaScreen> {
                           ),
                           if (state.citiesError != null) ...[
                             verticalSpace(8),
-                            Align(alignment: Alignment.centerRight, child: Text(state.citiesError!, style: TextStyles.font14Red500Weight)),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: Text(state.citiesError!, style: TextStyles.font14Red500Weight),
+                            ),
                           ],
                           verticalSpace(16),
 
                           // رقم الهاتف
                           SecondaryTextFormField(
-                            label: 'رقم الهاتف *',
+                            label: 'رقم الهاتف',
                             hint: 'أدخل رقم الهاتف',
                             maxheight: 56.w,
                             minHeight: 56.w,
@@ -234,21 +294,9 @@ class _SathaScreenState extends State<SathaScreen> {
                           ),
                           verticalSpace(16),
 
-                          // الموقع
-                          SecondaryTextFormField(
-                            label: 'موقع الخدمة',
-                            hint: 'اختر الموقع على الخريطة أو ابحث',
-                            maxheight: 56.w,
-                            minHeight: 56.w,
-                            controller: _locationCtrl,
-                            onTap: _pickLocation,
-                            suffexIcon: 'location-primary',
-                          ),
-                          verticalSpace(16),
-
                           // وقت الخدمة
                           DetailSelector(
-                            title: 'حدد وقت الخدمة',
+                            title: 'تحديد وقت الخدمة',
                             widget: Row(
                               children: [
                                 Expanded(
@@ -261,7 +309,7 @@ class _SathaScreenState extends State<SathaScreen> {
                                 horizontalSpace(16),
                                 Expanded(
                                   child: CustomizedChip(
-                                    title: 'لاحقاً',
+                                    title: 'تحديد وقت لاحق',
                                     isSelected: !nowSelected,
                                     onTap: () => setState(() => nowSelected = false),
                                   ),
@@ -274,7 +322,7 @@ class _SathaScreenState extends State<SathaScreen> {
                           // ملاحظات
                           SecondaryTextFormField(
                             label: 'ملاحظات إضافية',
-                            hint: 'ادخل تفاصيل إضافية للخدمة',
+                            hint: 'اكتب ملاحظاتك',
                             maxheight: 96.w,
                             minHeight: 96.w,
                             controller: _notesCtrl,
@@ -291,10 +339,17 @@ class _SathaScreenState extends State<SathaScreen> {
                               FocusScope.of(context).unfocus();
                               if (_formKey.currentState?.validate() != true) return;
 
-                              if (selectedRegion == null || selectedCity == null || _pickedLatLng == null) {
+                              // تحقق أساسي
+                              if (selectedRegion == null || selectedCity == null) {
                                 final m = ScaffoldMessenger.of(context);
                                 m.hideCurrentSnackBar();
-                                m.showSnackBar(const SnackBar(content: Text('الرجاء اختيار المنطقة والمدينة والموقع')));
+                                m.showSnackBar(const SnackBar(content: Text('الرجاء اختيار المنطقة والمدينة')));
+                                return;
+                              }
+                              if (_pickupLatLng == null || _dropoffLatLng == null) {
+                                final m = ScaffoldMessenger.of(context);
+                                m.hideCurrentSnackBar();
+                                m.showSnackBar(const SnackBar(content: Text('الرجاء تحديد موقعي التحميل والإنزال على الخريطة')));
                                 return;
                               }
                               if (selectedFlatbedSize == null || selectedServiceType == null) {
@@ -305,21 +360,33 @@ class _SathaScreenState extends State<SathaScreen> {
                               }
 
                               final extras = <String, dynamic>{
-                                'flatbed_size': selectedFlatbedSize,     // صغر/متوسط/كبير
-                                'flatbed_service': selectedServiceType, // نقل/سحب/طوارئ
+                                'flatbed_size': selectedFlatbedSize,            // صغيرة/متوسطة/كبيرة
+                                'flatbed_service_type': selectedServiceType,   // عادية/ونش/تريلة
                               };
 
                               final req = CreateServiceRequest(
                                 serviceType: 'flatbed',
                                 description: _descCtrl.text.trim(),
                                 phone: _phoneCtrl.text.trim(),
-                                scheduleType: nowSelected ? 'now' : 'later',
+                                scheduleType: nowSelected ? 'now' : 'scheduled',
                                 scheduleTimeIso: null,
                                 notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
                                 cityId: selectedCity!.id,
                                 regionId: selectedRegion!.id,
-                                latitude: _pickedLatLng!.latitude,
-                                longitude: _pickedLatLng!.longitude,
+
+                                // موقع عام (سنستخدم موقع التحميل كإحداثيات عامة للطلب)
+                                latitude: _pickupLatLng!.latitude,
+                                longitude: _pickupLatLng!.longitude,
+
+                                // مواقع التحميل والإنزال (جديدة)
+                                pickupLocation: _pickupAddressAr ?? _pickupCtrl.text.trim(),
+                                pickupLatitude: _pickupLatLng!.latitude,
+                                pickupLongitude: _pickupLatLng!.longitude,
+                                dropoffLocation: _dropoffAddressAr ?? _dropoffCtrl.text.trim(),
+                                dropoffLatitude: _dropoffLatLng!.latitude,
+                                dropoffLongitude: _dropoffLatLng!.longitude,
+
+                                // Extras
                                 extras: extras,
                               );
 

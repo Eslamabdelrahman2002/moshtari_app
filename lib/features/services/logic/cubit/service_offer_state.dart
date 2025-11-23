@@ -1,22 +1,52 @@
-// lib/features/services/logic/cubit/service_offer_state.dart
-abstract class ServiceOfferState {
-  const ServiceOfferState();
-}
+import 'package:equatable/equatable.dart';
+import 'package:mushtary/features/service_profile/data/model/received_offer.dart';
 
-class ServiceOfferInitial extends ServiceOfferState {
-  const ServiceOfferInitial();
-}
+class ServiceOffersState extends Equatable {
+  final bool loading;
+  final String? error;
+  final bool success;
 
-class ServiceOfferSubmitting extends ServiceOfferState {
-  const ServiceOfferSubmitting();
-}
+  /// آخر عرض تم إنشاؤه (Submit)
+  final ReceivedOffer? lastCreatedOffer;
 
-class ServiceOfferSuccess extends ServiceOfferState {
-  final String message;
-  const ServiceOfferSuccess(this.message);
-}
+  /// Id العرض الذي تُجرى عليه عملية حالياً (accept/reject)
+  final int? actingOfferId;
 
-class ServiceOfferFailure extends ServiceOfferState {
-  final String error;
-  const ServiceOfferFailure(this.error);
+  const ServiceOffersState({
+    this.loading = false,
+    this.error,
+    this.success = false,
+    this.lastCreatedOffer,
+    this.actingOfferId,
+  });
+
+  ServiceOffersState copyWith({
+    bool? loading,
+    String? error,
+    bool clearError = false,
+    bool? success,
+    ReceivedOffer? lastCreatedOffer,
+    bool clearLastCreated = false,
+    int? actingOfferId,
+    bool clearActing = false,
+  }) {
+    return ServiceOffersState(
+      loading: loading ?? this.loading,
+      error: clearError ? null : (error ?? this.error),
+      success: success ?? this.success,
+      lastCreatedOffer:
+      clearLastCreated ? null : (lastCreatedOffer ?? this.lastCreatedOffer),
+      actingOfferId:
+      clearActing ? null : (actingOfferId ?? this.actingOfferId),
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+    loading,
+    error,
+    success,
+    lastCreatedOffer,
+    actingOfferId,
+  ];
 }

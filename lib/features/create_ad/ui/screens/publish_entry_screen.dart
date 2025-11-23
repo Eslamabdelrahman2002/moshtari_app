@@ -8,7 +8,12 @@ import 'package:mushtary/core/widgets/primary/primary_button.dart';
 
 import '../../../ad_action/ui/widgets/bid_type_dialog.dart';
 import '../../../services/ui/widgets/service_app_bar.dart';
-
+String _normalizeAuctionType(dynamic type) {
+  final s = type?.toString().toLowerCase().trim() ?? 'single';
+  if (s.contains('multi')) return 'multiple';       // يدعم: 'multi', 'multiple', 'multiple_auction'...
+  if (s == 'true' || s == '1') return 'multiple';   // لو رجعت بوليني أو رقم
+  return 'single';
+}
 class PublishEntryScreen extends StatelessWidget {
   const PublishEntryScreen({super.key});
 
@@ -51,17 +56,20 @@ class PublishEntryScreen extends StatelessWidget {
                           context,
                           initial: 'single',
                           onContinue: (type) {
-                            if (selectedCategory == 'cars') {
-                              Navigator.of(context).pushNamed(
-                                Routes.createCarAuctionScreen,
-                                arguments: {'auctionType': type},
-                              );
-                            } else if (selectedCategory == 'real_estate') {
-                              Navigator.of(context).pushNamed(
-                                Routes.createRealEstateAuctionScreen,
-                                arguments: {'auctionType': type},
-                              );
-                            }
+                            final t = _normalizeAuctionType(type);
+                            debugPrint('[PUBLISH] selectedCategory=$selectedCategory, type(raw)=$type, normalized=$t');
+
+                            final route = (selectedCategory == 'cars')
+                                ? Routes.createCarAuctionScreen
+                                : Routes.createRealEstateAuctionScreen;
+
+                            Navigator.of(context).pushNamed(
+                              route,
+                              arguments: {
+                                'auctionType': t,           // 'single' أو 'multiple'
+                                'isMultiple': t == 'multiple', // تأكيد إضافي
+                              },
+                            );
                           },
                           onBackHome: () {
                             Navigator.of(context).popUntil((route) => route.isFirst);

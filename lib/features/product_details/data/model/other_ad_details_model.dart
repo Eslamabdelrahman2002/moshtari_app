@@ -1,4 +1,3 @@
-// lib/features/other_ads/data/models/other_ad_details_model.dart
 import 'offer_model.dart';
 
 class OtherAdDetailsModel {
@@ -17,7 +16,7 @@ class OtherAdDetailsModel {
   final List<String> communicationMethods;
   final List<OfferModel> offers;
 
-  final int? userId; // ✅ الحقل الجديد
+  final int? userId;
   final String username;
   final String email;
   final String userPhone;
@@ -48,7 +47,7 @@ class OtherAdDetailsModel {
     required this.allowComments,
     required this.imageUrls,
     required this.communicationMethods,
-    required this.userId, // ✅ إضافته للـ constructor
+    required this.userId,
     required this.username,
     required this.email,
     required this.userPhone,
@@ -66,6 +65,7 @@ class OtherAdDetailsModel {
     if (json is! Map) {
       throw const FormatException('Expected Map for OtherAdDetailsModel');
     }
+
     final root = (json as Map).cast<String, dynamic>();
     final data = root['data'] is Map
         ? (root['data'] as Map).cast<String, dynamic>()
@@ -82,10 +82,8 @@ class OtherAdDetailsModel {
       price: data['price']?.toString(),
       priceType: data['price_type']?.toString() ?? '',
       conditionType: data['condition_type']?.toString(),
-      postedAt: DateTime.tryParse(data['posted_at']?.toString() ?? '') ??
-          DateTime.now(),
-      createdAt: DateTime.tryParse(data['created_at']?.toString() ?? '') ??
-          DateTime.now(),
+      postedAt: DateTime.tryParse(data['posted_at']?.toString() ?? '') ?? DateTime.now(),
+      createdAt: DateTime.tryParse(data['created_at']?.toString() ?? '') ?? DateTime.now(),
       viewsCount: (data['views_count'] as num?)?.toInt() ?? 0,
       allowMarketingOffers: data['allow_marketing_offers'] == true,
       allowComments: data['allow_comments'] == true,
@@ -95,7 +93,7 @@ class OtherAdDetailsModel {
       communicationMethods: (data['communication_methods'] as List? ?? const [])
           .map((e) => e.toString())
           .toList(),
-      userId: (data['user_id'] ?? data['owner_id'] as num?)?.toInt(), // ✅ استخلاص userId
+      userId: (data['user_id'] ?? data['owner_id'] as num?)?.toInt(),
       username: data['username']?.toString() ?? '',
       email: data['email']?.toString() ?? '',
       userPhone: data['user_phone']?.toString() ?? '',
@@ -117,31 +115,41 @@ class OtherAdDetailsModel {
   }
 }
 
+// ✅ Comment Model الجديد بعد الإصلاح
 class OtherCommentModel {
   final int id;
   final String text;
   final String userName;
   final String? userPicture;
-  final String? offerPrice; // ✅ الحقل الجديد لدعم offer_price
+  final String? offerPrice;
+  final DateTime createdAt; // ✅ أضفناه
 
   OtherCommentModel({
     required this.id,
     required this.text,
     required this.userName,
     this.userPicture,
-    this.offerPrice, // ✅ إضافته للـ constructor
+    this.offerPrice,
+    required this.createdAt,
   });
 
   factory OtherCommentModel.fromJson(Map<String, dynamic> json) {
     return OtherCommentModel(
       id: (json['comment_id'] as num?)?.toInt() ?? 0,
-      text: (json['comment_text'] ?? json['text'] ?? '').toString(),
+      text: (json['comment_text'] ??
+          json['text'] ??
+          json['comment'] ??
+          json['content'] ??
+          '').toString(),
       userName: (json['user_name'] ?? json['username'] ?? '').toString(),
-      userPicture: json['user_picture']?.toString(),
-      // ✅ استخراج offer_price كأولوية أولى
+      userPicture: json['user_picture']?.toString() ??
+          json['user_profile_image']?.toString() ??
+          json['profile_picture_url']?.toString(),
       offerPrice: json['offer_price']?.toString() ??
           json['price']?.toString() ??
           json['amount']?.toString(),
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+          DateTime.now(), // ✅ ضمان وجود تاريخ
     );
   }
 }

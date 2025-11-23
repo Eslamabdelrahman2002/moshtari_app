@@ -7,10 +7,10 @@ class RealEstateAuctionDetailsCubit extends Cubit<RealEstateAuctionDetailsState>
   final RealEstateAuctionRepo repo;
   RealEstateAuctionDetailsCubit(this.repo) : super(RealEstateAuctionDetailsInitial());
 
-  Future<void> fetch(int id) async {
+  Future<void> fetch(int id, {int? activeItemId}) async { // ✅ تعديل التوقيع
     emit(RealEstateAuctionDetailsLoading());
     try {
-      final data = await repo.fetch(id);
+      final data = await repo.fetch(id, activeItemId: activeItemId); // ✅ تمرير للريبو
       emit(RealEstateAuctionDetailsSuccess(data));
     } catch (e) {
       emit(RealEstateAuctionDetailsFailure(e.toString().replaceFirst('Exception: ', '')));

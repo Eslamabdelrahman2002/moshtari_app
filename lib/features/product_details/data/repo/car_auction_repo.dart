@@ -10,10 +10,17 @@ class CarAuctionRepo {
   final ApiService api;
   CarAuctionRepo(this.api);
 
-  Future<CarAuctionDetailsModel> fetchCarAuction(int id) async {
+  Future<CarAuctionDetailsModel> fetchCarAuction(int id, {int? activeItemId}) async {
+    final qp = <String, dynamic>{};
+    if (activeItemId != null) {
+      // غيّر الاسم حسب المطلوب من API: 'active_item_id' أو 'item_id'
+      qp['active_item_id'] = activeItemId;
+    }
+
     final res = await api.getResponse(
       ApiConstants.carAuctionDetails(id),
       relaxStatus: true,
+      queryParameters: qp.isEmpty ? null : qp,
     );
 
     final ct = res.headers.value('content-type') ?? '';

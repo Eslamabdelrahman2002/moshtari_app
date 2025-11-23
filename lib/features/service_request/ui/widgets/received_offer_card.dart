@@ -4,13 +4,13 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
-import 'package:mushtary/core/widgets/primary/my_svg.dart';
 import '../../data/model/received_offer_models.dart';
 
 class ReceivedOfferCard extends StatelessWidget {
   final ReceivedOffer offer;
   final VoidCallback? onAccept;
-  final bool isAccepting;
+  final VoidCallback? onReject;
+  final bool isBusy;
   final VoidCallback? onTap;
 
   const ReceivedOfferCard({
@@ -18,7 +18,8 @@ class ReceivedOfferCard extends StatelessWidget {
     required this.offer,
     this.onTap,
     this.onAccept,
-    this.isAccepting = false,
+    this.onReject,
+    this.isBusy = false,
   });
 
   Color _offerStatusColor(String s) {
@@ -38,7 +39,7 @@ class ReceivedOfferCard extends StatelessWidget {
         return ColorsManager.success500;
       case 'in_progress':
         return ColorsManager.primaryColor;
-      default: // pending/rejected
+      default:
         return ColorsManager.darkGray;
     }
   }
@@ -84,7 +85,7 @@ class ReceivedOfferCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final dfTime = DateFormat('HH:mm');
     final dfDate = DateFormat('dd/MM/yyyy');
-    final canAccept = offer.status != 'accepted';
+    final canAct = offer.status == 'pending';
 
     return InkWell(
       onTap: onTap,
@@ -105,7 +106,7 @@ class ReceivedOfferCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. الصف العلوي (الاسم، السعر، حالة العرض)
+            // Top Row
             Row(
               children: [
                 CircleAvatar(
@@ -114,32 +115,39 @@ class ReceivedOfferCard extends StatelessWidget {
                   backgroundImage: (offer.personalImage?.isNotEmpty == true)
                       ? CachedNetworkImageProvider(offer.personalImage!)
                       : null,
-                  child: (offer.personalImage?.isNotEmpty ?? false) ? null : Icon(Icons.person, color: ColorsManager.primaryColor, size: 24.w),
+                  child: (offer.personalImage?.isNotEmpty ?? false)
+                      ? null
+                      : Icon(Icons.person, color: ColorsManager.primaryColor, size: 24.w),
                 ),
                 SizedBox(width: 10.w),
-                // الاسم و شارة التوثيق
                 Expanded(
                   child: Row(
                     children: [
-                      Text(offer.fullName, style: TextStyles.font16Black500Weight, maxLines: 1, overflow: TextOverflow.ellipsis),
-                      SizedBox(width: 6.w),
-                      // شارة التوثيق
+                      Expanded(
+                        child: Text(
+                          offer.fullName,
+                          style: TextStyles.font16Black500Weight,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                       if (offer.isVerified)
-                        Icon(Icons.verified_user_rounded, color: ColorsManager.primary400, size: 16.w),
+                        Padding(
+                          padding: EdgeInsets.only(right: 6.w),
+                          child: Icon(Icons.verified_user_rounded, color: ColorsManager.primary400, size: 16.w),
+                        ),
                     ],
                   ),
                 ),
-                // حالة العرض (Chip)
                 _StatusChip(label: _statusLabel(offer.status), color: _offerStatusColor(offer.status)),
               ],
             ),
             SizedBox(height: 12.h),
 
-            // 2. السعر + نوع الخدمة + تاريخ ووقت العرض
+            // Price + Request Status
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // السعر
                 Expanded(
                   flex: 2,
                   child: Text(
@@ -151,7 +159,6 @@ class ReceivedOfferCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                // قيد التنفيذ (Request Status)
                 Expanded(
                   flex: 2,
                   child: _StatusChip(
@@ -164,11 +171,10 @@ class ReceivedOfferCard extends StatelessWidget {
             ),
             SizedBox(height: 10.h),
 
-            // 3. النوع و التاريخ
+            // Type + date/time
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Badge نوع المركبة
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                   decoration: BoxDecoration(
@@ -177,26 +183,18 @@ class ReceivedOfferCard extends StatelessWidget {
                   ),
                   child: Text(_typeLabel(offer.serviceType), style: TextStyles.font12secondary900400Weight),
                 ),
-
-                // التاريخ والوقت
                 if (offer.createdAt != null)
                   Row(
                     children: [
-                      Text(
-                        dfTime.format(offer.createdAt!),
-                        style: TextStyles.font12DarkGray400Weight,
-                      ),
+                      Text(dfTime.format(offer.createdAt!), style: TextStyles.font12DarkGray400Weight),
                       SizedBox(width: 4.w),
-                      Text(
-                        dfDate.format(offer.createdAt!),
-                        style: TextStyles.font12DarkGray400Weight,
-                      ),
+                      Text(dfDate.format(offer.createdAt!), style: TextStyles.font12DarkGray400Weight),
                     ],
                   )
               ],
             ),
 
-            // 4. حالة القبول النهائية (إن وجدت)
+            // Accepted banner
             if (offer.status == 'accepted')
               Padding(
                 padding: EdgeInsets.only(top: 10.h),
@@ -208,30 +206,49 @@ class ReceivedOfferCard extends StatelessWidget {
                   ],
                 ),
               )
-            else if (canAccept)
+            else if (canAct)
               SizedBox(height: 10.h),
 
-            // 5. زر القبول (يظهر فقط إذا كان العرض لم يُقبل بعد)
-            if (canAccept)
+            // Actions
+            if (canAct)
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+                  // Reject
+                  SizedBox(
+                    height: 40.h,
+                    child: OutlinedButton.icon(
+                      onPressed: isBusy ? null : onReject,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: ColorsManager.errorColor,
+                        side: const BorderSide(color: ColorsManager.errorColor),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+                        padding: EdgeInsets.symmetric(horizontal: 12.w),
+                      ),
+                      icon: isBusy
+                          ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator.adaptive(strokeWidth: 2))
+                          : const Icon(Icons.close_rounded, size: 18),
+                      label: Text('رفض', style: TextStyles.font14Black500Weight.copyWith(color: ColorsManager.errorColor)),
+                    ),
+                  ),
+                  SizedBox(width: 8.w),
+                  // Accept
                   SizedBox(
                     height: 40.h,
                     child: ElevatedButton.icon(
-                      onPressed: isAccepting ? null : onAccept,
+                      onPressed: isBusy ? null : onAccept,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: ColorsManager.success500,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
                         padding: EdgeInsets.symmetric(horizontal: 16.w),
                       ),
-                      icon: isAccepting
+                      icon: isBusy
                           ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator.adaptive(valueColor: AlwaysStoppedAnimation(Colors.white), strokeWidth: 2))
                           : const Icon(Icons.check_rounded, size: 18),
-                      label: Text('قبول العرض', style: TextStyles.font14White500Weight),
+                      label: Text('قبول', style: TextStyles.font14White500Weight),
                     ),
-                  )
+                  ),
                 ],
               ),
           ],
@@ -259,7 +276,7 @@ class _StatusChip extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          color: isOutline ? color : color,
+          color: color,
           fontSize: 12.sp,
           fontWeight: FontWeight.w700,
         ),

@@ -28,11 +28,10 @@ class CarAuctionDetailsCubit extends Cubit<CarAuctionDetailsState> {
   AuctionActionCubit get actionCubit => _actionCubit;
 
   // الدالة الأساسية لجلب تفاصيل المزاد
-  Future<void> fetchAuction(int id) async {
+  Future<void> fetchAuction(int id, {int? activeItemId}) async {
     emit(CarAuctionDetailsLoading());
     try {
-      // نفترض وجود fetchCarAuction(id) في Repo
-      final data = await repo.fetchCarAuction(id);
+      final data = await repo.fetchCarAuction(id, activeItemId: activeItemId); // ✅ مرّرناه للريبو
       emit(CarAuctionDetailsSuccess(data));
     } catch (e) {
       emit(CarAuctionDetailsFailure(e.toString().replaceFirst('Exception: ', '')));

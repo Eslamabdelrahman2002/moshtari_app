@@ -57,7 +57,6 @@ class AuctionsModel {
   );
 }
 
-// HomeAdModel
 class HomeAdModel {
   final int id;
   final int? categoryId;
@@ -72,7 +71,7 @@ class HomeAdModel {
   final String? auctionDisplayType;
   final int? auctionId;
 
-  // مصدر العنصر: car_ads | real_estate_ads | car_parts_ads | other_ads
+  // car_ads | real_estate_ads | car_parts_ads | other_ads | auction
   final String? sourceType;
 
   HomeAdModel({
@@ -90,6 +89,15 @@ class HomeAdModel {
     this.auctionId,
     this.sourceType,
   });
+
+  // NEW: ميثود مريحة للفرز لو حبيت تستخدمها
+  DateTime get createdAtDate => DateTime.tryParse(createdAt) ?? DateTime(1970);
+
+  // NEW: الآن تقدر تستخدم ad.isAuction في أي مكان
+  bool get isAuction {
+    final st = (sourceType ?? '').toLowerCase();
+    return auctionDisplayType != null || st.contains('auction') || auctionId != null || (price == 'مزاد');
+  }
 
   HomeAdModel copyWith({
     int? id,
@@ -195,15 +203,15 @@ class HomeAdModel {
       username: auction.username,
       phoneNumber: null,
       auctionDisplayType: auction.type,
-      sourceType: null,
+      sourceType: 'auction', // مفيد كـ fallback
     );
   }
 
   // من المفضلة
   factory HomeAdModel.fromFavorite(FavoriteItemModel favorite) {
     final d = favorite.details;
-    final isAuction = favorite.favoriteType == 'auction';
-    // صور أفضل: image_urls ثم thumbnail
+    final isAuctionFav = favorite.favoriteType == 'auction';
+
     final images = (d.imageUrls?.isNotEmpty ?? false)
         ? d.imageUrls!
         : (d.thumbnail != null && d.thumbnail!.isNotEmpty ? [d.thumbnail!] : <String>[]);
@@ -212,18 +220,18 @@ class HomeAdModel {
 
     return HomeAdModel(
       id: favorite.favoriteId,
-      auctionId: isAuction ? favorite.favoriteId : null,
+      auctionId: isAuctionFav ? favorite.favoriteId : null,
       title: title,
-      price: isAuction ? 'مزاد' : d.price,
+      price: isAuctionFav ? 'مزاد' : d.price,
       imageUrls: images,
       createdAt: d.createdAt ?? DateTime(1970).toIso8601String(),
       location: d.location ?? 'Unknown Location',
       username: d.username ?? 'Unknown User',
       phoneNumber: d.phoneNumber,
-      auctionDisplayType: isAuction ? 'single' : null,
+      auctionDisplayType: isAuctionFav ? 'single' : null,
       categoryId: null,
       condition: null,
-      sourceType: null,
+      sourceType: isAuctionFav ? 'auction' : null,
     );
   }
 }

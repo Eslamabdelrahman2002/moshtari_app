@@ -13,10 +13,13 @@ import '../../data/model/dyna_trip_models.dart';
 import '../logic/cubit/dyna_trip_create_cubit.dart';
 import '../logic/cubit/dyna_trip_create_state.dart';
 import '../widgets/city_selector_dialog.dart';
+import 'package:mushtary/features/create_ad/ui/widgets/customized_chip.dart';
 
 class CreateDynaTripScreen extends StatefulWidget {
-  final int providerId; // from profile.provider.provider_id
-  const CreateDynaTripScreen({super.key, required this.providerId});
+  final int providerId;
+  final int? tripId; // إذا وُجد فهي تعديل
+
+  const CreateDynaTripScreen({super.key, required this.providerId, this.tripId});
 
   @override
   State<CreateDynaTripScreen> createState() => _CreateDynaTripScreenState();
@@ -24,19 +27,31 @@ class CreateDynaTripScreen extends StatefulWidget {
 
 class _CreateDynaTripScreenState extends State<CreateDynaTripScreen> {
   final _formKey = GlobalKey<FormState>();
-
-  final TextEditingController _fromCityCtrl = TextEditingController();
-  final TextEditingController _toCityCtrl = TextEditingController();
-  final TextEditingController _departCtrl = TextEditingController();
-  final TextEditingController _arriveCtrl = TextEditingController();
-  final TextEditingController _capacityCtrl = TextEditingController(text: '5');
+  // controllers
+  final _fromCityCtrl = TextEditingController();
+  final _toCityCtrl = TextEditingController();
+  final _departCtrl = TextEditingController();
+  final _arriveCtrl = TextEditingController();
+  final _capacityCtrl = TextEditingController(text: '5');
+  final _routeStartCtrl = TextEditingController();
+  final _routeEndCtrl = TextEditingController();
+  final _extraCtrl = TextEditingController();
 
   City? _fromCity;
   City? _toCity;
   DateTime? _departure;
   DateTime? _arrival;
+  String? _selectedCargoType;
+  String? _selectedVehicleSize;
+  String _scheduleType = 'once';
 
   final _fmtUi = DateFormat('dd/MM/yyyy HH:mm');
+  final List<String> _cargoTypes = const [
+    'أثاث منزلي', 'أجهزة كهربائية', 'مواد بناء', 'أغراض شخصية', 'أخرى'
+  ];
+  final List<String> _vehicleSizes = const [
+    'دينّا صغيرة', 'دينّا متوسطة', 'دينّا كبيرة'
+  ];
 
   @override
   void dispose() {
@@ -45,22 +60,24 @@ class _CreateDynaTripScreenState extends State<CreateDynaTripScreen> {
     _departCtrl.dispose();
     _arriveCtrl.dispose();
     _capacityCtrl.dispose();
+    _routeStartCtrl.dispose();
+    _routeEndCtrl.dispose();
+    _extraCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _pickCity({required bool isFrom}) async {
     final c = await showCitySelectorDialog(context);
-    if (c != null) {
-      setState(() {
-        if (isFrom) {
-          _fromCity = c;
-          _fromCityCtrl.text = c.nameAr;
-        } else {
-          _toCity = c;
-          _toCityCtrl.text = c.nameAr;
-        }
-      });
-    }
+    if (c == null) return;
+    setState(() {
+      if (isFrom) {
+        _fromCity = c;
+        _fromCityCtrl.text = c.nameAr;
+      } else {
+        _toCity = c;
+        _toCityCtrl.text = c.nameAr;
+      }
+    });
   }
 
   Future<void> _pickDateTime({required bool isDeparture}) async {
@@ -72,13 +89,11 @@ class _CreateDynaTripScreenState extends State<CreateDynaTripScreen> {
       lastDate: DateTime(now.year + 2),
     );
     if (d == null) return;
-
     final TimeOfDay? t = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.fromDateTime(now.add(const Duration(hours: 1))),
+      initialTime: TimeOfDay.fromDateTime(now),
     );
     if (t == null) return;
-
     final dt = DateTime(d.year, d.month, d.day, t.hour, t.minute);
     setState(() {
       if (isDeparture) {
@@ -91,178 +106,155 @@ class _CreateDynaTripScreenState extends State<CreateDynaTripScreen> {
     });
   }
 
-  String? _validateCity(String? _) {
-    if (_fromCity == null) return 'اختر موقع الانطلاق';
-    if (_toCity == null) return 'اختر موقع الوصول';
-    return null;
-  }
-
-  String? _validateDate(String? _) {
-    if (_departure == null) return 'اختر وقت الانطلاق';
-    if (_arrival == null) return 'اختر وقت الوصول';
-    if (_arrival!.isBefore(_departure!)) return 'وقت الوصول لا يجب أن يسبق الانطلاق';
-    return null;
-  }
-
-  String? _validateCapacity(String? v) {
-    if (v == null || v.trim().isEmpty) return 'أدخل سعة الديّنا';
-    final n = int.tryParse(v);
-    if (n == null || n <= 0) return 'سعة غير صالحة';
-    return null;
-  }
-
-  void _onSubmit() {
-    final cityErr = _validateCity(null);
-    final dateErr = _validateDate(null);
-    final capErr = _validateCapacity(_capacityCtrl.text);
-    if (cityErr != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(cityErr)));
+  void _onSubmit(BuildContext context) {
+    // تحقق من الحقول
+    if (_fromCity == null || _toCity == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('اختر مدينتي الرحلة')));
       return;
     }
-    if (dateErr != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(dateErr)));
-      return;
-    }
-    if (capErr != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(capErr)));
+
+    if (_departure == null || _arrival == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('اختر وقتي الانطلاق والوصول')));
       return;
     }
 
     final req = DynaTripCreateRequest(
-      providerId: widget.providerId,
+      providerRequestId: widget.providerId,
       fromCityId: _fromCity!.id,
       toCityId: _toCity!.id,
-      dynaCapacity: int.parse(_capacityCtrl.text.trim()),
+      dynaCapacity: _capacityCtrl.text.trim(),
       departureDate: _departure!,
       arrivalDate: _arrival!,
+      cargoType: _selectedCargoType ?? 'أخرى',
+      vehicleSize: _selectedVehicleSize ?? 'دينّا صغيرة',
+      routeStart: _routeStartCtrl.text.trim(),
+      routeEnd: _routeEndCtrl.text.trim(),
+      scheduleType: _scheduleType,
+      extraDetails:
+      _extraCtrl.text.trim().isEmpty ? null : _extraCtrl.text.trim(),
     );
-    context.read<DynaTripCreateCubit>().submit(req);
+
+    final cubit = context.read<DynaTripCreateCubit>();
+    if (widget.tripId != null) {
+      cubit.updateTrip(widget.tripId!, req.toJson());
+    } else {
+      cubit.submit(req);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<DynaTripCreateCubit>(
+    final isEdit = widget.tripId != null;
+    final title = isEdit ? 'تعديل الرحلة' : 'إنشاء رحلة جديدة';
+
+    return BlocProvider(
       create: (_) => getIt<DynaTripCreateCubit>(),
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
           centerTitle: true,
-          title: Text('إنشاء رحلة جديدة', style: TextStyles.font20Black500Weight),
+          title: Text(title, style: TextStyles.font20Black500Weight),
           leading: IconButton(
             icon: Icon(Icons.arrow_back_ios, color: ColorsManager.darkGray300),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.pop(context),
           ),
         ),
         body: BlocListener<DynaTripCreateCubit, DynaTripCreateState>(
-          listener: (context, state) {
+          listener: (ctx, state) {
             if (state.success) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إنشاء الرحلة بنجاح')));
-              Navigator.of(context).pop(true);
+              ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                  content: Text(isEdit
+                      ? 'تم حفظ التعديلات بنجاح'
+                      : 'تم إنشاء الرحلة بنجاح')));
+              Navigator.pop(ctx, true);
             } else if (state.error != null) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.error!)));
+              ScaffoldMessenger.of(ctx)
+                  .showSnackBar(SnackBar(content: Text(state.error!)));
             }
           },
-          child: SafeArea(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 16.h),
-              child: Column(
-                children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          children: [
-                            // موقع الانطلاق
-                            GestureDetector(
-                              onTap: () => _pickCity(isFrom: true),
-                              child: AbsorbPointer(
-                                child: SecondaryTextFormField(
-                                  controller: _fromCityCtrl,
-                                  label: 'موقع الانطلاق',
-                                  hint: 'موقع الانطلاق',
-                                  minHeight: 56, maxheight: 56,
-                                  validator: (_) => _fromCity == null ? 'اختر موقع الانطلاق' : null,
-                                  suffexIcon: 'arrow-down',
-                                ),
-                              ),
-                            ),
-                            verticalSpace(12),
-
-                            // موقع الوصول
-                            GestureDetector(
-                              onTap: () => _pickCity(isFrom: false),
-                              child: AbsorbPointer(
-                                child: SecondaryTextFormField(
-                                  controller: _toCityCtrl,
-                                  label: 'موقع الوصول',
-                                  hint: 'موقع الوصول',
-                                  minHeight: 56, maxheight: 56,
-                                  validator: (_) => _toCity == null ? 'اختر موقع الوصول' : null,
-                                  suffexIcon: 'arrow-down',
-                                ),
-                              ),
-                            ),
-                            verticalSpace(12),
-
-                            // وقت الانطلاق
-                            GestureDetector(
-                              onTap: () => _pickDateTime(isDeparture: true),
-                              child: AbsorbPointer(
-                                child: SecondaryTextFormField(
-                                  controller: _departCtrl,
-                                  label: 'وقت الانطلاق',
-                                  hint: 'وقت الانطلاق',
-                                  minHeight: 56, maxheight: 56,
-                                  suffexIcon: 'calendar',
-                                ),
-                              ),
-                            ),
-                            verticalSpace(12),
-
-                            // وقت الوصول المتوقع
-                            GestureDetector(
-                              onTap: () => _pickDateTime(isDeparture: false),
-                              child: AbsorbPointer(
-                                child: SecondaryTextFormField(
-                                  controller: _arriveCtrl,
-                                  label: 'وقت الوصول المتوقع',
-                                  hint: 'وقت الوصول المتوقع',
-                                  minHeight: 56, maxheight: 56,
-                                  suffexIcon: 'calendar',
-                                ),
-                              ),
-                            ),
-                            verticalSpace(12),
-
-                            // سعة الديّنا
-                            SecondaryTextFormField(
-                              controller: _capacityCtrl,
-                              label: 'سعة الديّنا',
-                              hint: 'مثال: 5',
-                              isNumber: true,
-                              minHeight: 56, maxheight: 56,
-                              validator: _validateCapacity,
-                            ),
-                          ],
+          child: Padding(
+            padding: EdgeInsets.all(16.w),
+            child: Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        SecondaryTextFormField(
+                          controller: _fromCityCtrl,
+                          label: 'مدينة الانطلاق',
+                          hint: 'اختر مدينة الانطلاق',
+                          onTap: () => _pickCity(isFrom: true),
+                          minHeight: 56, maxheight: 56,
                         ),
-                      ),
+                        verticalSpace(12),
+                        SecondaryTextFormField(
+                          controller: _toCityCtrl,
+                          label: 'مدينة الوصول',
+                          hint: 'اختر مدينة الوصول',
+                          onTap: () => _pickCity(isFrom: false),
+                          minHeight: 56, maxheight: 56,
+                        ),
+                        verticalSpace(12),
+                        SecondaryTextFormField(
+                          controller: _routeStartCtrl,
+                          label: 'نقطة البداية',
+                          hint: '...مثال: جدة - حي الصفا',
+                          minHeight: 56, maxheight: 56,
+                        ),
+                        verticalSpace(12),
+                        SecondaryTextFormField(
+                          controller: _routeEndCtrl,
+                          label: 'نقطة النهاية',
+                          hint: '...مثال: مكة - حي الزاهر',
+                          minHeight: 56, maxheight: 56,
+                        ),
+                        verticalSpace(12),
+                        SecondaryTextFormField(
+                          controller: _departCtrl,
+                          label: 'وقت الانطلاق',
+                          hint: 'حدد وقت الانطلاق',
+                          onTap: () => _pickDateTime(isDeparture: true),
+                          minHeight: 56, maxheight: 56,
+
+
+                        ),
+                        verticalSpace(12),
+                        SecondaryTextFormField(
+                          controller: _arriveCtrl,
+                          label: 'وقت الوصول المتوقع',
+                          hint: 'حدد وقت الوصول المتوقع',
+                          minHeight: 56, maxheight: 56,
+                          onTap: () => _pickDateTime(isDeparture: false),
+                        ),
+                        verticalSpace(16),
+                        SecondaryTextFormField(
+                          controller: _capacityCtrl,
+                          label: 'سعة الدينا',
+                          hint: 'مثال: 5',
+                          minHeight: 56, maxheight: 56,
+                        ),
+                        verticalSpace(24),
+                      ],
                     ),
                   ),
-
-                  BlocBuilder<DynaTripCreateCubit, DynaTripCreateState>(
-                    builder: (context, state) {
-                      return PrimaryButton(
-                        text: state.submitting ? 'جاري الإنشاء...' : 'إنشاء رحلة',
-                        isDisabled: state.submitting,
-                        isLoading: state.submitting,
-                        onPressed: _onSubmit,
-                      );
-                    },
-                  ),
-                ],
-              ),
+                ),
+                BlocBuilder<DynaTripCreateCubit, DynaTripCreateState>(
+                  builder: (context, state) {
+                    return PrimaryButton(
+                      text: state.submitting
+                          ? (isEdit ? 'جاري الحفظ...' : 'جاري الإنشاء...')
+                          : (isEdit ? 'حفظ التعديلات' : 'إنشاء الرحلة'),
+                      isDisabled: state.submitting,
+                      isLoading: state.submitting,
+                      onPressed: () => _onSubmit(context),
+                    );
+                  },
+                ),
+              ],
             ),
           ),
         ),

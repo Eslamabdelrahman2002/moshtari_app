@@ -62,7 +62,7 @@ class _OtherAdDetailsScreenState extends State<OtherAdDetailsScreen> {
     return '';
   }
 
-  void _startChat(BuildContext context, int receiverId, String receiverName) {
+  void _startChat(BuildContext context, int receiverId, String receiverName,) {
     showChatInitiationSheet(
       context,
       receiverName: receiverName,
@@ -155,102 +155,107 @@ class _OtherAdDetailsScreenState extends State<OtherAdDetailsScreen> {
                   }
                 } catch (_) {}
 
-                return SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(children: [
-                    const ProductScreenAppBar(),
-                    OtherAdDetailsImages(
-                      images: images,
-                      adId: widget.id,
-                      favoriteType: 'ad',
-                      status: status,
-                    ),
-                    BlocBuilder<UserAdsCubit, UserAdsState>(
-                      builder: (context, adsState) {
-                        List<HomeAdModel> ownerHomeAds = [];
-                        if (adsState is UserAdsSuccess) {
-                          final List<PublisherProductModel> publisherProducts = adsState.ads.map((a) => a.toPublisherProduct()).toList();
-                          ownerHomeAds = publisherProducts
-                              .map((p) => HomeAdModel.fromJson({
-                            "id": p.id,
-                            "title": p.title,
-                            "price": p.priceText ?? '',
-                            "name_ar": p.categoryLabel,
-                            "created_at": p.createdAt ?? DateTime.now().toIso8601String(),
-                            "username": "",
-                            "image_urls": p.imageUrl != null ? [p.imageUrl] : <String>[],
-                            "condition": "",
-                          }))
-                              .toList();
-                        }
-                        return StoryAndTitleWidget(
-                          title: ad.title,
-                          similarAds: ownerHomeAds,
-                        );
-                      },
-                    ),
-                    CarDetailsPanel(
-                      city: ad.cityName,
-                      region: ad.regionName,
-                      createdAt: ad.postedAt,
-                    ),
-                    SizedBox(height: 16.h),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w),
-                      child: CarPartPrice(priceText: ad.price),
-                    ),
-                    const MyDivider(),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: CurrentUserInfo(
-                        ownerName: ownerName.isEmpty ? '—' : ownerName,
-                        ownerPicture: ownerPicture,
-                        isVerified: isVerified,
-                        rating: rating,
-                        reviewsCount: reviewsCount,
-                        onTap: () {
-                          final ownerId = ad.userId;
-                          if (ownerId != null) {
-                            NavX(context).pushNamed(Routes.userProfileScreenId, arguments: ownerId);
-                          }
-                        },
-                        onFollow: () {},
-                      ),
-                    ),
-                    const MyDivider(),
-                    InfoDescription(description: ad.description.isNotEmpty ? ad.description : 'لا يوجد'),
-                    const MyDivider(),
-                    const Reminder(),
-                    const MyDivider(),
-                    OtherAdCommentsView(comments: ad.comments,offers: ad.offers,),
-                    verticalSpace(12),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: OtherAdAddCommentField(
+                return RefreshIndicator.adaptive(
+                  onRefresh: ()async{
+                    await context.read<OtherAdDetailsCubit>().fetchOtherAdDetails(widget.id);
+                  },
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(children: [
+                      const ProductScreenAppBar(),
+                      OtherAdDetailsImages(
+                        images: images,
                         adId: widget.id,
-                        onSuccessRefresh: () {
-                          context.read<OtherAdDetailsCubit>().fetchOtherAdDetails(widget.id);
+                        favoriteType: 'ad',
+                        status: status,
+                      ),
+                      BlocBuilder<UserAdsCubit, UserAdsState>(
+                        builder: (context, adsState) {
+                          List<HomeAdModel> ownerHomeAds = [];
+                          if (adsState is UserAdsSuccess) {
+                            final List<PublisherProductModel> publisherProducts = adsState.ads.map((a) => a.toPublisherProduct()).toList();
+                            ownerHomeAds = publisherProducts
+                                .map((p) => HomeAdModel.fromJson({
+                              "id": p.id,
+                              "title": p.title,
+                              "price": p.priceText ?? '',
+                              "name_ar": p.categoryLabel,
+                              "created_at": p.createdAt ?? DateTime.now().toIso8601String(),
+                              "username": "",
+                              "image_urls": p.imageUrl != null ? [p.imageUrl] : <String>[],
+                              "condition": "",
+                            }))
+                                .toList();
+                          }
+                          return StoryAndTitleWidget(
+                            title: ad.title,
+                            similarAds: ownerHomeAds,
+                          );
                         },
                       ),
-                    ),
-                    const MyDivider(),
-                    PromoButton(onPressed: () async {
-                      final myId = context.read<ProfileCubit>().user?.userId;
-                      final isOwner = (myId != null && ad.userId == myId);
-                      if (isOwner) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('لا يمكنك طلب تسويق لإعلانك.')),
-                        );
-                        return;
-                      }
-                      await showMarketingRequestSheet(context, adId: widget.id);
-                    }),
-                    if (similarHomeAds.isNotEmpty)
-                      ...[
-                        SimilarAds(similarAds: similarHomeAds),
-                        const MyDivider(),
-                      ],
-                  ]),
+                      CarDetailsPanel(
+                        city: ad.cityName,
+                        region: ad.regionName,
+                        createdAt: ad.postedAt,
+                      ),
+                      SizedBox(height: 16.h),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16.w),
+                        child: CarPartPrice(priceText: ad.price),
+                      ),
+                      const MyDivider(),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: CurrentUserInfo(
+                          ownerName: ownerName.isEmpty ? '—' : ownerName,
+                          ownerPicture: ownerPicture,
+                          isVerified: isVerified,
+                          rating: rating,
+                          reviewsCount: reviewsCount,
+                          onTap: () {
+                            final ownerId = ad.userId;
+                            if (ownerId != null) {
+                              NavX(context).pushNamed(Routes.userProfileScreenId, arguments: ownerId);
+                            }
+                          },
+                          onFollow: () {},
+                        ),
+                      ),
+                      const MyDivider(),
+                      InfoDescription(description: ad.description.isNotEmpty ? ad.description : 'لا يوجد'),
+                      const MyDivider(),
+                      const Reminder(),
+                      const MyDivider(),
+                      OtherAdCommentsView(comments: ad.comments,offers: ad.offers,),
+                      verticalSpace(12),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: OtherAdAddCommentField(
+                          adId: widget.id,
+                          onSuccessRefresh: () {
+                            context.read<OtherAdDetailsCubit>().fetchOtherAdDetails(widget.id);
+                          },
+                        ),
+                      ),
+                      const MyDivider(),
+                      PromoButton(onPressed: () async {
+                        final myId = context.read<ProfileCubit>().user?.userId;
+                        final isOwner = (myId != null && ad.userId == myId);
+                        if (isOwner) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('لا يمكنك طلب تسويق لإعلانك.')),
+                          );
+                          return;
+                        }
+                        await showMarketingRequestSheet(context, adId: widget.id);
+                      }),
+                      if (similarHomeAds.isNotEmpty)
+                        ...[
+                          SimilarAds(similarAds: similarHomeAds),
+                          const MyDivider(),
+                        ],
+                    ]),
+                  ),
                 );
               }
               return const SizedBox();

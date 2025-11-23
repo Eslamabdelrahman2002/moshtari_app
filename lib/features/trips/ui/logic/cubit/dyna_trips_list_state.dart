@@ -11,6 +11,7 @@ class DynaTripsListState extends Equatable {
   final int page;
   final int pageSize;
   final int totalPages;
+  final int? actingId;
 
   final City? fromCity;
   final City? toCity;
@@ -25,6 +26,7 @@ class DynaTripsListState extends Equatable {
     this.totalPages = 1,
     this.fromCity,
     this.toCity,
+    this.actingId,
   });
 
   bool get hasMore => page < totalPages;
@@ -39,6 +41,7 @@ class DynaTripsListState extends Equatable {
     int? totalPages,
     City? fromCity,
     City? toCity,
+    int? actingId,
     bool clearError = false,
   }) {
     return DynaTripsListState(
@@ -51,6 +54,7 @@ class DynaTripsListState extends Equatable {
       totalPages: totalPages ?? this.totalPages,
       fromCity: fromCity ?? this.fromCity,
       toCity: toCity ?? this.toCity,
+      actingId: actingId,
     );
   }
 

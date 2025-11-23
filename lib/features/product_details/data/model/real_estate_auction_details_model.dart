@@ -4,22 +4,29 @@ class RealEstateAuctionDetailsModel {
   final String description;
   final String? thumbnail;
 
-  final String startPrice;      // e.g. "938"
+  final String startPrice;
   final String? hiddenLimit;
   final bool autoApprove;
-  final String bidStep;         // e.g. "88"
+  final String bidStep;
   final DateTime startTime;
   final DateTime endTime;
   final DateTime createdAt;
-  final String type;            // single | multiple
+  final String type;
   final bool isAutoApproval;
-  final String minBidValue;     // e.g. "99"
+  final String minBidValue;
+
   final String ownerName;
   final String? ownerPicture;
-  final num? maxBid;            // e.g. "522.00" -> 522.0
+  final num? maxBid;
+
+  // ✅ جديد: نحتفظ بمعرّف الناشر القادم من API (user_id/owner_id)
+  final int? ownerId;
 
   // ✅ خليتها nullable
   final RealEstateAuctionItem? activeItem;
+
+  // ✅ إضافة قائمة بجميع العناصر في المزاد المتعدد
+  final List<RealEstateAuctionItem> items;
 
   RealEstateAuctionDetailsModel({
     required this.id,
@@ -40,11 +47,15 @@ class RealEstateAuctionDetailsModel {
     required this.ownerPicture,
     required this.maxBid,
     required this.activeItem,
+    required this.items, // ✅
+    this.ownerId,
   });
 
   factory RealEstateAuctionDetailsModel.fromJson(dynamic json) {
     final root = (json as Map).cast<String, dynamic>();
-    final data = (root['data'] as Map).cast<String, dynamic>();
+    // يدعم الردين: { data: {...} } أو {...} مباشرة
+    final Map<String, dynamic> data =
+    (root['data'] is Map) ? (root['data'] as Map).cast<String, dynamic>() : root;
 
     num? _toNum(dynamic v) {
       if (v == null) return null;
@@ -52,11 +63,24 @@ class RealEstateAuctionDetailsModel {
       return num.tryParse(v.toString());
     }
 
+    int? _toInt(dynamic v) {
+      if (v == null) return null;
+      if (v is int) return v;
+      if (v is num) return v.toInt();
+      return int.tryParse(v.toString());
+    }
+
     RealEstateAuctionItem? _parseActiveItem(dynamic v) {
       if (v is Map) {
         return RealEstateAuctionItem.fromJson(v.cast<String, dynamic>());
       }
       return null;
+    }
+
+    // دالة مساعدة لتحليل التاريخ
+    DateTime _parseDate(dynamic v) {
+      if (v == null) return DateTime.now();
+      return DateTime.tryParse(v.toString()) ?? DateTime.now();
     }
 
     return RealEstateAuctionDetailsModel(
@@ -68,16 +92,25 @@ class RealEstateAuctionDetailsModel {
       hiddenLimit: data['hidden_limit']?.toString(),
       autoApprove: data['auto_approve'] == true,
       bidStep: data['bid_step']?.toString() ?? '0',
-      startTime: DateTime.tryParse(data['start_time']?.toString() ?? '') ?? DateTime.now(),
-      endTime: DateTime.tryParse(data['end_time']?.toString() ?? '') ?? DateTime.now(),
-      createdAt: DateTime.tryParse(data['created_at']?.toString() ?? '') ?? DateTime.now(),
+      // التعامل مع start_time/start_date
+      startTime: _parseDate(data['start_time'] ?? data['start_date']),
+      // التعامل مع end_time/end_date
+      endTime: _parseDate(data['end_time'] ?? data['end_date']),
+      createdAt: _parseDate(data['created_at']),
       type: data['type']?.toString() ?? '',
       isAutoApproval: data['is_auto_approval'] == true,
       minBidValue: data['min_bid_value']?.toString() ?? '0',
       ownerName: data['owner_name']?.toString() ?? '',
       ownerPicture: data['owner_picture']?.toString(),
       maxBid: _toNum(data['max_bid']),
-      activeItem: _parseActiveItem(data['active_item']), // ✅ آمن على null
+      activeItem: _parseActiveItem(data['active_item']),
+      // ✅ هنا نقرأ الـ user_id (أو owner_id لو موجود)
+      ownerId: _toInt(data['user_id']) ?? _toInt(data['owner_id']),
+      // ✅ تحليل قائمة العناصر الجديدة
+      items: (data['items'] as List?)
+          ?.map((e) => RealEstateAuctionItem.fromJson((e as Map).cast<String, dynamic>()))
+          .toList() ??
+          const [],
     );
   }
 }
@@ -141,6 +174,12 @@ class RealEstateAuctionItem {
   });
 
   factory RealEstateAuctionItem.fromJson(Map<String, dynamic> json) {
+    // دالة مساعدة لتحليل التاريخ
+    DateTime _parseDate(dynamic v) {
+      if (v == null) return DateTime.now();
+      return DateTime.tryParse(v.toString()) ?? DateTime.now();
+    }
+
     return RealEstateAuctionItem(
       id: (json['id'] as num?)?.toInt() ?? 0,
       auctionId: (json['auction_id'] as num?)?.toInt() ?? 0,
@@ -160,8 +199,8 @@ class RealEstateAuctionItem {
       isFurnished: json['is_furnished'] == true,
       description: json['description']?.toString(),
       licenseNumber: json['license_number']?.toString(),
-      startDate: DateTime.tryParse(json['start_date']?.toString() ?? '') ?? DateTime.now(),
-      endDate: DateTime.tryParse(json['end_date']?.toString() ?? '') ?? DateTime.now(),
+      startDate: _parseDate(json['start_date']?.toString()),
+      endDate: _parseDate(json['end_date']?.toString()),
       title: json['title']?.toString() ?? '',
       pdfFiles: (json['pdf_files'] as List? ?? const []).map((e) => e.toString()).toList(),
       images: (json['images'] as List? ?? const []).map((e) => e.toString()).toList(),

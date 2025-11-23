@@ -1,10 +1,14 @@
 // lib/features/service_profile/ui/screens/service_provider_dashboard_screen.dart
 
 import 'package:equatable/equatable.dart';
+import 'package:mushtary/features/service_profile/data/model/received_offer.dart';
 import '../../../data/model/service_provider_models.dart';
 import '../../../data/model/service_request_models.dart';
 
 class ProviderState extends Equatable {
+  final List<ReceivedOffer> receivedOffers;
+  final bool receivedOffersLoading;
+  final String? receivedOffersError;
   final bool loading;
   final String? error;
   final ServiceProviderModel? provider;
@@ -26,7 +30,11 @@ class ProviderState extends Equatable {
     this.requests = const [],
     this.isUpdating = false, // 🟢 RENAMED (كانت updating)
     this.updateSuccess = false,
-    this.actingRequestId, // 🟢 NEW
+    this.actingRequestId,
+    this.receivedOffers = const [],
+    this.receivedOffersLoading = false,
+    this.receivedOffersError,
+    // 🟢 NEW
   });
 
   ProviderState copyWith({
@@ -36,7 +44,10 @@ class ProviderState extends Equatable {
     bool? requestsLoading,
     String? requestsError,
     List<ServiceRequest>? requests,
-
+    List<ReceivedOffer>? receivedOffers,
+    bool? receivedOffersLoading,
+    String? receivedOffersError,
+    bool clearReceivedOffersError = false,
     // 🟢 NEW/RENAMED in copyWith:
     bool? isUpdating,
     bool? updateSuccess,
@@ -46,6 +57,11 @@ class ProviderState extends Equatable {
     bool clearRequestsError = false,
   }) {
     return ProviderState(
+      receivedOffers: receivedOffers ?? this.receivedOffers,
+      receivedOffersLoading: receivedOffersLoading ?? this.receivedOffersLoading,
+      receivedOffersError: clearReceivedOffersError
+          ? null
+          : (receivedOffersError ?? this.receivedOffersError),
       loading: loading ?? this.loading,
       error: clearError ? null : (error ?? this.error),
       provider: provider ?? this.provider,

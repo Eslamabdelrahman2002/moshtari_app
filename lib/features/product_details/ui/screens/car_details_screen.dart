@@ -123,122 +123,127 @@ class CarDetailsScreen extends StatelessWidget {
                   final car = state.details;
                   final List<SimilarCarAdModel> similar = car.similarAds ?? [];
 
-                  return SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.only(bottom: 72.h),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const CarDetailsAppBar(),
-                        CarDetailsImages( images: car.imageUrls,
+                  return RefreshIndicator.adaptive(
+                        onRefresh: ()async{
+                          await context.read<CarDetailsCubit>().fetchCarDetails(id);
+                        },
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.only(bottom: 72.h),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const CarDetailsAppBar(),
+                          CarDetailsImages( images: car.imageUrls,
 
-                          adId: id,
-                          favoriteType: 'ad', // مثل العقار
-                        ),
-
-                        // 👈 عرض إعلانات الـ owner فقط في الـ story (تجاهل المزادات)
-                        BlocBuilder<UserAdsCubit, UserAdsState>(
-                          builder: (context, adsState) {
-                            List<PublisherProductModel> storyItems = [];
-                            if (adsState is UserAdsSuccess) {
-                              storyItems = adsState.ads.map((ad) => ad.toPublisherProduct()).toList();
-                            }
-                            // 👈 تجاهل المزادات تمامًا هنا
-                            return CarStoryAndTitle(
-                              title: car.title ?? '',
-                              similarAds: storyItems, // 👈 إعلانات الـ owner فقط
-                              onOpenDetails: (product) {
-                                // 👈 تنقل ذكي بناءً على نوع المنتج (للإعلانات فقط)
-                                if (product.categoryId == 1 || product.categoryId == 5) { // سيارة
-                                  Navigator.of(context).pushNamed(
-                                    Routes.carDetailsScreen,
-                                    arguments: product.id,
-                                  );
-                                }
-
-                              },
-                            );
-                          },
-                        ),
-
-                        CarDetailsPanel(
-                          city: car.city,
-                          region: car.region,
-                          createdAt: DateTime.tryParse(car.createdAt) ?? DateTime.now(),
-                        ),
-                        verticalSpace(16),
-                        Center(child: CarPrice(price: double.tryParse(car.price ?? '0'))),
-                        const MyDivider(),
-                        Center(
-                          child: CarInfoGridView(
-                            transmission: car.transmissionType,
-                            mileage: car.mileage,
-                            cylinder: car.cylinderCount,
-                            driveType: car.driveType,
-                            horsepower: car.horsepower,
-                            fuelType: car.fuelType,
-                            vehicleType: car.vehicleType,
-                          ),
-                        ),
-                        CarInfoDescription(
-                          description: car.description.isEmpty ? 'لا يوجد' : car.description,
-                        ),
-                        verticalSpace(16),
-                        CarOwnerInfo(
-                          username: car.username.isEmpty ? 'مستخدم' : car.username,
-                          phone: car.userPhoneNumber,
-                          onTap: () {
-                            final ownerId = car.userId;
-                            if (ownerId != null) {
-                              NavX(context).pushNamed( // ✅ استخدام NavX
-                                Routes.userProfileScreenId,
-                                arguments: ownerId,
-                              );
-                            }
-                          },
-                        ),
-                        const MyDivider(),
-                        CarCommentsView(comments: car.comments, offers:car.offers,),
-                        verticalSpace(12),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16.w),
-                          child: CarAddCommentField(
                             adId: id,
-                            onSuccessRefresh: () {
-                              context.read<CarDetailsCubit>().fetchCarDetails(id);
-                            },
+                            favoriteType: 'ad', // مثل العقار
                           ),
-                        ),
-                        const MyDivider(),
 
-                        // سوق للإعلان (Marketing)
-                        Center(
-                          child: PromoButton(
-                            onPressed: () async {
-                              final myId = context.read<ProfileCubit>().user?.userId;
-                              final isOwner = (myId != null && car.userId != null && myId == car.userId);
-                              if (isOwner) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('لا يمكنك طلب تسويق لإعلانك.')),
-                                );
-                                return;
+                          // 👈 عرض إعلانات الـ owner فقط في الـ story (تجاهل المزادات)
+                          BlocBuilder<UserAdsCubit, UserAdsState>(
+                            builder: (context, adsState) {
+                              List<PublisherProductModel> storyItems = [];
+                              if (adsState is UserAdsSuccess) {
+                                storyItems = adsState.ads.map((ad) => ad.toPublisherProduct()).toList();
                               }
-                              await showMarketingRequestSheet(context, adId: id);
+                              // 👈 تجاهل المزادات تمامًا هنا
+                              return CarStoryAndTitle(
+                                title: car.title ?? '',
+                                similarAds: storyItems, // 👈 إعلانات الـ owner فقط
+                                onOpenDetails: (product) {
+                                  // 👈 تنقل ذكي بناءً على نوع المنتج (للإعلانات فقط)
+                                  if (product.categoryId == 1 || product.categoryId == 5) { // سيارة
+                                    Navigator.of(context).pushNamed(
+                                      Routes.carDetailsScreen,
+                                      arguments: product.id,
+                                    );
+                                  }
+
+                                },
+                              );
                             },
                           ),
-                        ),
 
-                        // 👈 عرض similarAds كما هو (أسفل الشاشة)
-                        if (similar.isNotEmpty) ...[
-                          CarSimilarAds(
-                            similarAds: similar, // 👈 كما هو
-                            onTapAd: (ad) {
-                              NavX(context).pushNamed(Routes.carDetailsScreen, arguments: ad.id);
+                          CarDetailsPanel(
+                            city: car.city,
+                            region: car.region,
+                            createdAt: DateTime.tryParse(car.createdAt) ?? DateTime.now(),
+                          ),
+                          verticalSpace(16),
+                          Center(child: CarPrice(price: double.tryParse(car.price ?? '0'))),
+                          const MyDivider(),
+                          Center(
+                            child: CarInfoGridView(
+                              transmission: car.transmissionType,
+                              mileage: car.mileage,
+                              cylinder: car.cylinderCount,
+                              driveType: car.driveType,
+                              horsepower: car.horsepower,
+                              fuelType: car.fuelType,
+                              vehicleType: car.vehicleType,
+                            ),
+                          ),
+                          CarInfoDescription(
+                            description: car.description.isEmpty ? 'لا يوجد' : car.description,
+                          ),
+                          verticalSpace(16),
+                          CarOwnerInfo(
+                            username: car.username.isEmpty ? 'مستخدم' : car.username,
+                            phone: car.userPhoneNumber,
+                            onTap: () {
+                              final ownerId = car.userId;
+                              if (ownerId != null) {
+                                NavX(context).pushNamed( // ✅ استخدام NavX
+                                  Routes.userProfileScreenId,
+                                  arguments: ownerId,
+                                );
+                              }
                             },
                           ),
                           const MyDivider(),
+                          CarCommentsView(comments: car.comments, offers:car.offers,),
+                          verticalSpace(12),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16.w),
+                            child: CarAddCommentField(
+                              adId: id,
+                              onSuccessRefresh: () {
+                                context.read<CarDetailsCubit>().fetchCarDetails(id);
+                              },
+                            ),
+                          ),
+                          const MyDivider(),
+
+                          // سوق للإعلان (Marketing)
+                          Center(
+                            child: PromoButton(
+                              onPressed: () async {
+                                final myId = context.read<ProfileCubit>().user?.userId;
+                                final isOwner = (myId != null && car.userId != null && myId == car.userId);
+                                if (isOwner) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('لا يمكنك طلب تسويق لإعلانك.')),
+                                  );
+                                  return;
+                                }
+                                await showMarketingRequestSheet(context, adId: id);
+                              },
+                            ),
+                          ),
+
+                          // 👈 عرض similarAds كما هو (أسفل الشاشة)
+                          if (similar.isNotEmpty) ...[
+                            CarSimilarAds(
+                              similarAds: similar, // 👈 كما هو
+                              onTapAd: (ad) {
+                                NavX(context).pushNamed(Routes.carDetailsScreen, arguments: ad.id);
+                              },
+                            ),
+                            const MyDivider(),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   );
                 }

@@ -17,7 +17,7 @@ class Routes {
   // Home
   static const String homeScreen = '/homeScreen';
   static const String reelsScreen = '/reelsScreen';
-
+  static const String myRequest = '/myRequest';
   // User/Profile
   static const String userProfileScreen = '/userProfileScreen';
   static const String userProfileScreenId = '/userProfileScreenId';

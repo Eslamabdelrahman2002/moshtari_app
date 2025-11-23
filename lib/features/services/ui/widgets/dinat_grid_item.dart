@@ -1,29 +1,27 @@
 // lib/features/services/ui/widgets/dinat_grid_item.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/utils/helpers/spacing.dart';
 import 'package:mushtary/core/widgets/primary/my_svg.dart';
 import 'package:mushtary/core/widgets/primary/primary_button.dart';
-import 'package:mushtary/core/dependency_injection/injection_container.dart';
 
-// لو اسم الملف عندك dinat_trip.dart غيّر الاستيراد بما يوافق اسم الملف
-
-import '../../data/model/dinat_trip.dart';
-import '../../logic/cubit/service_offer_cubit.dart';
-import '../../logic/cubit/service_offer_state.dart';
-import 'dinat_trip_details_dialog.dart';
+import '../../data/model/dinat_trip.dart'; // DynaTrip
+import 'dinat_trip_details_dialog.dart';   // DinatTripDetailsDialog.show(context, trip: ...)
 
 class DinatGridItem extends StatelessWidget {
   final DynaTrip trip;
-  final VoidCallback? onRequestTap;
+
+  // اختياري لو تحب تمرر أكشن مخصص عند الانضمام/المحادثة
+  final VoidCallback? onJoin;
+  final VoidCallback? onChat;
 
   const DinatGridItem({
     super.key,
     required this.trip,
-    this.onRequestTap,
+    this.onJoin,
+    this.onChat,
   });
 
   String _fmtDate(DateTime dt) =>
@@ -32,199 +30,12 @@ class DinatGridItem extends StatelessWidget {
   String _fmtTime(DateTime dt) =>
       '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
 
-  void _showDetails(BuildContext context) {
-    final details = DinatTripDetails(
-      title: 'رحلة دينا - من ${trip.fromCityNameAr} إلى ${trip.toCityNameAr}',
-      pickUpAddress: trip.fromCityNameAr,
-      dropOffAddress: trip.toCityNameAr,
-      mapImage: 'assets/images/map_image.png',
-    );
-    showDialog(context: context, builder: (ctx) => DinatTripDetailsDialog(details: details));
-  }
-
-  // فتح شيت إرسال عرض
-  void _showSendOfferSheet(BuildContext context) {
-    final priceCtrl = TextEditingController();
-    final msgCtrl = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-      ),
-      builder: (ctx) {
-        final bottom = MediaQuery.of(ctx).viewInsets.bottom;
-        return BlocProvider<ServiceOfferCubit>(
-          create: (_) => getIt<ServiceOfferCubit>(),
-          child: BlocConsumer<ServiceOfferCubit, ServiceOfferState>(
-            listenWhen: (p, c) => c is ServiceOfferSuccess || c is ServiceOfferFailure,
-            listener: (ctx, state) {
-              if (state is ServiceOfferSuccess) {
-                Navigator.pop(ctx); // اغلق الشيت
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
-              } else if (state is ServiceOfferFailure) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.error)));
-              }
-            },
-            builder: (ctx, state) {
-              final submitting = state is ServiceOfferSubmitting;
-              return Padding(
-                padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 16.h + bottom),
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(width: 40.w, height: 4.h,
-                        decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(100)),
-                      ),
-                      verticalSpace(12),
-                      Row(
-                        children: [
-                          Container(
-                            width: 40.w, height: 40.w,
-                            decoration: BoxDecoration(color: ColorsManager.primary50, borderRadius: BorderRadius.circular(12)),
-                            child: const Icon(Icons.local_shipping_outlined, color: ColorsManager.primary400),
-                          ),
-                          horizontalSpace(10),
-                          Expanded(child: Text('إرسال عرض لخدمة النقل', style: TextStyles.font18Black500Weight)),
-                        ],
-                      ),
-                      verticalSpace(12),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Text('السعر (ريال)', style: TextStyles.font14Dark500Weight),
-                      ),
-                      verticalSpace(6),
-                      TextFormField(
-                        controller: priceCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          hintText: 'اكتب السعر المقترح',
-                          prefixIcon: const Icon(Icons.payments_outlined),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        validator: (v) {
-                          final s = (v ?? '').trim();
-                          if (s.isEmpty) return 'أدخل السعر';
-                          final num? n = num.tryParse(s.replaceAll(RegExp(r'[^0-9.]'), ''));
-                          if (n == null || n <= 0) return 'أدخل سعرًا صحيحًا';
-                          return null;
-                        },
-                      ),
-                      verticalSpace(12),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Text('ملاحظة (اختياري)', style: TextStyles.font14Dark500Weight),
-                      ),
-                      verticalSpace(6),
-                      TextFormField(
-                        controller: msgCtrl,
-                        maxLines: 3,
-                        decoration: InputDecoration(
-                          hintText: 'رسالة للمستخدم (اختياري)',
-                          prefixIcon: const Icon(Icons.message_outlined),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                      verticalSpace(16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: submitting ? null : () => Navigator.pop(ctx),
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(color: Colors.grey[300]!),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              child: Text('إلغاء', style: TextStyles.font14Black500Weight),
-                            ),
-                          ),
-                          horizontalSpace(12),
-                          Expanded(
-                            child:GestureDetector(
-                              onTap: submitting
-                                  ? null
-                                  : () {
-                                if (!formKey.currentState!.validate()) return;
-                                final num price = num.tryParse(
-                                  priceCtrl.text.replaceAll(RegExp(r'[^0-9.]'), ''),
-                                ) ??
-                                    0;
-                                ctx.read<ServiceOfferCubit>().send(
-                                  requestId: trip.id,
-                                  price: price,
-                                  message: msgCtrl.text.trim().isEmpty ? null : msgCtrl.text.trim(),
-                                );
-                              },
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 250),
-                                height: 46.h,
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                  color: submitting
-                                      ? ColorsManager.primaryColor.withOpacity(0.6)
-                                      : ColorsManager.primaryColor,
-                                  borderRadius: BorderRadius.circular(12.r),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 3),
-                                    ),
-                                  ],
-                                ),
-                                child: Center(
-                                  child: AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 250),
-                                    child: submitting
-                                        ? SizedBox(
-                                      key: const ValueKey('loading'),
-                                      width: 18.w,
-                                      height: 18.w,
-                                      child: const CircularProgressIndicator.adaptive(
-                                        strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation(Colors.white),
-                                      ),
-                                    )
-                                        : Row(
-                                      key: const ValueKey('content'),
-                                      mainAxisSize: MainAxisSize.min,
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          'إرسال',
-                                          style: TextStyles.font14White500Weight,
-                                        ),
-
-                                        horizontalSpace(8),
-                                        const Icon(
-                                          Icons.send_rounded,
-                                          size: 22,
-                                          color: Colors.white,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        );
-      },
+  void _openDetails(BuildContext context) {
+    DinatTripDetailsDialog.show(
+      context,
+      trip: trip,
+      onJoin: onJoin,
+      onChat: onChat,
     );
   }
 
@@ -272,7 +83,10 @@ class DinatGridItem extends StatelessWidget {
                       style: TextStyles.font14Black500Weight,
                       children: [
                         TextSpan(text: trip.fromCityNameAr),
-                        TextSpan(text: ' ---> ', style: TextStyles.font14Black500Weight.copyWith(color: ColorsManager.primaryColor)),
+                        TextSpan(
+                          text: ' ---> ',
+                          style: TextStyles.font14Black500Weight.copyWith(color: ColorsManager.primaryColor),
+                        ),
                         TextSpan(text: trip.toCityNameAr),
                       ],
                     ),
@@ -299,7 +113,14 @@ class DinatGridItem extends StatelessWidget {
                     children: [
                       MySvg(image: 'calendar', width: 16.w, height: 16.h),
                       horizontalSpace(4),
-                      Expanded(child: Text(dateLabel, style: TextStyles.font12Black500Weight, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                      Expanded(
+                        child: Text(
+                          dateLabel,
+                          style: TextStyles.font12Black500Weight,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -309,7 +130,14 @@ class DinatGridItem extends StatelessWidget {
                     children: [
                       MySvg(image: 'clock', width: 16.w, height: 16.h),
                       horizontalSpace(4),
-                      Expanded(child: Text(timeLabel, style: TextStyles.font12Black500Weight, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                      Expanded(
+                        child: Text(
+                          timeLabel,
+                          style: TextStyles.font12Black500Weight,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -325,7 +153,14 @@ class DinatGridItem extends StatelessWidget {
                       : const AssetImage('assets/images/prof.png') as ImageProvider,
                 ),
                 horizontalSpace(6),
-                Expanded(child: Text(trip.providerName, style: TextStyles.font12Black500Weight, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                Expanded(
+                  child: Text(
+                    trip.providerName,
+                    style: TextStyles.font12Black500Weight,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
                 horizontalSpace(4),
                 MySvg(image: 'judge', width: 16.w, height: 16.h),
               ],
@@ -336,8 +171,7 @@ class DinatGridItem extends StatelessWidget {
               backgroundColor: ColorsManager.primary500,
               textColor: Colors.white,
               text: 'طلب خدمة',
-              // إن أردت سلوكًا مخصصًا، مرّر onRequestTap من الاستدعاء
-              onPressed: onRequestTap ?? () => _showSendOfferSheet(context),
+              onPressed: () => _openDetails(context), // يفتح الديالوج الجديد
             ),
           ],
         ),

@@ -1,12 +1,12 @@
 import 'dart:convert';
 
-// 🟢 الدوال المساعدة يجب أن تكون خارج الكلاس
+// Helpers
 int _asInt(v) => v is int ? v : int.tryParse('$v') ?? 0;
 bool _asBool(v) => v == true || v?.toString().toLowerCase() == 'true';
 
 class ReceivedOffer {
   final int offerId;
-  final String price;           // نص كما بالـ API
+  final String price;           // as string per API
   final String status;          // pending | accepted | rejected
   final DateTime? createdAt;
   final String serviceType;     // dyna | flatbed | tanker
@@ -14,7 +14,7 @@ class ReceivedOffer {
   final int providerId;
   final String fullName;
   final String? personalImage;
-  final bool isVerified; // 🟢 NEW: Added to support UI check
+  final bool isVerified;
 
   ReceivedOffer({
     required this.offerId,
@@ -39,7 +39,7 @@ class ReceivedOffer {
     providerId: _asInt(j['provider_id']),
     fullName: (j['full_name'] ?? '').toString(),
     personalImage: (j['personal_image'] ?? '').toString().isEmpty ? null : (j['personal_image'] as String),
-    isVerified: _asBool(j['is_verified'] ?? j['verified'] ?? false), // استخدام الدالة المساعدة
+    isVerified: _asBool(j['is_verified'] ?? j['verified'] ?? false),
   );
 }
 

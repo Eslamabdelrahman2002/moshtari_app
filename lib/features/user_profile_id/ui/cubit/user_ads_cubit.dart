@@ -21,18 +21,22 @@ class UserAdsFailure extends UserAdsState {
 
 // Cubit
 class UserAdsCubit extends Cubit<UserAdsState> {
-  final PublisherRepo _repo; // 🔄 Changed type to PublisherRepo
-
+  final PublisherRepo _repo;
   UserAdsCubit(this._repo) : super(UserAdsInitial());
 
   Future<void> fetchUserAds(int userId) async {
     emit(UserAdsLoading());
     try {
-      // 🔄 Changed method call to use PublisherRepo's method
       final ads = await _repo.getPublisherAds(userId);
       emit(UserAdsSuccess(ads));
     } on AppException catch (e) {
-      emit(UserAdsFailure(e.message));
+      final msg = e.message;
+      // لو الرسالة بتدل إنه مفيش بيانات، اعتبرها قائمة فاضية
+      if ((e is AppException && (e.statusCode == 404)) || (msg.contains('لا يوجد'))) {
+        emit(UserAdsSuccess(const []));
+      } else {
+        emit(UserAdsFailure(msg));
+      }
     } catch (e) {
       emit(UserAdsFailure('حدث خطأ في جلب الإعلانات: ${e.toString()}'));
     }

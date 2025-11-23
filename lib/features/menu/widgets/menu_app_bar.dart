@@ -26,9 +26,7 @@ class MenuScreenAppBar extends StatelessWidget {
         children: [
           InkWell(
             splashColor: Colors.transparent,
-            onTap: () {
-              Navigator.pop(context);
-            },
+            onTap: () => Navigator.of(context).pushNamed(Routes.bottomNavigationBar),
             child: const MySvg(image: 'back_arrow'),
           ),
           const MySvg(image: 'logo_on_white', isImage: false),

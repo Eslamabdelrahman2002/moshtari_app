@@ -21,7 +21,9 @@ import '../../../../core/car/logic/cubit/car_catalog_state.dart';
 import '../../../create_ad/ui/widgets/steps_header_rtl.dart';
 import '../logic/cubit/auction_start_state.dart';
 import '../logic/cubit/car_auction_start_cubit.dart';
-import '../widgets/auction_ui_parts.dart';
+import '../widgets/auction_ui_parts.dart'; // يحتوي على DashedActionBox
+import 'package:flutter/services.dart' show FilteringTextInputFormatter;
+
 import '../widgets/car_step_classify.dart';
 
 class CarAuctionStartScreen extends StatefulWidget {
@@ -83,11 +85,12 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
 
   bool _argsApplied = false;
 
+  // NEW: هل المزاد متعدد؟
+  bool get _isMultiple => _auctionType == 'multiple';
+
   // ===================== Helpers (Arabic normalization) =====================
-  // شيل أي نص بين أقواس من نوع الدفع: "دفع كلي (AWD)" -> "دفع كلي"
   String _stripParens(String s) => s.replaceAll(RegExp(r'\s*\([^)]*\)'), '').trim();
 
-  // يحول "3.0 لتر" أو "4.0 لتر+" إلى "3.0" (كنص)
   String _engineCapacityToString(String text) {
     final s = _toAsciiDigits(text).replaceAll('+', '');
     final m = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(s);
@@ -257,7 +260,6 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
     return num.tryParse(txt) ?? 0;
   }
 
-  // يستخرج أول رقم صحيح من نص (للمدى "50,000 - 100,000 كم" -> 50000)
   int _normalizeKilometersToInt(String text) {
     final s = _toAsciiDigits(text);
     final match = RegExp(r'(\d+(?:\.\d+)?)').allMatches(s).toList();
@@ -267,7 +269,6 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
     return int.tryParse(intPart) ?? 0;
   }
 
-  // (احتفظنا بها لو احتجناها في التحقق)
   double _normalizeEngineCapacityLiters(String text) {
     final s = _toAsciiDigits(text).replaceAll('+', '');
     final m = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(s);
@@ -357,34 +358,32 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
   }
 
   // ===================== Building/Managing Items =====================
-  // ملاحظة: نخزّن قيم عربية للاستهلاك داخل الواجهة، ونحوّل لصيغة الـ API عند الإرسال.
   Map<String, dynamic> _buildCurrentCarItem() {
     final yearVal = int.tryParse(_year.text.trim()) ?? 0;
     final kmVal = _normalizeKilometersToInt(_mileage.text.trim());
     final engineStr = _engineCapacityToString(_engineCapacity.text.trim());
     final cylindersVal = int.tryParse(_cylinders.text.trim()) ?? 0;
 
-    final colorAr = _color.text.trim();                // عربي
-    final bodyAr = _bodyType.text.trim();              // عربي
-    final driveAr = _stripParens(_driveType.text.trim()); // عربي بدون الأقواس
+    final colorAr = _color.text.trim();
+    final bodyAr = _bodyType.text.trim();
+    final driveAr = _stripParens(_driveType.text.trim());
 
     return {
-      if (_selectedBrand != null) 'brand_id': _selectedBrand!.id,           // int (نحوّلها نص عند الإرسال)
-      if (_selectedModel != null) 'model_id': _selectedModel!.id,           // int (نحوّلها نص عند الإرسال)
-      'make': _selectedBrand?.name ?? _carType.text.trim(),                 // للعرض فقط
-      'model': _selectedModel?.displayName ?? _carModel.text.trim(),        // للعرض فقط
-      'year': yearVal,                    // int
-      'color': colorAr,                   // عربي
-      'body_type': bodyAr,                // عربي
-      'kilometers': kmVal,                // int
-      'engine_capacity': engineStr,       // "2.4"
-      'cylinders': cylindersVal,          // int
-      'drivetrain': driveAr,              // عربي
+      if (_selectedBrand != null) 'brand_id': _selectedBrand!.id,
+      if (_selectedModel != null) 'model_id': _selectedModel!.id,
+      'make': _selectedBrand?.name ?? _carType.text.trim(),
+      'model': _selectedModel?.displayName ?? _carModel.text.trim(),
+      'year': yearVal,
+      'color': colorAr,
+      'body_type': bodyAr,
+      'kilometers': kmVal,
+      'engine_capacity': engineStr,
+      'cylinders': cylindersVal,
+      'drivetrain': driveAr,
       'description': _descAdv.text.trim(),
     };
   }
 
-  // يبني عنصر الـ API من عنصر الواجهة، ويضيف أسعار/تواريخ العنصر
   Map<String, dynamic> _toApiItem(
       Map<String, dynamic> it, {
         required num startPrice,
@@ -398,9 +397,9 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
       'year': it['year'],
       'color': it['color'],
       'body_type': it['body_type'],
-      'title': _title.text.trim(), // عنوان للعنصر
+      'title': _title.text.trim(),
       'kilometers': it['kilometers'],
-      'engine_capacity': it['engine_capacity']?.toString(), // كنص "2.4"
+      'engine_capacity': it['engine_capacity']?.toString(),
       'cylinders': it['cylinders'],
       'drivetrain': it['drivetrain'],
       'specs': 'خليجي', // مؤقتًا
@@ -411,7 +410,6 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
       'end_date': itemEndDate.trim(),
     };
 
-    // إزالة أي مفاتيح ناقصة (null) حتى لا يرفضها السيرفر
     m.removeWhere((k, v) => v == null || (v is String && v.trim().isEmpty));
     return m;
   }
@@ -447,10 +445,14 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
     }
   }
 
-  void _addAnotherCarItem() {
+  // UPDATED: أضف عنصر وانتقل (أو ابق) في خطوة التفاصيل لإدخال عنصر جديد
+  void _addAnotherCarItem({int navigateToStep = 1}) {
     if (_isEditingItem) {
       _saveEditedCarItem();
-      setState(() => _step = 0);
+      setState(() => _step = navigateToStep);
+      if (_pageController.hasClients) {
+        _pageController.animateToPage(navigateToStep, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+      }
       return;
     }
     if (!_validateVehicleRequiredFields()) return;
@@ -459,8 +461,13 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
     setState(() {
       _carItems.add(item);
       _clearCarItemFields();
-      _step = 0;
+      _step = navigateToStep; // ابقِ المستخدم في خطوة التفاصيل
     });
+
+    if (_pageController.hasClients) {
+      _pageController.animateToPage(navigateToStep, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('تمت إضافة عنصر رقم ${_carItems.length}. املأ بيانات عنصر جديد.')),
     );
@@ -482,8 +489,11 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
       _cylinders.text = (item['cylinders']?.toString() ?? '');
       _driveType.text = (item['drivetrain'] ?? '').toString();
       _descAdv.text = (item['description'] ?? '').toString();
-      _step = 0;
+      _step = 1; // حمّل للتعديل واذهب لخطوة التفاصيل مباشرة
     });
+    if (_pageController.hasClients) {
+      _pageController.animateToPage(1, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('تم تحميل العنصر للتعديل (رقم ${index + 1})')),
     );
@@ -503,7 +513,6 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
     });
   }
 
-  // يبني JSON النهائي للإرسال بصيغة الـ API تمامًا
   String _buildItemsJsonForSend({
     required num startPrice,
     required num hiddenLimit,
@@ -849,19 +858,18 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
   }
 
   Widget _carItemsSummary() {
-    if (_auctionType != 'multiple' || _carItems.isEmpty) {
+    if (!_isMultiple || _carItems.isEmpty) {
       return const SizedBox.shrink();
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('العناصر المضافة', style: TextStyles.font14Dark500Weight),
+        Text('العناصر المضافة (${_carItems.length})', style: TextStyles.font14Dark500Weight),
         SizedBox(height: 8.h),
         ...List.generate(_carItems.length, (i) {
           final it = _carItems[i];
           final title = '${it['make'] ?? ''} ${it['model'] ?? ''}'.trim();
-          final sub =
-              'سنة: ${it['year'] ?? '-'} • اللون: ${it['color'] ?? '-'} • الهيكل: ${it['body_type'] ?? '-'}';
+          final sub = 'سنة: ${it['year'] ?? '-'} • اللون: ${it['color'] ?? '-'} • الهيكل: ${it['body_type'] ?? '-'}';
           return Container(
             margin: EdgeInsets.only(bottom: 8.h),
             padding: EdgeInsets.all(12.w),
@@ -876,8 +884,7 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title.isEmpty ? 'عنصر #${i + 1}' : title,
-                          style: TextStyles.font14Black500Weight),
+                      Text(title.isEmpty ? 'عنصر #${i + 1}' : title, style: TextStyles.font14Black500Weight),
                       SizedBox(height: 4.h),
                       Text(sub, style: TextStyles.font12DarkGray400Weight),
                     ],
@@ -898,6 +905,25 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
           );
         }),
         SizedBox(height: 8.h),
+      ],
+    );
+  }
+
+  // NEW: كارت لإضافة عنصر جديد في وضع المزاد المتعدد
+  Widget _multiAddCard() {
+    if (!_isMultiple) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_carItems.isNotEmpty) ...[
+          Text('العناصر المضافة: ${_carItems.length}', style: TextStyles.font12DarkGray400Weight),
+          SizedBox(height: 8.h),
+        ],
+        DashedActionBox(
+          title: 'إضافة مزاد آخر',
+          onTap: () => _addAnotherCarItem(navigateToStep: 1), // البقاء في خطوة التفاصيل
+        ),
+        SizedBox(height: 12.h),
       ],
     );
   }
@@ -937,7 +963,12 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
         _selectField(hint: 'عدد السلندرات', controller: _cylinders, options: _cylindersOptions),
         _selectField(hint: 'نوع الدفع', controller: _driveType, options: _driveTypeOptions),
         _area('وصف المركبة', _descAdv),
-        SizedBox(height: 16.h),
+        SizedBox(height: 8.h),
+
+        // NEW: الكارت يظهر لو مزاد متعدد
+        _multiAddCard(),
+
+        SizedBox(height: 8.h),
         _bottomNav(
           onBack: () => _goToStep(0),
           onNext: () => _goToStep(2),
@@ -987,10 +1018,10 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
 
               _carItemsSummary(),
 
-              if (_auctionType == 'multiple') ...[
+              if (_isMultiple) ...[
                 DashedActionBox(
                   title: 'إضافة مزاد آخر',
-                  onTap: _addAnotherCarItem,
+                  onTap: () => _addAnotherCarItem(navigateToStep: 1), // إبقِ المستخدم في خطوة التفاصيل
                 ),
                 SizedBox(height: 12.h),
               ],
@@ -1148,7 +1179,6 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
   ];
   final List<String> _cylindersOptions = const ['3','4','6','8','10','12'];
 
-  // مهم: خلي الخيارات بالعربي بدون اختصارات داخل أقواس
   final List<String> _driveTypeOptions = const [
     'دفع أمامي',
     'دفع خلفي',
@@ -1186,7 +1216,7 @@ class _CarAuctionStartScreenState extends State<CarAuctionStartScreen> {
       child: Scaffold(
         appBar: AppBar(
             leading: IconButton(onPressed:()=>Navigator.pop(context),
-                icon: Icon(Icons.arrow_back_ios_new),color: ColorsManager.darkGray300,),
+              icon: Icon(Icons.arrow_back_ios_new),color: ColorsManager.darkGray300,),
             title:  Text('إنشاء مزاد',style: TextStyles.font20Black500Weight,)),
         body: SafeArea(
           child: Column(

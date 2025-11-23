@@ -28,7 +28,26 @@ class DynaMyTripsCubit extends Cubit<DynaTripsListState> {
       emit(state.copyWith(loading: false, error: e.toString()));
     }
   }
+  Future<void> deleteTrip(int id) async {
+    emit(state.copyWith(actingId: id));
+    try {
+      await _repo.deleteTrip(id);
+      final filtered = state.items.where((t) => t.id != id).toList();
+      emit(state.copyWith(items: filtered, actingId: null));
+    } catch (e) {
+      emit(state.copyWith(actingId: null, error: e.toString()));
+    }
+  }
 
+  Future<void> updateTrip(int id, Map<String, dynamic> data) async {
+    emit(state.copyWith(actingId: id));
+    try {
+      await _repo.updateTrip(id, data);
+      await initLoad(pageSize: state.pageSize);
+    } catch (e) {
+      emit(state.copyWith(actingId: null, error: e.toString()));
+    }
+  }
   Future<void> loadMore() async {
     if (!state.hasMore || state.loadingMore || state.loading) return;
     final next = state.page + 1;

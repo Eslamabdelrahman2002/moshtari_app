@@ -24,7 +24,12 @@ class UserAuctionsCubit extends Cubit<UserAuctionsState> {
       final auctions = await _repo.getPublisherAuctions(userId);
       emit(UserAuctionsSuccess(auctions));
     } on AppException catch (e) {
-      emit(UserAuctionsFailure(e.message));
+      final msg = e.message;
+      if ((e is AppException && (e.statusCode == 404)) || (msg.contains('لا يوجد'))) {
+        emit(UserAuctionsSuccess(const []));
+      } else {
+        emit(UserAuctionsFailure(msg));
+      }
     } catch (e) {
       emit(UserAuctionsFailure('حدث خطأ أثناء جلب المزادات: $e'));
     }

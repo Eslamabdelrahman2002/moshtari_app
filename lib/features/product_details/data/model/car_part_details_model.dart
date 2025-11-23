@@ -55,8 +55,10 @@ class CarPartDetailsModel {
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       carPartDetail: CarPartDetail.fromJson(json['car_part_detail']),
       user: User.fromJson(json['user']),
-      comments:
-      (json['comments'] as List).map((e) => Comment.fromJson(e)).toList(),
+      comments: (json['comments'] as List? ?? const [])
+          .whereType<Map>()
+          .map((e) => Comment.fromJson(e.cast<String, dynamic>()))
+          .toList(),
       similarAds: (json['similar_ads'] as List)
           .map((e) => SimilarAd.fromJson(e))
           .toList(),
@@ -119,20 +121,23 @@ class Comment {
   final String text;
   final String userName;
   final String userPicture;
+  final DateTime createdAt; // 👈 أضفناه
 
   Comment({
     required this.id,
     required this.text,
     required this.userName,
     required this.userPicture,
+    required this.createdAt,
   });
 
   factory Comment.fromJson(Map<String, dynamic> json) {
     return Comment(
-      id: json['comment_id'],
+      id: json['comment_id'] ?? 0,
       text: json['comment_text'] ?? '',
       userName: json['user_name'] ?? '',
       userPicture: json['user_picture'] ?? '',
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
     );
   }
 }

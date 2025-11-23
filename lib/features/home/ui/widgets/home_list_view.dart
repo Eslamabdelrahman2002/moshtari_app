@@ -46,10 +46,7 @@ class HomeListView extends StatelessWidget {
       delegate: SliverChildBuilderDelegate(
             (context, index) {
           final ad = items[index];
-          final isAuction = ad.auctionDisplayType != null ||
-              ((ad.sourceType ?? '').toLowerCase().contains('auction'));
-
-          return isAuction
+          return ad.isAuction
               ? HomeAuctionListViewItem(adModel: ad)
               : HomeListViewItem(adModel: ad);
         },

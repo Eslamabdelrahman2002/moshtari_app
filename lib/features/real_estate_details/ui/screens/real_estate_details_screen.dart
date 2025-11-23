@@ -131,138 +131,143 @@ class RealEstateDetailsScreen extends StatelessWidget {
                   final property = state.details;
                   final comments = property.comments;
 
-                  return SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.only(bottom: 72.h),
-                    child: Column(
-                      children: [
-                        const RealStateDetailsAppBar(),
-                        RealEstateDetailsProductImages(
-                          images: property.imageUrls,
-                          adId: id,
-                          favoriteType: 'ad',
-                        ),
-                        BlocBuilder<UserAdsCubit, UserAdsState>(
-                          builder: (context, adsState) {
-                            List<PublisherProductModel> storyItems =
-                            [];
-                            if (adsState is UserAdsSuccess) {
-                              storyItems = adsState.ads
-                                  .map((ad) => ad.toPublisherProduct())
-                                  .toList();
-                            }
-                            return RealEstateStoryAndTitleWidget(
-                              title: property.title,
-                              similarAds: storyItems,
-                            );
-                          },
-                        ),
-                        DetailsPanel(
-                          cityName: property.city,
-                          areaName: property.region,
-                          createdAt: property.createdAt,
-                        ),
-                        verticalSpace(16),
-                        RealEstatePrice(price: property.price),
-                        const MyDivider(),
-                        Padding(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 16.w, vertical: 12.h),
-                          child: RealEstateCurrentUserInfo(
-                            ownerName: property.user?.username ?? 'N/A',
-                            ownerPicture:
-                            property.user?.profilePictureUrl,
-                            userTitle:
-                            property.user?.username ?? 'وسيط عقاري',
-                            onTap: () {
-                              final ownerIdRaw = property.user?.id;
-                              final ownerId = int.tryParse(
-                                  ownerIdRaw.toString());
-                              if (ownerId != null) {
-                                NavX(context).pushNamed(
-                                  Routes.userProfileScreenId,
-                                  arguments: ownerId,
-                                );
-                              }
-                            },
-                          ),
-                        ),
-                        verticalSpace(8),
-                        const MyDivider(),
-                        RealEstateProductInfoGridView(
-                          area: property.realEstateDetails?.areaM2,
-                          bathrooms:
-                          property.realEstateDetails?.bathroomCount,
-                          numberOfStreetFrontages:
-                          property.realEstateDetails?.streetCount,
-                          rooms: property.realEstateDetails?.roomCount,
-                          streetWidth:
-                          property.realEstateDetails?.streetWidth,
-                          windDirection:
-                          property.realEstateDetails?.facade,
-                        ),
-                        RealEstateInfoDescription(
-                            description: property.description),
-                        verticalSpace(20),
-                        RealEstateMoreDetails(
-                          details: property.realEstateDetails,
-                          city: property.city,
-                          region: property.region,
-                        ),
-                        verticalSpace(20),
-                        const Reminder(),
-                        const MyDivider(),
-                        RealEstateCommentsView(comments: comments, offers: property.offers,),
-                        verticalSpace(12),
-                        Padding(
-                          padding:
-                          EdgeInsets.symmetric(horizontal: 16.w),
-                          child: RealEstateCommentComposer(
+                  return RefreshIndicator.adaptive(
+                    onRefresh: () async {
+                      await context.read<RealEstateDetailsCubit>().getRealEstateDetails(id);
+                    },
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.only(bottom: 72.h),
+                      child: Column(
+                        children: [
+                          const RealStateDetailsAppBar(),
+                          RealEstateDetailsProductImages(
+                            images: property.imageUrls,
                             adId: id,
-                            onSuccessRefresh: () {
-                              context
-                                  .read<RealEstateDetailsCubit>()
-                                  .getRealEstateDetails(id);
+                            favoriteType: 'ad',
+                          ),
+                          BlocBuilder<UserAdsCubit, UserAdsState>(
+                            builder: (context, adsState) {
+                              List<PublisherProductModel> storyItems =
+                              [];
+                              if (adsState is UserAdsSuccess) {
+                                storyItems = adsState.ads
+                                    .map((ad) => ad.toPublisherProduct())
+                                    .toList();
+                              }
+                              return RealEstateStoryAndTitleWidget(
+                                title: property.title,
+                                similarAds: storyItems,
+                              );
                             },
                           ),
-                        ),
-                        const MyDivider(),
-                        PromoButton(
-                          onPressed: () async {
-                            final myId = context
-                                .read<ProfileCubit>()
-                                .user
-                                ?.userId;
-                            final isOwner = (myId != null &&
-                                property.user?.id == myId);
-                            if (isOwner) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content:
-                                    Text('لا يمكنك طلب تسويق لإعلانك.')),
-                              );
-                              return;
-                            }
-                            await showMarketingRequestSheet(
-                                context,
-                                adId: id);
-                          },
-                        ),
-                        if (property.similarAds.isNotEmpty) ...[
-                          RealEstateSimilarAds(
-                            items: property.similarAds,
-                            onTapAd: (ad) {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      RealEstateDetailsScreen(id: ad.id),
-                                ),
-                              );
-                            },
+                          DetailsPanel(
+                            cityName: property.city,
+                            areaName: property.region,
+                            createdAt: property.createdAt,
+                          ),
+                          verticalSpace(16),
+                          RealEstatePrice(price: property.price),
+                          const MyDivider(),
+                          Padding(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 16.w, vertical: 12.h),
+                            child: RealEstateCurrentUserInfo(
+                              ownerName: property.user?.username ?? 'N/A',
+                              ownerPicture:
+                              property.user?.profilePictureUrl,
+                              userTitle:
+                              property.user?.username ?? 'وسيط عقاري',
+                              onTap: () {
+                                final ownerIdRaw = property.user?.id;
+                                final ownerId = int.tryParse(
+                                    ownerIdRaw.toString());
+                                if (ownerId != null) {
+                                  NavX(context).pushNamed(
+                                    Routes.userProfileScreenId,
+                                    arguments: ownerId,
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+                          verticalSpace(8),
+                          const MyDivider(),
+                          RealEstateProductInfoGridView(
+                            area: property.realEstateDetails?.areaM2,
+                            bathrooms:
+                            property.realEstateDetails?.bathroomCount,
+                            numberOfStreetFrontages:
+                            property.realEstateDetails?.streetCount,
+                            rooms: property.realEstateDetails?.roomCount,
+                            streetWidth:
+                            property.realEstateDetails?.streetWidth,
+                            windDirection:
+                            property.realEstateDetails?.facade,
+                          ),
+                          RealEstateInfoDescription(
+                              description: property.description),
+                          verticalSpace(20),
+                          RealEstateMoreDetails(
+                            details: property.realEstateDetails,
+                            city: property.city,
+                            region: property.region,
+                          ),
+                          verticalSpace(20),
+                          const Reminder(),
+                          const MyDivider(),
+                          RealEstateCommentsView(comments: comments, offers: property.offers,),
+                          verticalSpace(12),
+                          Padding(
+                            padding:
+                            EdgeInsets.symmetric(horizontal: 16.w),
+                            child: RealEstateCommentComposer(
+                              adId: id,
+                              onSuccessRefresh: () {
+                                context
+                                    .read<RealEstateDetailsCubit>()
+                                    .getRealEstateDetails(id);
+                              },
+                            ),
                           ),
                           const MyDivider(),
+                          PromoButton(
+                            onPressed: () async {
+                              final myId = context
+                                  .read<ProfileCubit>()
+                                  .user
+                                  ?.userId;
+                              final isOwner = (myId != null &&
+                                  property.user?.id == myId);
+                              if (isOwner) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content:
+                                      Text('لا يمكنك طلب تسويق لإعلانك.')),
+                                );
+                                return;
+                              }
+                              await showMarketingRequestSheet(
+                                  context,
+                                  adId: id);
+                            },
+                          ),
+                          if (property.similarAds.isNotEmpty) ...[
+                            RealEstateSimilarAds(
+                              items: property.similarAds,
+                              onTapAd: (ad) {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        RealEstateDetailsScreen(id: ad.id),
+                                  ),
+                                );
+                              },
+                            ),
+                            const MyDivider(),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   );
                 }

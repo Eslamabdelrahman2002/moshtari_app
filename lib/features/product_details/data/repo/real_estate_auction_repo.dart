@@ -10,10 +10,17 @@ class RealEstateAuctionRepo {
   final ApiService api;
   RealEstateAuctionRepo(this.api);
 
-  Future<RealEstateAuctionDetailsModel> fetch(int id) async {
+  Future<RealEstateAuctionDetailsModel> fetch(int id, {int? activeItemId}) async {
+    final qp = <String, dynamic>{};
+    if (activeItemId != null) {
+// اختر الاسم حسب API عندك: 'active_item_id' أو 'item_id'
+      qp['active_item_id'] = activeItemId;
+    }
+
     final res = await api.getResponse(
       ApiConstants.realEstateAuctionDetails(id),
       relaxStatus: true,
+      queryParameters: qp.isEmpty ? null : qp, // ✅ إن كان مدعوم
     );
 
     final ct = res.headers.value('content-type') ?? '';
@@ -21,9 +28,7 @@ class RealEstateAuctionRepo {
       final body = _asJsonMap(res.data, ct);
       return RealEstateAuctionDetailsModel.fromJson(body);
     }
-    if (res.statusCode == 404) {
-      throw AppException('المزاد غير موجود');
-    }
+    if (res.statusCode == 404) throw AppException('المزاد غير موجود');
     final msg = _extractMessage(res.data, ct);
     throw AppException('HTTP ${res.statusCode}: $msg');
   }

@@ -5,6 +5,8 @@ import 'package:mushtary/core/theme/colors.dart';
 import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/core/widgets/primary/my_svg.dart';
 
+import '../../../../core/router/routes.dart';
+
 class DinatSectionHeader extends StatelessWidget {
   final VoidCallback? onTap;
 
@@ -23,9 +25,9 @@ class DinatSectionHeader extends StatelessWidget {
             color: ColorsManager.white,
             child: Row(
               children: [
-                InkWell(
-                    onTap: ()=>Navigator.pop(context),
-                    child: Icon(Icons.arrow_back_ios,color: ColorsManager.darkGray300,)),
+                 InkWell(
+                     onTap: ()=>Navigator.of(context).pushNamed(Routes.bottomNavigationBar),
+                     child: Icon(Icons.arrow_back_ios,color: ColorsManager.darkGray300,)),
                 Spacer(),
                 Text('طلب الانضمام إلى رحلة حالية', style: TextStyles.font20Black500Weight),
                 Spacer()

@@ -87,6 +87,8 @@ import '../../features/messages/data/local/chat_db.dart';
 import '../../features/messages/data/local/chat_local_data_source.dart';
 import '../../features/messages/data/repo/chat_offline_repository.dart';
 
+import '../../features/my_requests/model/repo/my_requests_repo.dart' as mr;
+import '../../features/my_requests/ui/cubit/my_requests_cubit.dart' as mrc;
 import '../../features/notifications/data/repo/notifications_repo.dart';
 import '../../features/notifications/ui/cubit/notifications_cubit.dart';
 import '../../features/product_details/data/repo/auction_bid_repo.dart';
@@ -188,6 +190,8 @@ void setupServiceLocator() {
       otpRepo: getIt<OtpRepo>(),
     ),
   );
+  registerLazyIfNeeded<mr.MyRequestsRepo>(() => mr.MyRequestsRepo(getIt<api.ApiService>()));
+  registerFactoryReplacing<mrc.MyRequestsCubit>(() => mrc.MyRequestsCubit(getIt<mr.MyRequestsRepo>()));
   // Home + Search
   registerLazyIfNeeded<HomeRepo>(() => HomeRepo(getIt<api.ApiService>()));
   registerFactoryReplacing<HomeCubit>(() => HomeCubit(getIt<HomeRepo>()));
@@ -369,8 +373,8 @@ void setupServiceLocator() {
         () => ServiceOffersRepo(getIt<api.ApiService>()),
   );
 
-  registerFactoryReplacing<ServiceOfferCubit>(
-        () => ServiceOfferCubit(getIt<ServiceOffersRepo>()),
+  registerFactoryReplacing<ServiceOffersCubit>(
+        () => ServiceOffersCubit(getIt<ServiceOffersRepo>()),
   );
 
 }

@@ -1,4 +1,4 @@
-// file: RealEstateCommentsView.dart (بعد التعديل)
+// file: RealEstateCommentsView.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,7 +8,7 @@ import 'package:mushtary/core/theme/text_styles.dart';
 import 'package:mushtary/features/product_details/ui/widgets/comment_item.dart';
 import 'package:mushtary/features/user_profile/logic/cubit/profile_cubit.dart';
 
-// ✅ كلاس مساعد لتوحيد بيانات التعليق/العرض قبل العرض
+// ✅ كلاس مساعد لتوحيد التعليقات والعروض قبل عرضها
 class CommentOfferItem {
   final String userName;
   final String text;
@@ -27,100 +27,123 @@ class CommentOfferItem {
 
 class RealEstateCommentsView extends StatelessWidget {
   final List<dynamic> comments;
-  final List<dynamic> offers; // ✅ الحقل الجديد لاستقبال العروض
+  final List<dynamic> offers; // ✅ قائمة العروض
 
   const RealEstateCommentsView({
     super.key,
     required this.comments,
-    required this.offers, // ✅ إضافة العروض للـ constructor
+    required this.offers,
   });
 
-  String? _safeString(dynamic v) => v?.toString().trim().isEmpty ?? true ? null : v.toString();
+  // دالة لتأمين القيم النصية من null أو فراغ
+  String? _safeString(dynamic v) =>
+      v?.toString().trim().isEmpty ?? true ? null : v.toString();
 
-  // ✅ دالة لدمج العروض والتعليقات وفرزها
+  // ✅ دمج وفرز التعليقات والعروض
   List<CommentOfferItem> _combineAndSortItems(String? currentUsername) {
-    List<CommentOfferItem> allItems = [];
+    final List<CommentOfferItem> allItems = [];
 
-    // 1. معالجة التعليقات
+    // ----------------------------
+    // 🟢 1. معالجة التعليقات
+    // ----------------------------
     for (final c in comments) {
       if (c is! Map<String, dynamic>) continue;
       final map = c;
 
-      // استخراج الاسم
-      String? nameFromComment;
+      // الاسم
       final rawName = map['user_name'] ??
           map['username'] ??
-          (map['user'] is Map ? map['user']['username'] : null);
-      nameFromComment = _safeString(rawName);
+          (map['user'] is Map ? (map['user'] as Map)['username'] : null);
+      final nameFromComment = _safeString(rawName);
 
-      // استخراج رابط الصورة
-      String? imageUrl;
-      final rawImage = map['user_profile_image'] ?? map['user_image'] ?? map['user_avatar'];
+      // الصورة
+      final rawImage =
+          map['user_profile_image'] ?? map['user_image'] ?? map['user_avatar'];
       final userMap = map['user'] as Map<String, dynamic>?;
-      final userRawImage = userMap?['profile_image'] ?? userMap?['image'] ?? userMap?['avatar'];
+      final userRawImage =
+          userMap?['profile_image'] ?? userMap?['image'] ?? userMap?['avatar'];
+      final imageUrl = _safeString(rawImage ?? userRawImage);
 
-      imageUrl = _safeString(rawImage ?? userRawImage);
+      // النص
+      final text =
+          _safeString(map['comment_text'] ?? map['text'] ?? '') ?? '...';
 
-      final userName = (nameFromComment != null)
-          ? nameFromComment
-          : ((currentUsername?.trim().isNotEmpty ?? false)
-          ? currentUsername!.trim()
-          : 'مستخدم');
+      // التاريخ
+      final createdAtStr = _safeString(
+          map['created_at'] ?? map['createdAt'] ?? map['date']);
+      final createdAt = createdAtStr != null
+          ? (DateTime.tryParse(createdAtStr) ?? DateTime.now())
+          : DateTime.now();
 
-      final text = _safeString(map['comment_text'] ?? map['text'] ?? '') ?? '...';
-      final createdAtStr = _safeString(map['created_at']);
-      DateTime? createdAt = createdAtStr != null ? DateTime.tryParse(createdAtStr) : null;
-
-      if (createdAt != null) {
-        allItems.add(CommentOfferItem(
-          userName: userName,
-          text: text,
-          createdAt: createdAt,
-          userImageUrl: imageUrl,
-          offerPrice: null,
-        ));
-      }
+      // أضف التعليق
+      allItems.add(CommentOfferItem(
+        userName: nameFromComment ??
+            (currentUsername?.trim().isNotEmpty ?? false
+                ? currentUsername!.trim()
+                : 'مستخدم'),
+        text: text,
+        createdAt: createdAt,
+        userImageUrl: imageUrl,
+        offerPrice: null,
+      ));
     }
 
-    // 2. معالجة العروض
-    for (final o in offers) {
-      if (o is! Map<String, dynamic>) continue;
-      final map = o;
 
-      // استخراج سعر العرض
+    for (final o in offers) {
+      Map<String, dynamic>? map;
+
+      // 🧩 في حالة OfferModel
+      if (o.runtimeType.toString() == 'OfferModel' ||
+          (o is dynamic && o?.offerPrice != null)) {
+        try {
+          map = {
+            'user_name': o.userName?.toString(),
+            'user_picture': o.userPicture?.toString(),
+            'offer_price': o.offerPrice?.toString(),
+            'offer_comment': o.offerComment?.toString(),
+            'created_at': o.createdAt?.toIso8601String(),
+          };
+        } catch (_) {}
+      }
+
+      // 🧩 أو حالة Map عادية
+      if (o is Map<String, dynamic>) {
+        map = o;
+      }
+
+      if (map == null) continue;
+
       final offerPrice = _safeString(map['offer_price'] ?? map['price']);
       if (offerPrice == null) continue;
 
-      // استخراج الاسم
-      String? nameFromOffer;
-      final rawName = map['user_name'] ?? map['username'];
-      nameFromOffer = _safeString(rawName);
-
-      // استخراج رابط الصورة
-      String? imageUrl = _safeString(map['user_picture']);
-
-      final userName = (nameFromOffer != null)
-          ? nameFromOffer
-          : ((currentUsername?.trim().isNotEmpty ?? false)
-          ? currentUsername!.trim()
-          : 'مستخدم');
+      final nameFromOffer =
+      _safeString(map['user_name'] ?? map['username']);
+      final imageUrl = _safeString(map['user_picture']);
+      final userName = nameFromOffer ??
+          (currentUsername?.trim().isNotEmpty ?? false
+              ? currentUsername!.trim()
+              : 'مستخدم');
 
       final text = _safeString(map['offer_comment'] ?? '') ?? 'عرض سعر';
-      final createdAtStr = _safeString(map['created_at']);
-      DateTime? createdAt = createdAtStr != null ? DateTime.tryParse(createdAtStr) : null;
+      final createdAtStr =
+      _safeString(map['created_at'] ?? map['createdAt']);
+      final createdAt = createdAtStr != null
+          ? (DateTime.tryParse(createdAtStr) ?? DateTime.now())
+          : DateTime.now();
 
-      if (createdAt != null) {
-        allItems.add(CommentOfferItem(
-          userName: userName,
-          text: text,
-          createdAt: createdAt,
-          userImageUrl: imageUrl,
-          offerPrice: offerPrice, // ✅ تمرير سعر العرض
-        ));
-      }
+      // ✅ إضافة العرض
+      allItems.add(CommentOfferItem(
+        userName: userName,
+        text: text,
+        createdAt: createdAt,
+        userImageUrl: imageUrl,
+        offerPrice: offerPrice,
+      ));
     }
 
-    // 3. الفرز: الأحدث أولاً
+    // ----------------------------
+    // 🟡 3. الفرز: الأحدث أولاً
+    // ----------------------------
     allItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     return allItems;
@@ -128,27 +151,37 @@ class RealEstateCommentsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // اسم المستخدم الحالي (لو مسجل دخوله)
     final currentUsername =
     context.select<ProfileCubit, String?>((cubit) => cubit.user?.username);
 
-    final allItems = _combineAndSortItems(currentUsername); // ✅ دمج وفرز القوائم
+    // دمج وفرز العناصر
+    final allItems = _combineAndSortItems(currentUsername);
 
     if (allItems.isEmpty) {
       return Padding(
         padding: EdgeInsets.symmetric(horizontal: 16.w),
-        child: Text('لا توجد تعليقات أو عروض بعد 👀', style: TextStyles.font14DarkGray400Weight),
+        child: Text(
+          'لا توجد تعليقات أو عروض بعد 👀',
+          style: TextStyles.font14DarkGray400Weight,
+        ),
       );
     }
 
+    // ----------------------------
+    // 🧾 4. عرض القائمة
+    // ----------------------------
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('التعليقات والعروض', style: TextStyles.font16Dark300Grey400Weight),
+          Text(
+            'التعليقات',
+            style: TextStyles.font16Dark300Grey400Weight,
+          ),
           verticalSpace(8),
-          ...allItems.map((item) { // ✅ استخدام القائمة المدمجة والمفرزة
-
+          ...allItems.map((item) {
             final userName = item.userName;
             final text = item.text.isEmpty ? '...' : item.text;
 
@@ -157,9 +190,9 @@ class RealEstateCommentsView extends StatelessWidget {
               child: CommentItem(
                 userName: userName,
                 comment: text,
-                createdAt: item.createdAt, // ✅ تمرير تاريخ الإنشاء
-                userImageUrl: item.userImageUrl, // ✅ تمرير رابط الصورة
-                offerPrice: item.offerPrice, // ✅ تمرير سعر العرض
+                createdAt: item.createdAt,
+                userImageUrl: item.userImageUrl,
+                offerPrice: item.offerPrice, // ✅ عرض السعر عند وجوده
               ),
             );
           }).toList(),

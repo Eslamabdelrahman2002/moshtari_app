@@ -12,7 +12,8 @@ class ApiConstants {
     final scheme = secure ? 'wss' : 'ws';
     return '$scheme://$wsHost?token=$token';
   }
-
+  static String serviceOfferReject(int offerId) => 'service-offers/offers/$offerId/reject';
+  static const String serviceRequestsMyRequests = 'service-requests/my-requests';
   // Auth
   static const String login = 'auth/login';
   static const String register = 'auth/register';
@@ -136,7 +137,7 @@ class ApiConstants {
   //car
   static const String carTypes = 'car-types';
   static String carTypeModels(int typeId) => 'car-types/$typeId/models';
-
+  static String get myReceivedOffers => 'service-requests/my-received-offers';
   static const String deleteAccount = 'users/delete-account';
   static String conversationReport(int conversationId) => 'conversation-reports/$conversationId/report';
   // Payments (MyFatoorah)
@@ -165,7 +166,7 @@ class ApiConstants {
         throw ArgumentError('Unsupported adType: $adType');
     }
   }
-
+  static String dynaTripById(int id) => 'dyna-trips/$id';
   static String getPublisherProfile(int userId) => 'users/$userId';
   static String getPublisherAds(int userId) => '$carAds/my-ads/$userId';
   static String getPublisherAuctions(int userId) => '$carAuctions/my-auctions/$userId';

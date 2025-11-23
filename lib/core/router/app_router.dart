@@ -26,6 +26,7 @@ import 'package:mushtary/features/home/ui/screens/bottom_navigation_bar.dart';
 import 'package:mushtary/features/home/data/models/home_data_model.dart';
 import 'package:mushtary/features/home/ui/screens/home_screen.dart';
 import 'package:mushtary/features/home/ui/widgets/home_reels_view.dart';
+import 'package:mushtary/features/my_requests/ui/screens/my_requests_screen.dart';
 import 'package:mushtary/features/policy/ui/screens/usage_policy_screen.dart';
 
 // Common
@@ -147,6 +148,8 @@ class AppRouter {
 
       case Routes.onboardingScreen:
         return NoAnimationPageRoute(builder: (_) => const OnboardingScreen());
+      case Routes.myRequest:
+        return NoAnimationPageRoute(builder: (_) => const MyRequestsScreen());
 
       case Routes.loginScreen:
         return NoAnimationPageRoute(builder: (_) => const LoginScreen());
@@ -448,10 +451,16 @@ class AppRouter {
 
 // Auctions (create)
       case Routes.createCarAuctionScreen:
-        return NoAnimationPageRoute(builder: (_) => const CarAuctionStartScreen());
-
+        return NoAnimationPageRoute(
+          builder: (_) => const CarAuctionStartScreen(),
+          settings: settings,
+        );
       case Routes.createRealEstateAuctionScreen:
-        return NoAnimationPageRoute(builder: (_) => const RealEstateAuctionStartScreen());
+        return NoAnimationPageRoute(
+          builder: (_) => const RealEstateAuctionStartScreen(),
+          settings: settings,
+        );
+
 
       case Routes.publishEntryScreen:
         return NoAnimationPageRoute(builder: (_) => const PublishEntryScreen());

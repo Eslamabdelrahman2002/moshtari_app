@@ -173,9 +173,9 @@ class _DynaTripsScreenState extends State<DynaTripsScreen> {
                         final item = state.items[index];
                         return DynaTripCard(
                           item: item,
-                          onDetails: () {
-                            // TODO: شاشة تفاصيل الطلب/الرحلة
-                          },
+                          // onDetails: () {
+                          //   // TODO: شاشة تفاصيل الطلب/الرحلة
+                          // },
                         );
                       },
                     ),
